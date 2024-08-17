@@ -1,6 +1,7 @@
 {
-    "name": "sakai-vue",
-    "version": "4.1.0",
+    "name": "report-documentation",
+    "version": "1.0.0",
+    "author": "Ivan Miroshnichenko",
     "scripts": {
         "dev": "vite",
         "build": "vite build",
