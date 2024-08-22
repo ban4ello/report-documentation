@@ -1,4 +1,69 @@
 export const MochDataService = {
+  workers() {
+    return [
+      {
+        lastname: 'Бабенко',
+        name: null,
+        role: 'worker'
+      },
+      {
+        lastname: 'Червань',
+        name: 'Антон',
+        role: 'worker'
+      },
+      {
+        lastname: 'Васильев',
+        name: null,
+        role: 'worker'
+      },
+      {
+        lastname: 'Атаманенко',
+        name: null,
+        role: 'worker'
+      },
+      {
+        lastname: 'Татарский',
+        name: null,
+        role: 'worker'
+      },
+      {
+        lastname: 'Кристина',
+        name: null,
+        role: 'ITR'
+      },
+      {
+        lastname: 'Олька',
+        name: null,
+        role: 'ITR'
+      },
+      {
+        lastname: 'Танюха',
+        name: null,
+        role: 'ITR'
+      },
+      {
+        lastname: 'Тёмка',
+        name: null,
+        role: 'ITR'
+      },
+      {
+        lastname: 'Николаев',
+        name: null,
+        role: 'ITR'
+      },
+      {
+        lastname: 'Никита',
+        name: null,
+        role: 'ITR'
+      },
+      {
+        lastname: 'Шеф',
+        name: null,
+        role: 'ITR'
+      }
+    ];
+  },
+
   сonsumables() {
     return [
       {
@@ -144,6 +209,32 @@ export const MochDataService = {
         quantity: 2,
         taxPrice: '25,00',
         price: '50,00'
+      }
+    ];
+  },
+
+  specificationData() {
+    return [
+      {
+        id: 1,
+        name: 'Изделие №1',
+        quantity: 2,
+        weightPerItem: 2,
+        totalWeight: null
+      },
+      {
+        id: 2,
+        name: 'Изделие №2',
+        quantity: 3,
+        weightPerItem: 5,
+        totalWeight: null
+      },
+      {
+        id: 3,
+        name: 'Изделие №3',
+        quantity: 4,
+        weightPerItem: 1,
+        totalWeight: null
       }
     ];
   },
@@ -348,5 +439,13 @@ export const MochDataService = {
 
   getITRData() {
     return Promise.resolve(this.ITRData());
+  },
+
+  getSpecificationData() {
+    return Promise.resolve(this.specificationData());
+  },
+
+  getWorkers() {
+    return Promise.resolve(this.workers());
   }
 };
