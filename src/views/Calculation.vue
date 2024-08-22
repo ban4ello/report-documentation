@@ -3,7 +3,6 @@
   TODO:
   1. Разработать функционал добавления в базу новых сотрудников
   2. Добавить возможность гибко управлять стоимостью ЗП
-  3. Спецификаций может быть много
   4. Таблица с ЗП ИТровцев:
     - сделать подблок значений ЗП с налогами
   5. В блоке "Цех"
@@ -16,11 +15,16 @@
 import { onBeforeMount, ref, computed } from 'vue';
 import { MochDataService } from '@/service/MochDataService';
 import { useToast } from 'primevue/usetoast';
+import SearchSelect from '@/components/custom-ui/SearchSelect.vue';
 
 const toast = useToast();
 const fileupload = ref();
 const dropdownItemsWorkerStaff = ref(['Бабенко', 'Червань Антон', 'Васильев', 'Атаманенко', 'Татарский']);
 const dropdownItemsITR = ref(['Кристина', 'Олька', 'Танюха', 'Тёмка', 'Николаев', 'Никита', 'Шеф']);
+const dropdownItemsWorkersRole = ref([
+  { label: 'Рабочий', key: 'worker' },
+  { label: 'ИТР', key: 'ITR' }
+]);
 
 const consumables = ref([]);
 const hardware = ref([]);
@@ -33,7 +37,10 @@ const selectedStaff = ref(null);
 const selectedITRStaff = ref(null);
 const newStaffDialog = ref(false);
 const newITRStaffDialog = ref(false);
+const createNewWorkerDialog = ref(false);
 let workersData = ref([]);
+let specificationData = ref([]);
+let newWorkerData = ref({ name: '', lastname: '', role: '' });
 let workersTaxData = ref([]);
 let ITRData = ref([]);
 let numberOfHoursPerShift = ref(8);
@@ -75,6 +82,12 @@ const taxOfSalariesOfITRTotal = computed(() =>
 const salariesOfITRTotalPerMonth = computed(() =>
   ITRData.value.reduce((acc, item) => {
     return acc + Number(parseFloat(item.salaryPerMonth));
+  }, 0)
+);
+
+const totalSpecificationItems = computed(() =>
+  specificationData.value.reduce((acc, item) => {
+    return acc + Number(item.quantity * item.weightPerItem);
   }, 0)
 );
 
@@ -172,6 +185,10 @@ onBeforeMount(() => {
   MochDataService.getITRData().then((data) => {
     ITRData.value = data;
   });
+
+  MochDataService.getSpecificationData().then((data) => {
+    specificationData.value = data;
+  });
 });
 
 function getTotalPrice(array) {
@@ -190,18 +207,35 @@ const onCellEditComplete = (event) => {
   data[field] = newValue;
 };
 
-const showDialog = (key) => {
+const showDialog = (key, flag = true) => {
   switch (key) {
     case 'newStaffDialog':
-      newStaffDialog.value = true;
+      newStaffDialog.value = flag;
       break;
     case 'newITRStaffDialog':
-      newITRStaffDialog.value = true;
+      newITRStaffDialog.value = flag;
+      break;
+    case 'createNewWorkerDialog':
+      createNewWorkerDialog.value = flag;
       break;
 
     default:
       break;
   }
+};
+
+const copySpecification = (data) => {
+  specificationData.value.push({
+    id: (Math.random() * 1000).toFixed(),
+    name: data.name,
+    quantity: data.quantity,
+    weightPerItem: data.weightPerItem,
+    totalWeight: data.totalWeight
+  });
+};
+
+const confirmDeleteSpecification = (data) => {
+  specificationData.value = specificationData.value.filter((item) => item.id !== data.id);
 };
 
 const copyStaffWorker = (data) => {
@@ -291,33 +325,125 @@ const copyITRWorker = (data) => {
     salaryPerMonth: data.salaryPerMonth
   });
 };
+
+const changeSelectedItem = (event) => {
+  console.log(event);
+  newStaffData.value.name = event.value;
+};
+
+const showNewWorkerModal = () => {
+  showDialog('createNewWorkerDialog');
+};
+
+const saveNewWorker = (worker) => {
+  console.log('saveNewWorker', worker);
+
+  switch (worker.role.key) {
+    case 'worker':
+      dropdownItemsWorkerStaff.value.push(worker.name);
+      break;
+    case 'ITR':
+      dropdownItemsITR.value.push(worker.name);
+      break;
+
+    default:
+      break;
+  }
+
+  showDialog('createNewWorkerDialog', false);
+};
 </script>
 
 <template>
   <Fluid>
     <div class="flex flex-col gap-4">
-      <div class="card flex flex-col gap-4 w-full">
-        <div class="font-semibold text-xl">Спецификация</div>
+      <div class="grid grid-cols-1fr-35 gap-4">
+        <div>
+          <div class="card h-full">
+            <div class="flex flex-row items-center justify-between gap-2">
+              <div class="font-semibold text-[--primary-color] text-xl">Спецификация</div>
+            </div>
 
-        <div class="flex flex-col md:flex-column gap-4">
-          <div class="flex flex-wrap gap-2 w-full">
-            <label for="specificationName">Наименование изделия</label>
-            <InputText v-model="specification.name" id="specificationName" type="text" />
+            <DataTable :value="specificationData" editMode="cell" @cell-edit-complete="onCellEditComplete">
+              <Column field="name" header="Наименование изделия" style="width: 25%">
+                <template #body="{ data }">
+                  {{ data.name }}
+                </template>
+
+                <template #editor="{ data }">
+                  <InputText v-model="data.name" type="text" />
+                </template>
+              </Column>
+
+              <Column field="quantity" header="Количество" style="width: 25%">
+                <template #body="{ data }">
+                  {{ data.quantity }}
+                </template>
+
+                <template #editor="{ data }">
+                  <InputText v-model="data.quantity" type="number" />
+                </template>
+              </Column>
+
+              <Column field="weightPerItem" header="Вес одной штуки в тоннах" style="width: 25%">
+                <template #body="{ data }">
+                  {{ data.weightPerItem }}
+                </template>
+
+                <template #editor="{ data }">
+                  <InputText v-model="data.weightPerItem" type="number" />
+                </template>
+              </Column>
+
+              <Column field="totalWeight" header="Общий вес" style="width: 25%">
+                <template #body="{ data }">
+                  {{ Number(data.quantity * data.weightPerItem).toFixed() }}
+                </template>
+              </Column>
+
+              <Column :exportable="false" style="min-width: 12rem">
+                <template #body="slotProps">
+                  <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copySpecification(slotProps.data)" />
+                  <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteSpecification(slotProps.data)" />
+                </template>
+              </Column>
+
+              <template #footer>
+                <div class="flex justify-end gap-4 w-full">
+                  <div class="flex items-center">
+                    Итого общий вес: &nbsp;<span class="font-bold text-lg"> {{ totalSpecificationItems }} тонн</span>
+                  </div>
+                </div>
+              </template>
+            </DataTable>
           </div>
+        </div>
 
-          <div class="flex flex-wrap gap-2 w-full">
-            <label for="specificationQuantity">Количество</label>
-            <InputText v-model="specification.quantity" id="specificationQuantity" type="number" />
-          </div>
+        <div>
+          <div class="card">
+            <div class="flex flex-row justify-between gap-2">
+              <div class="font-semibold text-[--primary-color] text-xl">Итоговая ведомость</div>
+            </div>
 
-          <div class="flex flex-wrap gap-2 w-full">
-            <label for="specificationWeightOfOnePiece">Вес одной штуки в тоннах</label>
-            <InputText v-model="specification.weightOfOnePiece" id="specificationWeightOfOnePiece" type="number" />
-          </div>
+            <DataTable :value="priceData" editMode="cell" showGridlines @cell-edit-complete="onCellEditComplete">
+              <Column field="name" style="width: 25%">
+                <template #body="{ data }">
+                  {{ data.name }}
+                </template>
+              </Column>
 
-          <div class="flex flex-wrap gap-2 w-full">
-            <label for="specificationTotalWeight">Общий вес</label>
-            <InputText :value="totalWeightOfMetal" id="specificationTotalWeight" type="text" disabled />
+              <Column field="total" header="Общая" style="width: 25%">
+                <template #body="{ data }">
+                  {{ data.total }}
+                </template>
+              </Column>
+
+              <Column field="perItem" header="На 1 тн" style="width: 25%">
+                <template #body="{ data }">
+                  {{ data.perItem }}
+                </template>
+              </Column>
+            </DataTable>
           </div>
         </div>
       </div>
@@ -326,7 +452,7 @@ const copyITRWorker = (data) => {
         <div>
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2">
-              <div class="font-semibold text-xl">Цех</div>
+              <div class="font-semibold text-[--primary-color] text-xl">Цех</div>
 
               <div>
                 <Button label="Добавить сотрудника" size="small" icon="pi pi-plus" severity="success" class="mr-2 text-xs max-w-[100px]" @click="showDialog('newStaffDialog')" />
@@ -405,11 +531,11 @@ const copyITRWorker = (data) => {
               </template>
             </DataTable>
 
-            <Dialog v-model:visible="newStaffDialog" :style="{ width: '450px' }" header="Новый сотрудник" :modal="true">
+            <Dialog v-model:visible="newStaffDialog" :style="{ width: '450px' }" header="Выберте сотрудника" :modal="true">
               <div class="flex flex-col gap-6">
                 <div>
                   <label for="name" class="block font-bold mb-3">Имя</label>
-                  <Select id="staff" v-model="newStaffData.name" :options="dropdownItemsWorkerStaff" class="w-full"></Select>
+                  <SearchSelect :dropdownItemsWorkerStaff="dropdownItemsWorkerStaff" :value="newStaffData.name" @change="changeSelectedItem" @clickToHeader="showNewWorkerModal" />
                 </div>
 
                 <div>
@@ -425,7 +551,7 @@ const copyITRWorker = (data) => {
 
               <template #footer>
                 <Button label="Cancel" icon="pi pi-times" text @click="newStaffDialog = false" />
-                <Button :disabled="!newStaffData.name.trim() || newStaffData.numberOfHoursWorked === null || newStaffData.salaryPerDay === null" label="Save" icon="pi pi-check" @click="saveNewStaff" />
+                <Button :disabled="!newStaffData.name.trim() || newStaffData.numberOfHoursWorked === null || newStaffData.salaryPerDay === null" label="Сохранить" icon="pi pi-check" @click="saveNewStaff" />
               </template>
             </Dialog>
           </div>
@@ -434,7 +560,7 @@ const copyITRWorker = (data) => {
         <div>
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2">
-              <div class="font-semibold text-xl">Налоговые начисления</div>
+              <div class="font-semibold text-[--primary-color] text-xl">Налоговые начисления</div>
             </div>
 
             <DataTable :value="workersTaxData" editMode="cell" @cell-edit-complete="onCellEditComplete">
@@ -482,7 +608,7 @@ const copyITRWorker = (data) => {
         <div class="ITR">
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2 mb-4">
-              <div class="font-semibold text-xl">ИТР</div>
+              <div class="font-semibold text-[--primary-color] text-xl">ИТР</div>
 
               <div class="">
                 <Button label="Добавить сотрудника" size="small" icon="pi pi-plus" severity="success" class="mr-2 text-xs max-w-[100px]" @click="showDialog('newITRStaffDialog')" />
@@ -551,7 +677,7 @@ const copyITRWorker = (data) => {
               </template>
             </DataTable>
 
-            <Dialog v-model:visible="newITRStaffDialog" :style="{ width: '450px' }" header="Новый сотрудник" :modal="true">
+            <Dialog v-model:visible="newITRStaffDialog" :style="{ width: '450px' }" header="Выберте сотрудника" :modal="true">
               <div class="flex flex-col gap-6">
                 <div>
                   <label for="name" class="block font-bold mb-3">Имя</label>
@@ -566,7 +692,7 @@ const copyITRWorker = (data) => {
 
               <template #footer>
                 <Button label="Cancel" icon="pi pi-times" text @click="newStaffDialog = false" />
-                <Button :disabled="!newITRStaffData.name.trim() || newITRStaffData.salaryPerMonth === null" label="Save" icon="pi pi-check" @click="saveNewITRStaff" />
+                <Button :disabled="!newITRStaffData.name.trim() || newITRStaffData.salaryPerMonth === null" label="Сохранить" icon="pi pi-check" @click="saveNewITRStaff" />
               </template>
             </Dialog>
           </div>
@@ -575,7 +701,7 @@ const copyITRWorker = (data) => {
         <div class="ITR-tax">
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2">
-              <div class="font-semibold text-xl">Налоговые начисления</div>
+              <div class="font-semibold text-[--primary-color] text-xl">Налоговые начисления</div>
             </div>
 
             <DataTable :value="workersTaxData" editMode="cell" @cell-edit-complete="onCellEditComplete">
@@ -621,33 +747,7 @@ const copyITRWorker = (data) => {
 
       <div class="card">
         <div class="flex flex-row justify-between gap-2">
-          <div class="font-semibold text-xl">Итоговая ведомость</div>
-        </div>
-
-        <DataTable :value="priceData" editMode="cell" showGridlines @cell-edit-complete="onCellEditComplete">
-          <Column field="name" style="width: 25%">
-            <template #body="{ data }">
-              {{ data.name }}
-            </template>
-          </Column>
-
-          <Column field="total" header="Общая" style="width: 25%">
-            <template #body="{ data }">
-              {{ data.total }}
-            </template>
-          </Column>
-
-          <Column field="perItem" header="На 1 тн" style="width: 25%">
-            <template #body="{ data }">
-              {{ data.perItem }}
-            </template>
-          </Column>
-        </DataTable>
-      </div>
-
-      <div class="card">
-        <div class="flex flex-row justify-between gap-2">
-          <div class="font-semibold text-xl">Расходники</div>
+          <div class="font-semibold text-[--primary-color] text-xl">Расходники</div>
 
           <FileUpload ref="fileupload" class="max-w-[100px]" mode="basic" accept=".csv, .xlsx" :maxFileSize="1000000" @uploader="onUpload" chooseLabel="Выберите файл"> </FileUpload>
         </div>
@@ -813,6 +913,41 @@ const copyITRWorker = (data) => {
         </Accordion>
       </div>
     </div>
+
+    <Dialog v-model:visible="createNewWorkerDialog" :style="{ width: '450px' }" header="Новый сотрудник" :modal="true">
+      <div class="flex flex-col gap-6">
+        <div>
+          <label for="name" class="block font-bold mb-3">Имя</label>
+          <InputText v-model="newWorkerData.name" type="text" />
+        </div>
+
+        <div>
+          <label for="lastname" class="block font-bold mb-3">Фамилия</label>
+          <InputText v-model="newWorkerData.lastname" type="text" />
+        </div>
+
+        <div>
+          <label for="numberOfHoursWorked" class="block font-bold mb-3">Должность</label>
+          <Select id="role" v-model="newWorkerData.role" :options="dropdownItemsWorkersRole" class="w-full">
+            <template #value="slotProps">
+              <div class="flex items-center h-[25px]">
+                <div>{{ slotProps.value.label }}</div>
+              </div>
+            </template>
+            <template #option="slotProps">
+              <div class="flex items-center">
+                <div>{{ slotProps.option.label }}</div>
+              </div>
+            </template>
+          </Select>
+        </div>
+      </div>
+
+      <template #footer>
+        <Button label="Cancel" icon="pi pi-times" text @click="createNewWorkerDialog = false" />
+        <Button :disabled="!newWorkerData.name.trim()" label="Сохранить" icon="pi pi-check" @click="saveNewWorker(newWorkerData)" />
+      </template>
+    </Dialog>
   </Fluid>
 </template>
 
