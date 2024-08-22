@@ -1,1 +1,0 @@
-import{_ as e,a as s,c,b as t}from"./index-CZmPgcIN.js";const o={},a={className:"card"},n=t("div",{class:"font-semibold text-xl mb-4"},"Empty Page",-1),r=t("p",null,"Use this page to start from scratch and place your custom content.",-1),_=[n,r];function d(i,l){return s(),c("div",a,_)}const p=e(o,[["render",d]]);export{p as default};
