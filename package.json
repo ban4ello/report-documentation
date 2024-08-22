@@ -4,6 +4,8 @@
     "author": "Ivan Miroshnichenko",
     "scripts": {
         "dev": "vite",
+        "predeploy": "npm run build",
+        "deploy": "gh-pages -d dist",
         "build": "vite build",
         "preview": "vite preview",
         "lint": "eslint --fix . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
@@ -24,6 +26,7 @@
         "autoprefixer": "^10.4.19",
         "eslint": "^8.57.0",
         "eslint-plugin-vue": "^9.23.0",
+        "gh-pages": "^6.1.1",
         "postcss": "^8.4.40",
         "prettier": "^3.2.5",
         "sass": "^1.55.0",

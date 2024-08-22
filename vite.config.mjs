@@ -7,7 +7,7 @@ import { defineConfig } from 'vite';
 
 // https://vitejs.dev/config/
 export default defineConfig({
-  base: process.env.NODE_ENV === 'production' ? 'https://ban4ello.github.io/report-documentation/' : '/',
+  base: process.env.NODE_ENV === 'production' ? '/report-documentation' : '/',
   mode: process.env.NODE_ENV === 'production' ? 'production' : 'development',
   optimizeDeps: {
     noDiscovery: true
