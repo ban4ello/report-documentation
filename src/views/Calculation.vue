@@ -8,21 +8,20 @@
   - Добавить поле "Имя калькуляции" (по дефолту: "Калькуляция <дата>")
 
   ИТР
-    - сделать подблок значений ЗП с налогами
   Цех
-    - сделать подблок значений ЗП с налогами
-  Итоговая ведомость
-    - сделать инфографику сколько какой вид работ потянул от общей суммы
   Спецификация:
-    - Добавить кнопку для добвления новых записей
+  - Добавить кнопку для добвления новых записей
   Итоговая ведомость:
+    - сделать инфографику сколько какой вид работ потянул от общей суммы
     - Выводить инфографику по кол. затраченых ресурсов
+    - Поля Оцинковка, Транспорт, Аренда, Эл эн сделать редактируемыми
 */
 
 import { onBeforeMount, ref, computed } from 'vue';
 import { MochDataService } from '@/service/MochDataService';
 import { useToast } from 'primevue/usetoast';
 import SearchSelect from '@/components/custom-ui/SearchSelect.vue';
+import TaxCharges from '@/components/TaxCharges.vue';
 
 const toast = useToast();
 const fileupload = ref();
@@ -49,6 +48,7 @@ let workersData = ref([]);
 let specificationData = ref([]);
 let newWorkerData = ref({ name: '', lastname: '', role: '' });
 let workersTaxData = ref([]);
+let ITRTaxData = ref([]);
 let ITRData = ref([]);
 let numberOfHoursPerShift = ref(8);
 let numberOfDaysPerShift = ref(21);
@@ -60,30 +60,10 @@ const salariesOfWorkersTotal = computed(() =>
   }, 0)
 );
 
-const taxOfSalariesOfWorkersTotal = computed(() =>
-  Number(
-    workersTaxData.value
-      .reduce((acc, item) => {
-        return acc + parseFloat((item.quantity * salariesOfWorkersTotal.value) / 100);
-      }, 0)
-      .toFixed(2)
-  )
-);
-
 const salariesOfITRTotal = computed(() =>
   ITRData.value.reduce((acc, item) => {
     return acc + Number(parseFloat((item.salaryPerMonth / numberOfDaysPerShift.value) * ITRWorkedDays.value).toFixed());
   }, 0)
-);
-
-const taxOfSalariesOfITRTotal = computed(() =>
-  Number(
-    workersTaxData.value
-      .reduce((acc, item) => {
-        return acc + parseFloat((item.quantity * salariesOfITRTotal.value) / 100);
-      }, 0)
-      .toFixed(2)
-  )
 );
 
 const salariesOfITRTotalPerMonth = computed(() =>
@@ -126,14 +106,14 @@ const priceData = computed(() => {
     {
       id: 4,
       name: 'Цех',
-      perItem: Number((taxOfSalariesOfWorkersTotal.value + salariesOfWorkersTotal.value) / totalWeightOfMetal.value).toFixed(2),
-      total: taxOfSalariesOfWorkersTotal.value + salariesOfWorkersTotal.value
+      perItem: taxTotal.value / totalWeightOfMetal.value,
+      total: taxTotal
     },
     {
       id: 5,
       name: 'Зарплата ИТР',
-      perItem: Number((taxOfSalariesOfITRTotal.value + salariesOfITRTotal.value) / totalWeightOfMetal.value).toFixed(2),
-      total: taxOfSalariesOfITRTotal.value + salariesOfITRTotal.value
+      perItem: taxITRTotal.value / totalWeightOfMetal.value,
+      total: taxITRTotal
     },
     {
       id: 6,
@@ -168,6 +148,82 @@ const priceData = computed(() => {
   ];
 });
 
+const computedWorkerTaxData = computed(() => {
+  const numberOfDecimal = 2;
+
+  return workersTaxData.value.reduce(
+    (acc, item) => {
+      switch (item.key) {
+        case 'T':
+          acc.T = Number(parseFloat(item.coefficient * salariesOfWorkersTotal.value).toFixed(numberOfDecimal));
+          break;
+        case 'TN':
+          acc.TN = Number(parseFloat((acc.T / item.coefficient.a) * item.coefficient.b).toFixed(numberOfDecimal));
+          break;
+        case 'K':
+          acc.K = Number(parseFloat(salariesOfWorkersTotal.value - acc.T).toFixed(numberOfDecimal));
+          break;
+        case 'KMIL':
+          acc.KMIL = Number(parseFloat(acc.K * item.coefficient).toFixed(numberOfDecimal));
+          break;
+        case 'KESV':
+          acc.KESV = Number(parseFloat((acc.K + acc.KMIL) * item.coefficient).toFixed(numberOfDecimal));
+          break;
+
+        default:
+          break;
+      }
+
+      return acc;
+    },
+    { TN: 0, K: 0, KMIL: 0, KESV: 0 }
+  );
+});
+
+const computedITRTaxData = computed(() => {
+  const numberOfDecimal = 2;
+
+  return ITRTaxData.value.reduce(
+    (acc, item) => {
+      switch (item.key) {
+        case 'T':
+          acc.T = Number(parseFloat(item.coefficient * salariesOfITRTotal.value).toFixed(numberOfDecimal));
+          break;
+        case 'TN':
+          acc.TN = Number(parseFloat((acc.T / item.coefficient.a) * item.coefficient.b).toFixed(numberOfDecimal));
+          break;
+        case 'K':
+          acc.K = Number(parseFloat(salariesOfITRTotal.value - acc.T).toFixed(numberOfDecimal));
+          break;
+        case 'KMIL':
+          acc.KMIL = Number(parseFloat(acc.K * item.coefficient).toFixed(numberOfDecimal));
+          break;
+        case 'KESV':
+          acc.KESV = Number(parseFloat((acc.K + acc.KMIL) * item.coefficient).toFixed(numberOfDecimal));
+          break;
+
+        default:
+          break;
+      }
+
+      return acc;
+    },
+    { TN: 0, K: 0, KMIL: 0, KESV: 0 }
+  );
+});
+
+const taxTotal = computed(() => {
+  const numberOfDecimal = 2;
+
+  return Number(parseFloat((computedWorkerTaxData.value.T + computedWorkerTaxData.value.TN + computedWorkerTaxData.value.K + computedWorkerTaxData.value.KMIL + computedWorkerTaxData.value.KESV) * 1.2).toFixed(numberOfDecimal));
+});
+
+const taxITRTotal = computed(() => {
+  const numberOfDecimal = 2;
+
+  return Number(parseFloat((computedITRTaxData.value.T + computedITRTaxData.value.TN + computedITRTaxData.value.K + computedITRTaxData.value.KMIL + computedITRTaxData.value.KESV) * 1.2).toFixed(numberOfDecimal));
+});
+
 onBeforeMount(() => {
   MochDataService.getConsumables().then((data) => {
     consumables.value = data;
@@ -187,6 +243,10 @@ onBeforeMount(() => {
 
   MochDataService.getWorkersTaxData().then((data) => {
     workersTaxData.value = data;
+  });
+
+  MochDataService.getITRTaxData().then((data) => {
+    ITRTaxData.value = data;
   });
 
   MochDataService.getITRData().then((data) => {
@@ -359,6 +419,16 @@ const saveNewWorker = (worker) => {
 
   showDialog('createNewWorkerDialog', false);
 };
+
+const formatNumber = (numberData) => {
+  if (numberData && numberData.value) {
+    return new Intl.NumberFormat('ru-RU').format(numberData.value);
+  } else if (numberData) {
+    return new Intl.NumberFormat('ru-RU').format(numberData);
+  } else {
+    return 0;
+  }
+};
 </script>
 
 <template>
@@ -380,13 +450,13 @@ const saveNewWorker = (worker) => {
 
               <Column field="total" header="Общая" style="width: 25%">
                 <template #body="{ data }">
-                  {{ data.total }}
+                  {{ formatNumber(data.total) }}
                 </template>
               </Column>
 
               <Column field="perItem" header="На 1 тн" style="width: 25%">
                 <template #body="{ data }">
-                  {{ data.perItem }}
+                  {{ formatNumber(data.perItem) }}
                 </template>
               </Column>
             </DataTable>
@@ -498,7 +568,7 @@ const saveNewWorker = (worker) => {
 
               <Column field="salaryPerDay" header="В день" style="width: 25%">
                 <template #body="{ data }">
-                  {{ data.salaryPerDay }}
+                  {{ formatNumber(data.salaryPerDay) }}
                 </template>
 
                 <template #editor="{ data }">
@@ -508,13 +578,13 @@ const saveNewWorker = (worker) => {
 
               <Column field="salaryPerHour" header="В час" style="width: 25%">
                 <template #body="{ data }">
-                  {{ data.salaryPerDay / numberOfHoursPerShift }}
+                  {{ formatNumber(data.salaryPerDay / numberOfHoursPerShift) }}
                 </template>
               </Column>
 
               <Column field="total" header="Итого" style="width: 25%">
                 <template #body="{ data }">
-                  {{ Number((data.salaryPerDay / numberOfHoursPerShift) * data.numberOfHoursWorked).toFixed() }}
+                  {{ formatNumber(Number((data.salaryPerDay / numberOfHoursPerShift) * data.numberOfHoursWorked).toFixed()) }}
                 </template>
               </Column>
 
@@ -528,11 +598,7 @@ const saveNewWorker = (worker) => {
               <template #footer>
                 <div class="flex justify-end gap-4 w-full">
                   <div class="flex items-center">
-                    ЗП без налога: &nbsp;<span class="font-bold text-lg"> {{ salariesOfWorkersTotal }}</span>
-                  </div>
-
-                  <div class="flex items-center">
-                    ЗП с налогом: &nbsp;<span class="font-bold text-lg"> {{ taxOfSalariesOfWorkersTotal + salariesOfWorkersTotal }}</span>
+                    Итого: &nbsp;<span class="font-bold text-lg"> {{ formatNumber(salariesOfWorkersTotal) }}</span>
                   </div>
                 </div>
               </template>
@@ -564,51 +630,7 @@ const saveNewWorker = (worker) => {
           </div>
         </div>
 
-        <div class="tax-charges">
-          <div class="card h-full">
-            <div class="flex flex-row items-center justify-between gap-2">
-              <div class="font-semibold text-[--primary-color] text-xl">Налоговые начисления</div>
-            </div>
-
-            <DataTable :value="workersTaxData" editMode="cell" @cell-edit-complete="onCellEditComplete">
-              <Column field="name" header="Имя" style="width: 25%">
-                <template #body="{ data }">
-                  {{ data.name }}
-                </template>
-
-                <!-- <template #editor="{ data }">
-                  <Select id="staff" v-model="data.name" :options="dropdownItemsWorkerStaff" class="w-full"></Select>
-                </template> -->
-              </Column>
-
-              <Column field="quantity" header="Размер налога" style="width: 25%">
-                <template #body="{ data }">
-                  {{ data.quantity + (data.type === 'percent' ? '%' : '') }}
-                </template>
-
-                <!-- <template #editor="{ data }">
-                  <InputText v-model="data.quantity" type="number" />
-                </template> -->
-              </Column>
-
-              <Column field="total" header="Сумма" style="width: 25%">
-                <template #body="{ data }">
-                  {{ parseFloat((data.quantity * salariesOfWorkersTotal) / 100) }}
-                </template>
-
-                <template #editor="{ data }">
-                  <InputText v-model="data.total" type="number" />
-                </template>
-              </Column>
-
-              <template #footer>
-                <div class="flex justify-end items-center font-bold w-full">
-                  Итого: &nbsp;<span class="text-lg"> {{ taxOfSalariesOfWorkersTotal }}</span>
-                </div>
-              </template>
-            </DataTable>
-          </div>
-        </div>
+        <TaxCharges :computedTaxData="computedWorkerTaxData" :taxData="workersTaxData" :totalAmount="salariesOfWorkersTotal" :taxTotal="taxTotal" :formatNumber="formatNumber" />
       </div>
 
       <div class="grid grid-cols-1fr-35 gap-4">
@@ -650,7 +672,7 @@ const saveNewWorker = (worker) => {
 
               <Column field="salaryPerMonth" header="ЗП в месяц" style="width: 25%">
                 <template #body="{ data }">
-                  {{ data.salaryPerMonth }}
+                  {{ formatNumber(data.salaryPerMonth) }}
                 </template>
 
                 <template #editor="{ data }">
@@ -660,7 +682,7 @@ const saveNewWorker = (worker) => {
 
               <Column field="salaryPerDay" header="ЗП по факту" style="width: 25%">
                 <template #body="{ data }">
-                  {{ parseFloat((data.salaryPerMonth / numberOfDaysPerShift) * ITRWorkedDays).toFixed() }}
+                  {{ formatNumber(parseFloat((data.salaryPerMonth / numberOfDaysPerShift) * ITRWorkedDays).toFixed()) }}
                 </template>
               </Column>
 
@@ -674,11 +696,11 @@ const saveNewWorker = (worker) => {
               <template #footer>
                 <div class="flex justify-end gap-4 w-full">
                   <div class="flex items-center">
-                    Итого ЗП за полный месяц работы: &nbsp;<span class="font-bold text-lg"> {{ salariesOfITRTotalPerMonth }}</span>
+                    Итого ЗП за полный месяц работы: &nbsp;<span class="font-bold text-lg"> {{ formatNumber(salariesOfITRTotalPerMonth) }}</span>
                   </div>
 
                   <div class="flex items-center">
-                    Итого ЗП по факту: &nbsp;<span class="font-bold text-lg"> {{ salariesOfITRTotal }}</span>
+                    Итого ЗП по факту: &nbsp;<span class="font-bold text-lg"> {{ formatNumber(salariesOfITRTotal) }}</span>
                   </div>
                 </div>
               </template>
@@ -705,51 +727,7 @@ const saveNewWorker = (worker) => {
           </div>
         </div>
 
-        <div class="tax-charges">
-          <div class="card h-full">
-            <div class="flex flex-row items-center justify-between gap-2">
-              <div class="font-semibold text-[--primary-color] text-xl">Налоговые начисления</div>
-            </div>
-
-            <DataTable :value="workersTaxData" editMode="cell" @cell-edit-complete="onCellEditComplete">
-              <Column field="name" header="Имя" style="width: 25%">
-                <template #body="{ data }">
-                  {{ data.name }}
-                </template>
-
-                <!-- <template #editor="{ data }">
-                  <Select id="staff" v-model="data.name" :options="dropdownItemsWorkerStaff" class="w-full"></Select>
-                </template> -->
-              </Column>
-
-              <Column field="quantity" header="Размер налога" style="width: 25%">
-                <template #body="{ data }">
-                  {{ data.quantity + (data.type === 'percent' ? '%' : '') }}
-                </template>
-
-                <!-- <template #editor="{ data }">
-                  <InputText v-model="data.quantity" type="number" />
-                </template> -->
-              </Column>
-
-              <Column field="total" header="Сумма" style="width: 25%">
-                <template #body="{ data }">
-                  {{ parseFloat((data.quantity * salariesOfITRTotal) / 100) }}
-                </template>
-
-                <template #editor="{ data }">
-                  <InputText v-model="data.total" type="number" />
-                </template>
-              </Column>
-
-              <template #footer>
-                <div class="flex justify-end items-center font-bold w-full">
-                  Итого: &nbsp;<span class="text-lg"> {{ taxOfSalariesOfITRTotal }}</span>
-                </div>
-              </template>
-            </DataTable>
-          </div>
-        </div>
+        <TaxCharges :computedTaxData="computedITRTaxData" :taxData="ITRTaxData" :totalAmount="salariesOfITRTotal" :taxTotal="taxITRTotal" :formatNumber="formatNumber" />
       </div>
 
       <div class="card total-costs">
@@ -807,7 +785,7 @@ const saveNewWorker = (worker) => {
 
                 <template #footer>
                   <div class="flex justify-end items-center font-bold w-full">
-                    Итого: &nbsp;<span class="text-lg">{{ totalConsumables }}</span>
+                    Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalConsumables) }}</span>
                   </div>
                 </template>
               </DataTable>
@@ -861,7 +839,7 @@ const saveNewWorker = (worker) => {
 
                 <template #footer>
                   <div class="flex justify-end items-center font-bold w-full">
-                    Итого: &nbsp;<span class="text-lg">{{ totalHardware }}</span>
+                    Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalHardware) }}</span>
                   </div>
                 </template>
               </DataTable>
@@ -911,7 +889,7 @@ const saveNewWorker = (worker) => {
 
                 <template #footer>
                   <div class="flex justify-end items-center font-bold w-full">
-                    Итого: &nbsp;<span class="text-lg">{{ totalMetal }}</span>
+                    Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalMetal) }}</span>
                   </div>
                 </template>
               </DataTable>
