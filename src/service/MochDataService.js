@@ -218,22 +218,8 @@ export const MochDataService = {
       {
         id: 1,
         name: 'Изделие №1',
-        quantity: 2,
-        weightPerItem: 2,
-        totalWeight: null
-      },
-      {
-        id: 2,
-        name: 'Изделие №2',
-        quantity: 3,
-        weightPerItem: 5,
-        totalWeight: null
-      },
-      {
-        id: 3,
-        name: 'Изделие №3',
-        quantity: 4,
-        weightPerItem: 1,
+        quantity: 1,
+        weightPerItem: 2.0018,
         totalWeight: null
       }
     ];

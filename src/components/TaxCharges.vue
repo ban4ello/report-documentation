@@ -20,6 +20,10 @@ const props = defineProps({
     type: Number,
     default: 0
   },
+  coeficientOfNDS: {
+    type: Number,
+    default: 0
+  },
   formatNumber: {
     type: Function,
     default: () => {}
@@ -41,16 +45,21 @@ const onCellEditComplete = (event) => {
 
 <template>
   <div class="tax-charges">
-    <div class="card h-full">
+    <div class="card h-full flex flex-col gap-4">
       <div class="flex flex-row items-center justify-between gap-2">
         <div class="font-semibold text-[--primary-color] text-xl">{{ props.title }}</div>
       </div>
 
       <div class="flex flex-row items-center justify-between gap-2">
         <div class="text-lg">Исходная сумма: {{ props.formatNumber(props.totalAmount) }}</div>
+
+        <div class="flex flex-row gap-2 items-center">
+          <label for="coeficientOfNDS">НДС:</label>
+          <InputNumber :modelValue="props.coeficientOfNDS" @input="(data) => $emit('changeCoeficient', data)" fluid inputId="coeficientOfNDS" class="max-w-[50px]" :minFractionDigits="1" :maxFractionDigits="5" />
+        </div>
       </div>
 
-      <DataTable :value="props.taxData" editMode="cell" @cell-edit-complete="onCellEditComplete">
+      <DataTable :value="props.taxData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
         <Column v-for="col of columns" :key="col.field" :field="col.field" :header="col.header">
           <template #body="{ data }">
             <div v-if="col.field === 'name'">

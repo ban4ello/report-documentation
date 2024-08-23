@@ -5,7 +5,7 @@
   - Добавить возможность гибко управлять стоимостью ЗП в блоках "ИТР" и "Цех"
   - Добавить возможность прикреплять файлы (чертежи) к проекту (заказу)
   - После создания "калькуляции" ("план") предлагать клонировать её (создать "факт"). В итоговый дашборд войдёт как "план" так и "факт"
-  - Добавить поле "Имя калькуляции" (по дефолту: "Калькуляция <дата>")
+  - Добавить кнопку "Сохранить"
 
   ИТР
   Цех
@@ -15,6 +15,8 @@
     - сделать инфографику сколько какой вид работ потянул от общей суммы
     - Выводить инфографику по кол. затраченых ресурсов
     - Поля Оцинковка, Транспорт, Аренда, Эл эн сделать редактируемыми
+  Общие затраты:
+  - Научить парсить таблицы из экселя
 */
 
 import { onBeforeMount, ref, computed } from 'vue';
@@ -44,6 +46,12 @@ const selectedITRStaff = ref(null);
 const newStaffDialog = ref(false);
 const newITRStaffDialog = ref(false);
 const createNewWorkerDialog = ref(false);
+
+let currentDate = new Date();
+const today = `${currentDate.getDate()}.${currentDate.getMonth()}.${currentDate.getFullYear()}`;
+const currentTime = currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds();
+
+let calculationData = ref({ title: 'Калькуляция-' + today, dateOfCreation: today, lastEditDate: today + ' ' + currentTime });
 let workersData = ref([]);
 let specificationData = ref([]);
 let newWorkerData = ref({ name: '', lastname: '', role: '' });
@@ -53,6 +61,9 @@ let ITRData = ref([]);
 let numberOfHoursPerShift = ref(8);
 let numberOfDaysPerShift = ref(21);
 let ITRWorkedDays = ref(13);
+let rentalCostPerDay = ref(170);
+let costOfElectricityPerDay = ref(550);
+let coeficientOfNDS = ref(1.2);
 
 const salariesOfWorkersTotal = computed(() =>
   workersData.value.reduce((acc, item) => {
@@ -81,38 +92,37 @@ const totalSpecificationItems = computed(() =>
 const totalConsumables = computed(() => getTotalPrice(consumables.value));
 const totalHardware = computed(() => getTotalPrice(hardware.value));
 const totalMetal = computed(() => getTotalPrice(metalData.value));
-const totalWeightOfMetal = computed(() => specification.value.quantity * specification.value.weightOfOnePiece);
 
 const priceData = computed(() => {
   return [
     {
       id: 1,
       name: 'Металл',
-      perItem: Number(totalMetal.value / totalWeightOfMetal.value).toFixed(2),
+      perItem: Number(totalMetal.value / totalSpecificationItems.value).toFixed(2),
       total: totalMetal
     },
     {
       id: 2,
       name: 'Метизы',
-      perItem: Number(totalHardware.value / totalWeightOfMetal.value).toFixed(2),
+      perItem: Number(totalHardware.value / totalSpecificationItems.value).toFixed(2),
       total: totalHardware
     },
     {
       id: 3,
       name: 'Расходники',
-      perItem: Number(totalConsumables.value / totalWeightOfMetal.value).toFixed(2),
+      perItem: Number(totalConsumables.value / totalSpecificationItems.value).toFixed(2),
       total: totalConsumables
     },
     {
       id: 4,
       name: 'Цех',
-      perItem: taxTotal.value / totalWeightOfMetal.value,
+      perItem: taxTotal.value / totalSpecificationItems.value,
       total: taxTotal
     },
     {
       id: 5,
       name: 'Зарплата ИТР',
-      perItem: taxITRTotal.value / totalWeightOfMetal.value,
+      perItem: taxITRTotal.value / totalSpecificationItems.value,
       total: taxITRTotal
     },
     {
@@ -130,14 +140,14 @@ const priceData = computed(() => {
     {
       id: 8,
       name: 'Аренда',
-      perItem: null,
-      total: null
+      perItem: (rentalCostPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value,
+      total: rentalCostPerDay.value * ITRWorkedDays.value
     },
     {
       id: 9,
       name: 'Эл эн',
-      perItem: null,
-      total: null
+      perItem: (costOfElectricityPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value,
+      total: costOfElectricityPerDay.value * ITRWorkedDays.value
     },
     {
       id: 10,
@@ -215,13 +225,13 @@ const computedITRTaxData = computed(() => {
 const taxTotal = computed(() => {
   const numberOfDecimal = 2;
 
-  return Number(parseFloat((computedWorkerTaxData.value.T + computedWorkerTaxData.value.TN + computedWorkerTaxData.value.K + computedWorkerTaxData.value.KMIL + computedWorkerTaxData.value.KESV) * 1.2).toFixed(numberOfDecimal));
+  return Number(parseFloat((computedWorkerTaxData.value.T + computedWorkerTaxData.value.TN + computedWorkerTaxData.value.K + computedWorkerTaxData.value.KMIL + computedWorkerTaxData.value.KESV) * coeficientOfNDS.value).toFixed(numberOfDecimal));
 });
 
 const taxITRTotal = computed(() => {
   const numberOfDecimal = 2;
 
-  return Number(parseFloat((computedITRTaxData.value.T + computedITRTaxData.value.TN + computedITRTaxData.value.K + computedITRTaxData.value.KMIL + computedITRTaxData.value.KESV) * 1.2).toFixed(numberOfDecimal));
+  return Number(parseFloat((computedITRTaxData.value.T + computedITRTaxData.value.TN + computedITRTaxData.value.K + computedITRTaxData.value.KMIL + computedITRTaxData.value.KESV) * coeficientOfNDS.value).toFixed(numberOfDecimal));
 });
 
 onBeforeMount(() => {
@@ -298,6 +308,16 @@ const copySpecification = (data) => {
     quantity: data.quantity,
     weightPerItem: data.weightPerItem,
     totalWeight: data.totalWeight
+  });
+};
+
+const addNewSpecification = () => {
+  specificationData.value.push({
+    id: (Math.random() * 1000).toFixed(),
+    name: null,
+    quantity: null,
+    weightPerItem: null,
+    totalWeight: null
   });
 };
 
@@ -433,6 +453,24 @@ const formatNumber = (numberData) => {
 
 <template>
   <Fluid>
+    <div class="card calculation-title">
+      <div class="flex flex-row justify-between gap-2">
+        <div class="font-semibold text-[--primary-color] text-xl">
+          <span>Название калькуляции:</span><span><InputText v-model="calculationData.title" type="text" /></span>
+        </div>
+
+        <div class="font-semibold text-[--primary-color] text-xl">
+          <p>Дата создания:</p>
+          <p>{{ calculationData.dateOfCreation }}</p>
+        </div>
+
+        <div class="font-semibold text-[--primary-color] text-xl">
+          <p>Дата последнего редактирования:</p>
+          <p>{{ calculationData.lastEditDate }}</p>
+        </div>
+      </div>
+    </div>
+
     <div class="flex flex-col gap-4">
       <div class="grid grid-cols-35-1fr gap-4">
         <div class="final-statement">
@@ -441,20 +479,24 @@ const formatNumber = (numberData) => {
               <div class="font-semibold text-[--primary-color] text-xl">Итоговая ведомость</div>
             </div>
 
-            <DataTable :value="priceData" editMode="cell" showGridlines @cell-edit-complete="onCellEditComplete">
-              <Column field="name" style="width: 25%">
+            <DataTable :value="priceData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
+              <Column field="name">
                 <template #body="{ data }">
                   {{ data.name }}
                 </template>
               </Column>
 
-              <Column field="total" header="Общая" style="width: 25%">
+              <Column field="total" header="Общая">
                 <template #body="{ data }">
                   {{ formatNumber(data.total) }}
                 </template>
+
+                <template #editor="{ data }">
+                  <InputText v-model="data.total" type="number" />
+                </template>
               </Column>
 
-              <Column field="perItem" header="На 1 тн" style="width: 25%">
+              <Column field="perItem" header="На 1 тн">
                 <template #body="{ data }">
                   {{ formatNumber(data.perItem) }}
                 </template>
@@ -469,7 +511,7 @@ const formatNumber = (numberData) => {
               <div class="font-semibold text-[--primary-color] text-xl">Спецификация</div>
             </div>
 
-            <DataTable :value="specificationData" editMode="cell" @cell-edit-complete="onCellEditComplete">
+            <DataTable :value="specificationData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
               <Column field="name" header="Наименование изделия" style="width: 25%">
                 <template #body="{ data }">
                   {{ data.name }}
@@ -514,6 +556,8 @@ const formatNumber = (numberData) => {
               </Column>
 
               <template #footer>
+                <div class="flex justify-center items-center text-[--primary-color] hover:cursor-pointer" @click="addNewSpecification">добавить строку +</div>
+
                 <div class="flex justify-end gap-4 w-full">
                   <div class="flex items-center">
                     Итого общий вес: &nbsp;<span class="font-bold text-lg"> {{ totalSpecificationItems }} тонн</span>
@@ -521,11 +565,23 @@ const formatNumber = (numberData) => {
                 </div>
               </template>
             </DataTable>
+
+            <div class="flex flex-col gap-2 mb-4">
+              <div class="flex flex-row gap-2 items-center">
+                <label for="rentalCostPerDay">Стоимость аренды в день:</label>
+                <InputNumber v-model="rentalCostPerDay" inputId="rentalCostPerDay" class="max-w-[50px]" :min="0" :max="10000" fluid />
+              </div>
+
+              <div class="flex flex-row gap-2 items-center">
+                <label for="costOfElectricityPerDay">Стоимость эл. эн. в день:</label>
+                <InputNumber v-model="costOfElectricityPerDay" inputId="costOfElectricityPerDay" class="max-w-[50px]" :min="0" :max="10000" fluid />
+              </div>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-1fr-35 gap-4">
+      <div class="grid grid-cols-1fr-40 gap-4">
         <div class="shop">
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2">
@@ -542,10 +598,10 @@ const formatNumber = (numberData) => {
               <InputNumber v-model="numberOfHoursPerShift" inputId="numberOfHoursPerShift" :min="0" :max="10000" fluid />
             </div>
 
-            <DataTable :value="workersData" v-model:selection="selectedStaff" editMode="cell" @cell-edit-complete="onCellEditComplete">
+            <DataTable :value="workersData" v-model:selection="selectedStaff" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
               <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
-              <Column field="name" header="Имя сотрудника" style="width: 25%">
+              <Column field="name" header="Имя сотрудника">
                 <template #body="{ data }">
                   {{ data.name }}
                 </template>
@@ -556,7 +612,7 @@ const formatNumber = (numberData) => {
                 </template>
               </Column>
 
-              <Column field="numberOfHoursWorked" header="Трудозатраты" style="width: 25%">
+              <Column field="numberOfHoursWorked" header="Трудозатраты">
                 <template #body="{ data }">
                   {{ data.numberOfHoursWorked }}
                 </template>
@@ -566,7 +622,7 @@ const formatNumber = (numberData) => {
                 </template>
               </Column>
 
-              <Column field="salaryPerDay" header="В день" style="width: 25%">
+              <Column field="salaryPerDay" header="В день">
                 <template #body="{ data }">
                   {{ formatNumber(data.salaryPerDay) }}
                 </template>
@@ -576,13 +632,13 @@ const formatNumber = (numberData) => {
                 </template>
               </Column>
 
-              <Column field="salaryPerHour" header="В час" style="width: 25%">
+              <Column field="salaryPerHour" header="В час">
                 <template #body="{ data }">
                   {{ formatNumber(data.salaryPerDay / numberOfHoursPerShift) }}
                 </template>
               </Column>
 
-              <Column field="total" header="Итого" style="width: 25%">
+              <Column field="total" header="Итого">
                 <template #body="{ data }">
                   {{ formatNumber(Number((data.salaryPerDay / numberOfHoursPerShift) * data.numberOfHoursWorked).toFixed()) }}
                 </template>
@@ -630,10 +686,18 @@ const formatNumber = (numberData) => {
           </div>
         </div>
 
-        <TaxCharges :computedTaxData="computedWorkerTaxData" :taxData="workersTaxData" :totalAmount="salariesOfWorkersTotal" :taxTotal="taxTotal" :formatNumber="formatNumber" />
+        <TaxCharges
+          :computedTaxData="computedWorkerTaxData"
+          :taxData="workersTaxData"
+          :totalAmount="salariesOfWorkersTotal"
+          :taxTotal="taxTotal"
+          :formatNumber="formatNumber"
+          :coeficientOfNDS="coeficientOfNDS"
+          @changeCoeficient="(data) => (coeficientOfNDS = data.value)"
+        />
       </div>
 
-      <div class="grid grid-cols-1fr-35 gap-4">
+      <div class="grid grid-cols-1fr-40 gap-4">
         <div class="ITR">
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2 mb-4">
@@ -657,7 +721,7 @@ const formatNumber = (numberData) => {
               </div>
             </div>
 
-            <DataTable :value="ITRData" v-model:selection="selectedITRStaff" editMode="cell" @cell-edit-complete="onCellEditComplete">
+            <DataTable :value="ITRData" v-model:selection="selectedITRStaff" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
               <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
               <Column field="name" header="Имя сотрудника" style="width: 25%">
@@ -727,7 +791,15 @@ const formatNumber = (numberData) => {
           </div>
         </div>
 
-        <TaxCharges :computedTaxData="computedITRTaxData" :taxData="ITRTaxData" :totalAmount="salariesOfITRTotal" :taxTotal="taxITRTotal" :formatNumber="formatNumber" />
+        <TaxCharges
+          :computedTaxData="computedITRTaxData"
+          :taxData="ITRTaxData"
+          :totalAmount="salariesOfITRTotal"
+          :taxTotal="taxITRTotal"
+          :formatNumber="formatNumber"
+          :coeficientOfNDS="coeficientOfNDS"
+          @changeCoeficient="(data) => (coeficientOfNDS = data.value)"
+        />
       </div>
 
       <div class="card total-costs">
@@ -947,6 +1019,10 @@ const formatNumber = (numberData) => {
 
 .grid-cols-1fr-35 {
   grid-template-columns: 1fr 35%;
+}
+
+.grid-cols-1fr-40 {
+  grid-template-columns: 1fr 38%;
 }
 
 .grid-cols-35-1fr {
