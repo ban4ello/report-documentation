@@ -50,7 +50,7 @@ const onCellEditComplete = (event) => {
         <div class="text-lg">Исходная сумма: {{ props.formatNumber(props.totalAmount) }}</div>
       </div>
 
-      <DataTable :value="props.taxData" editMode="cell" @cell-edit-complete="onCellEditComplete">
+      <DataTable :value="props.taxData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
         <Column v-for="col of columns" :key="col.field" :field="col.field" :header="col.header">
           <template #body="{ data }">
             <div v-if="col.field === 'name'">

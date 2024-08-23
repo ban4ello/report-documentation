@@ -5,7 +5,7 @@
   - Добавить возможность гибко управлять стоимостью ЗП в блоках "ИТР" и "Цех"
   - Добавить возможность прикреплять файлы (чертежи) к проекту (заказу)
   - После создания "калькуляции" ("план") предлагать клонировать её (создать "факт"). В итоговый дашборд войдёт как "план" так и "факт"
-  - Добавить поле "Имя калькуляции" (по дефолту: "Калькуляция <дата>")
+  - Добавить кнопку "Сохранить"
 
   ИТР
   Цех
@@ -15,6 +15,8 @@
     - сделать инфографику сколько какой вид работ потянул от общей суммы
     - Выводить инфографику по кол. затраченых ресурсов
     - Поля Оцинковка, Транспорт, Аренда, Эл эн сделать редактируемыми
+  Общие затраты:
+  - Научить парсить таблицы из экселя
 */
 
 import { onBeforeMount, ref, computed } from 'vue';
@@ -307,6 +309,16 @@ const copySpecification = (data) => {
   });
 };
 
+const addNewSpecification = () => {
+  specificationData.value.push({
+    id: (Math.random() * 1000).toFixed(),
+    name: null,
+    quantity: null,
+    weightPerItem: null,
+    totalWeight: null
+  });
+};
+
 const confirmDeleteSpecification = (data) => {
   specificationData.value = specificationData.value.filter((item) => item.id !== data.id);
 };
@@ -465,7 +477,7 @@ const formatNumber = (numberData) => {
               <div class="font-semibold text-[--primary-color] text-xl">Итоговая ведомость</div>
             </div>
 
-            <DataTable :value="priceData" editMode="cell" showGridlines @cell-edit-complete="onCellEditComplete">
+            <DataTable :value="priceData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
               <Column field="name" style="width: 25%">
                 <template #body="{ data }">
                   {{ data.name }}
@@ -493,7 +505,7 @@ const formatNumber = (numberData) => {
               <div class="font-semibold text-[--primary-color] text-xl">Спецификация</div>
             </div>
 
-            <DataTable :value="specificationData" editMode="cell" @cell-edit-complete="onCellEditComplete">
+            <DataTable :value="specificationData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
               <Column field="name" header="Наименование изделия" style="width: 25%">
                 <template #body="{ data }">
                   {{ data.name }}
@@ -538,6 +550,8 @@ const formatNumber = (numberData) => {
               </Column>
 
               <template #footer>
+                <div class="flex justify-center items-center text-[--primary-color] hover:cursor-pointer" @click="addNewSpecification">добавить строку +</div>
+
                 <div class="flex justify-end gap-4 w-full">
                   <div class="flex items-center">
                     Итого общий вес: &nbsp;<span class="font-bold text-lg"> {{ totalSpecificationItems }} тонн</span>
@@ -566,7 +580,7 @@ const formatNumber = (numberData) => {
               <InputNumber v-model="numberOfHoursPerShift" inputId="numberOfHoursPerShift" :min="0" :max="10000" fluid />
             </div>
 
-            <DataTable :value="workersData" v-model:selection="selectedStaff" editMode="cell" @cell-edit-complete="onCellEditComplete">
+            <DataTable :value="workersData" v-model:selection="selectedStaff" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
               <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
               <Column field="name" header="Имя сотрудника">
@@ -681,7 +695,7 @@ const formatNumber = (numberData) => {
               </div>
             </div>
 
-            <DataTable :value="ITRData" v-model:selection="selectedITRStaff" editMode="cell" @cell-edit-complete="onCellEditComplete">
+            <DataTable :value="ITRData" v-model:selection="selectedITRStaff" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
               <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
               <Column field="name" header="Имя сотрудника" style="width: 25%">
