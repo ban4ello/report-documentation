@@ -347,36 +347,86 @@ export const MochDataService = {
       {
         id: 1,
         name: 'т',
-        quantity: 5,
-        type: 'percent',
+        coefficient: 0.3,
+        key: 'T',
+        subtotal: null,
         total: null
       },
       {
         id: 2,
         name: 'т н',
-        quantity: 10,
-        type: 'percent',
+        coefficient: { a: 93, b: 7 },
+        key: 'TN',
+        subtotal: null,
         total: null
       },
       {
         id: 3,
         name: 'к',
-        quantity: 20,
-        type: 'percent',
+        coefficient: 0.2,
+        key: 'K',
+        subtotal: null,
         total: null
       },
       {
         id: 4,
         name: 'к налог подаходн+военн',
-        quantity: 3,
-        type: 'percent',
+        coefficient: 0.242236,
+        key: 'KMIL',
+        subtotal: null,
         total: null
       },
       {
         id: 5,
         name: 'к налог есв',
-        quantity: 3,
-        type: 'percent',
+        coefficient: 0.22,
+        key: 'KESV',
+        subtotal: null,
+        total: null
+      }
+    ];
+  },
+
+  ITRTaxData() {
+    return [
+      {
+        id: 1,
+        name: 'т',
+        coefficient: 0.3,
+        key: 'T',
+        subtotal: null,
+        total: null
+      },
+      {
+        id: 2,
+        name: 'т н',
+        coefficient: { a: 93, b: 7 },
+        key: 'TN',
+        subtotal: null,
+        total: null
+      },
+      {
+        id: 3,
+        name: 'к',
+        coefficient: 0.2,
+        key: 'K',
+        subtotal: null,
+        total: null
+      },
+      {
+        id: 4,
+        name: 'к налог подаходн+военн',
+        coefficient: 0.242236,
+        key: 'KMIL',
+        subtotal: null,
+        total: null
+      },
+      {
+        id: 5,
+        name: 'к налог есв',
+        coefficient: 0.22,
+        key: 'KESV',
+        subtotal: null,
         total: null
       }
     ];
@@ -435,6 +485,10 @@ export const MochDataService = {
 
   getWorkersTaxData() {
     return Promise.resolve(this.workersTaxData());
+  },
+
+  getITRTaxData() {
+    return Promise.resolve(this.ITRTaxData());
   },
 
   getITRData() {
