@@ -61,6 +61,9 @@ let ITRData = ref([]);
 let numberOfHoursPerShift = ref(8);
 let numberOfDaysPerShift = ref(21);
 let ITRWorkedDays = ref(13);
+let rentalCostPerDay = ref(170);
+let costOfElectricityPerDay = ref(550);
+let coeficientOfNDS = ref(1.2);
 
 const salariesOfWorkersTotal = computed(() =>
   workersData.value.reduce((acc, item) => {
@@ -89,38 +92,37 @@ const totalSpecificationItems = computed(() =>
 const totalConsumables = computed(() => getTotalPrice(consumables.value));
 const totalHardware = computed(() => getTotalPrice(hardware.value));
 const totalMetal = computed(() => getTotalPrice(metalData.value));
-const totalWeightOfMetal = computed(() => specification.value.quantity * specification.value.weightOfOnePiece);
 
 const priceData = computed(() => {
   return [
     {
       id: 1,
       name: 'Металл',
-      perItem: Number(totalMetal.value / totalWeightOfMetal.value).toFixed(2),
+      perItem: Number(totalMetal.value / totalSpecificationItems.value).toFixed(2),
       total: totalMetal
     },
     {
       id: 2,
       name: 'Метизы',
-      perItem: Number(totalHardware.value / totalWeightOfMetal.value).toFixed(2),
+      perItem: Number(totalHardware.value / totalSpecificationItems.value).toFixed(2),
       total: totalHardware
     },
     {
       id: 3,
       name: 'Расходники',
-      perItem: Number(totalConsumables.value / totalWeightOfMetal.value).toFixed(2),
+      perItem: Number(totalConsumables.value / totalSpecificationItems.value).toFixed(2),
       total: totalConsumables
     },
     {
       id: 4,
       name: 'Цех',
-      perItem: taxTotal.value / totalWeightOfMetal.value,
+      perItem: taxTotal.value / totalSpecificationItems.value,
       total: taxTotal
     },
     {
       id: 5,
       name: 'Зарплата ИТР',
-      perItem: taxITRTotal.value / totalWeightOfMetal.value,
+      perItem: taxITRTotal.value / totalSpecificationItems.value,
       total: taxITRTotal
     },
     {
@@ -138,14 +140,14 @@ const priceData = computed(() => {
     {
       id: 8,
       name: 'Аренда',
-      perItem: null,
-      total: null
+      perItem: (rentalCostPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value,
+      total: rentalCostPerDay.value * ITRWorkedDays.value
     },
     {
       id: 9,
       name: 'Эл эн',
-      perItem: null,
-      total: null
+      perItem: (costOfElectricityPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value,
+      total: costOfElectricityPerDay.value * ITRWorkedDays.value
     },
     {
       id: 10,
@@ -223,13 +225,13 @@ const computedITRTaxData = computed(() => {
 const taxTotal = computed(() => {
   const numberOfDecimal = 2;
 
-  return Number(parseFloat((computedWorkerTaxData.value.T + computedWorkerTaxData.value.TN + computedWorkerTaxData.value.K + computedWorkerTaxData.value.KMIL + computedWorkerTaxData.value.KESV) * 1.2).toFixed(numberOfDecimal));
+  return Number(parseFloat((computedWorkerTaxData.value.T + computedWorkerTaxData.value.TN + computedWorkerTaxData.value.K + computedWorkerTaxData.value.KMIL + computedWorkerTaxData.value.KESV) * coeficientOfNDS.value).toFixed(numberOfDecimal));
 });
 
 const taxITRTotal = computed(() => {
   const numberOfDecimal = 2;
 
-  return Number(parseFloat((computedITRTaxData.value.T + computedITRTaxData.value.TN + computedITRTaxData.value.K + computedITRTaxData.value.KMIL + computedITRTaxData.value.KESV) * 1.2).toFixed(numberOfDecimal));
+  return Number(parseFloat((computedITRTaxData.value.T + computedITRTaxData.value.TN + computedITRTaxData.value.K + computedITRTaxData.value.KMIL + computedITRTaxData.value.KESV) * coeficientOfNDS.value).toFixed(numberOfDecimal));
 });
 
 onBeforeMount(() => {
@@ -478,19 +480,23 @@ const formatNumber = (numberData) => {
             </div>
 
             <DataTable :value="priceData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
-              <Column field="name" style="width: 25%">
+              <Column field="name">
                 <template #body="{ data }">
                   {{ data.name }}
                 </template>
               </Column>
 
-              <Column field="total" header="Общая" style="width: 25%">
+              <Column field="total" header="Общая">
                 <template #body="{ data }">
                   {{ formatNumber(data.total) }}
                 </template>
+
+                <template #editor="{ data }">
+                  <InputText v-model="data.total" type="number" />
+                </template>
               </Column>
 
-              <Column field="perItem" header="На 1 тн" style="width: 25%">
+              <Column field="perItem" header="На 1 тн">
                 <template #body="{ data }">
                   {{ formatNumber(data.perItem) }}
                 </template>
@@ -559,6 +565,18 @@ const formatNumber = (numberData) => {
                 </div>
               </template>
             </DataTable>
+
+            <div class="flex flex-col gap-2 mb-4">
+              <div class="flex flex-row gap-2 items-center">
+                <label for="rentalCostPerDay">Стоимость аренды в день:</label>
+                <InputNumber v-model="rentalCostPerDay" inputId="rentalCostPerDay" class="max-w-[50px]" :min="0" :max="10000" fluid />
+              </div>
+
+              <div class="flex flex-row gap-2 items-center">
+                <label for="costOfElectricityPerDay">Стоимость эл. эн. в день:</label>
+                <InputNumber v-model="costOfElectricityPerDay" inputId="costOfElectricityPerDay" class="max-w-[50px]" :min="0" :max="10000" fluid />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -668,7 +686,15 @@ const formatNumber = (numberData) => {
           </div>
         </div>
 
-        <TaxCharges :computedTaxData="computedWorkerTaxData" :taxData="workersTaxData" :totalAmount="salariesOfWorkersTotal" :taxTotal="taxTotal" :formatNumber="formatNumber" />
+        <TaxCharges
+          :computedTaxData="computedWorkerTaxData"
+          :taxData="workersTaxData"
+          :totalAmount="salariesOfWorkersTotal"
+          :taxTotal="taxTotal"
+          :formatNumber="formatNumber"
+          :coeficientOfNDS="coeficientOfNDS"
+          @changeCoeficient="(data) => (coeficientOfNDS = data.value)"
+        />
       </div>
 
       <div class="grid grid-cols-1fr-40 gap-4">
@@ -765,7 +791,15 @@ const formatNumber = (numberData) => {
           </div>
         </div>
 
-        <TaxCharges :computedTaxData="computedITRTaxData" :taxData="ITRTaxData" :totalAmount="salariesOfITRTotal" :taxTotal="taxITRTotal" :formatNumber="formatNumber" />
+        <TaxCharges
+          :computedTaxData="computedITRTaxData"
+          :taxData="ITRTaxData"
+          :totalAmount="salariesOfITRTotal"
+          :taxTotal="taxITRTotal"
+          :formatNumber="formatNumber"
+          :coeficientOfNDS="coeficientOfNDS"
+          @changeCoeficient="(data) => (coeficientOfNDS = data.value)"
+        />
       </div>
 
       <div class="card total-costs">
