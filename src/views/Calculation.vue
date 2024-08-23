@@ -44,6 +44,12 @@ const selectedITRStaff = ref(null);
 const newStaffDialog = ref(false);
 const newITRStaffDialog = ref(false);
 const createNewWorkerDialog = ref(false);
+
+let currentDate = new Date();
+const today = `${currentDate.getDate()}.${currentDate.getMonth()}.${currentDate.getFullYear()}`;
+const currentTime = currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds();
+
+let calculationData = ref({ title: 'Калькуляция-' + today, dateOfCreation: today, lastEditDate: today + ' ' + currentTime });
 let workersData = ref([]);
 let specificationData = ref([]);
 let newWorkerData = ref({ name: '', lastname: '', role: '' });
@@ -433,6 +439,24 @@ const formatNumber = (numberData) => {
 
 <template>
   <Fluid>
+    <div class="card calculation-title">
+      <div class="flex flex-row justify-between gap-2">
+        <div class="font-semibold text-[--primary-color] text-xl">
+          <span>Название калькуляции:</span><span><InputText v-model="calculationData.title" type="text" /></span>
+        </div>
+
+        <div class="font-semibold text-[--primary-color] text-xl">
+          <p>Дата создания:</p>
+          <p>{{ calculationData.dateOfCreation }}</p>
+        </div>
+
+        <div class="font-semibold text-[--primary-color] text-xl">
+          <p>Дата последнего редактирования:</p>
+          <p>{{ calculationData.lastEditDate }}</p>
+        </div>
+      </div>
+    </div>
+
     <div class="flex flex-col gap-4">
       <div class="grid grid-cols-35-1fr gap-4">
         <div class="final-statement">
@@ -525,7 +549,7 @@ const formatNumber = (numberData) => {
         </div>
       </div>
 
-      <div class="grid grid-cols-1fr-35 gap-4">
+      <div class="grid grid-cols-1fr-40 gap-4">
         <div class="shop">
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2">
@@ -545,7 +569,7 @@ const formatNumber = (numberData) => {
             <DataTable :value="workersData" v-model:selection="selectedStaff" editMode="cell" @cell-edit-complete="onCellEditComplete">
               <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
-              <Column field="name" header="Имя сотрудника" style="width: 25%">
+              <Column field="name" header="Имя сотрудника">
                 <template #body="{ data }">
                   {{ data.name }}
                 </template>
@@ -556,7 +580,7 @@ const formatNumber = (numberData) => {
                 </template>
               </Column>
 
-              <Column field="numberOfHoursWorked" header="Трудозатраты" style="width: 25%">
+              <Column field="numberOfHoursWorked" header="Трудозатраты">
                 <template #body="{ data }">
                   {{ data.numberOfHoursWorked }}
                 </template>
@@ -566,7 +590,7 @@ const formatNumber = (numberData) => {
                 </template>
               </Column>
 
-              <Column field="salaryPerDay" header="В день" style="width: 25%">
+              <Column field="salaryPerDay" header="В день">
                 <template #body="{ data }">
                   {{ formatNumber(data.salaryPerDay) }}
                 </template>
@@ -576,13 +600,13 @@ const formatNumber = (numberData) => {
                 </template>
               </Column>
 
-              <Column field="salaryPerHour" header="В час" style="width: 25%">
+              <Column field="salaryPerHour" header="В час">
                 <template #body="{ data }">
                   {{ formatNumber(data.salaryPerDay / numberOfHoursPerShift) }}
                 </template>
               </Column>
 
-              <Column field="total" header="Итого" style="width: 25%">
+              <Column field="total" header="Итого">
                 <template #body="{ data }">
                   {{ formatNumber(Number((data.salaryPerDay / numberOfHoursPerShift) * data.numberOfHoursWorked).toFixed()) }}
                 </template>
@@ -633,7 +657,7 @@ const formatNumber = (numberData) => {
         <TaxCharges :computedTaxData="computedWorkerTaxData" :taxData="workersTaxData" :totalAmount="salariesOfWorkersTotal" :taxTotal="taxTotal" :formatNumber="formatNumber" />
       </div>
 
-      <div class="grid grid-cols-1fr-35 gap-4">
+      <div class="grid grid-cols-1fr-40 gap-4">
         <div class="ITR">
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2 mb-4">
@@ -947,6 +971,10 @@ const formatNumber = (numberData) => {
 
 .grid-cols-1fr-35 {
   grid-template-columns: 1fr 35%;
+}
+
+.grid-cols-1fr-40 {
+  grid-template-columns: 1fr 38%;
 }
 
 .grid-cols-35-1fr {
