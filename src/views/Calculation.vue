@@ -1,15 +1,22 @@
 <script setup>
 /*
   TODO:
-  1. Разработать функционал добавления в базу новых сотрудников
-  2. Добавить возможность гибко управлять стоимостью ЗП
-  4. Таблица с ЗП ИТровцев:
+  - Разработать функционал добавления в базу новых сотрудников
+  - Добавить возможность гибко управлять стоимостью ЗП в блоках "ИТР" и "Цех"
+  - Добавить возможность прикреплять файлы (чертежи) к проекту (заказу)
+  - После создания "калькуляции" ("план") предлагать клонировать её (создать "факт"). В итоговый дашборд войдёт как "план" так и "факт"
+  - Добавить поле "Имя калькуляции" (по дефолту: "Калькуляция <дата>")
+
+  ИТР
     - сделать подблок значений ЗП с налогами
-  5. В блоке "Цех"
+  Цех
     - сделать подблок значений ЗП с налогами
-  6. В блоке "Итоговая ведомость"
+  Итоговая ведомость
     - сделать инфографику сколько какой вид работ потянул от общей суммы
-  7. Добавить возможность прикреплять файлы (чертежи) к проекту (заказу))
+  Спецификация:
+    - Добавить кнопку для добвления новых записей
+  Итоговая ведомость:
+    - Выводить инфографику по кол. затраченых ресурсов
 */
 
 import { onBeforeMount, ref, computed } from 'vue';
@@ -357,8 +364,36 @@ const saveNewWorker = (worker) => {
 <template>
   <Fluid>
     <div class="flex flex-col gap-4">
-      <div class="grid grid-cols-1fr-35 gap-4">
-        <div>
+      <div class="grid grid-cols-35-1fr gap-4">
+        <div class="final-statement">
+          <div class="card">
+            <div class="flex flex-row justify-between gap-2">
+              <div class="font-semibold text-[--primary-color] text-xl">Итоговая ведомость</div>
+            </div>
+
+            <DataTable :value="priceData" editMode="cell" showGridlines @cell-edit-complete="onCellEditComplete">
+              <Column field="name" style="width: 25%">
+                <template #body="{ data }">
+                  {{ data.name }}
+                </template>
+              </Column>
+
+              <Column field="total" header="Общая" style="width: 25%">
+                <template #body="{ data }">
+                  {{ data.total }}
+                </template>
+              </Column>
+
+              <Column field="perItem" header="На 1 тн" style="width: 25%">
+                <template #body="{ data }">
+                  {{ data.perItem }}
+                </template>
+              </Column>
+            </DataTable>
+          </div>
+        </div>
+
+        <div class="specification">
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2">
               <div class="font-semibold text-[--primary-color] text-xl">Спецификация</div>
@@ -418,38 +453,10 @@ const saveNewWorker = (worker) => {
             </DataTable>
           </div>
         </div>
-
-        <div>
-          <div class="card">
-            <div class="flex flex-row justify-between gap-2">
-              <div class="font-semibold text-[--primary-color] text-xl">Итоговая ведомость</div>
-            </div>
-
-            <DataTable :value="priceData" editMode="cell" showGridlines @cell-edit-complete="onCellEditComplete">
-              <Column field="name" style="width: 25%">
-                <template #body="{ data }">
-                  {{ data.name }}
-                </template>
-              </Column>
-
-              <Column field="total" header="Общая" style="width: 25%">
-                <template #body="{ data }">
-                  {{ data.total }}
-                </template>
-              </Column>
-
-              <Column field="perItem" header="На 1 тн" style="width: 25%">
-                <template #body="{ data }">
-                  {{ data.perItem }}
-                </template>
-              </Column>
-            </DataTable>
-          </div>
-        </div>
       </div>
 
       <div class="grid grid-cols-1fr-35 gap-4">
-        <div>
+        <div class="shop">
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2">
               <div class="font-semibold text-[--primary-color] text-xl">Цех</div>
@@ -557,7 +564,7 @@ const saveNewWorker = (worker) => {
           </div>
         </div>
 
-        <div>
+        <div class="tax-charges">
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2">
               <div class="font-semibold text-[--primary-color] text-xl">Налоговые начисления</div>
@@ -698,7 +705,7 @@ const saveNewWorker = (worker) => {
           </div>
         </div>
 
-        <div class="ITR-tax">
+        <div class="tax-charges">
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2">
               <div class="font-semibold text-[--primary-color] text-xl">Налоговые начисления</div>
@@ -745,16 +752,16 @@ const saveNewWorker = (worker) => {
         </div>
       </div>
 
-      <div class="card">
+      <div class="card total-costs">
         <div class="flex flex-row justify-between gap-2">
-          <div class="font-semibold text-[--primary-color] text-xl">Расходники</div>
+          <div class="font-semibold text-[--primary-color] text-xl">Общие затраты</div>
 
-          <FileUpload ref="fileupload" class="max-w-[100px]" mode="basic" accept=".csv, .xlsx" :maxFileSize="1000000" @uploader="onUpload" chooseLabel="Выберите файл"> </FileUpload>
+          <FileUpload ref="fileupload" class="max-w-full h-[30px]" mode="basic" accept=".csv, .xlsx" :maxFileSize="1000000" @uploader="onUpload" chooseLabel="Выберите файл"> </FileUpload>
         </div>
 
         <Accordion :value="['0']" multiple>
           <AccordionPanel value="0">
-            <AccordionHeader>Общие расходники</AccordionHeader>
+            <AccordionHeader>Расходники</AccordionHeader>
 
             <AccordionContent>
               <DataTable :value="consumables" dataKey="order" :rowHover="true" showGridlines>
@@ -914,7 +921,7 @@ const saveNewWorker = (worker) => {
       </div>
     </div>
 
-    <Dialog v-model:visible="createNewWorkerDialog" :style="{ width: '450px' }" header="Новый сотрудник" :modal="true">
+    <Dialog v-model:visible="createNewWorkerDialog" header="Новый сотрудник" :style="{ width: '450px' }" modal>
       <div class="flex flex-col gap-6">
         <div>
           <label for="name" class="block font-bold mb-3">Имя</label>
@@ -962,5 +969,9 @@ const saveNewWorker = (worker) => {
 
 .grid-cols-1fr-35 {
   grid-template-columns: 1fr 35%;
+}
+
+.grid-cols-35-1fr {
+  grid-template-columns: 35% 1fr;
 }
 </style>
