@@ -99,60 +99,86 @@ const priceData = computed(() => {
     {
       id: 1,
       name: 'Металл',
+      key: 'metal',
       total: totalMetal,
       perItem: Number(totalMetal.value / totalSpecificationItems.value).toFixed(2)
     },
     {
       id: 2,
       name: 'Метизы',
+      key: 'hardware',
       total: totalHardware,
       perItem: Number(totalHardware.value / totalSpecificationItems.value).toFixed(2)
     },
     {
       id: 3,
       name: 'Расходники',
+      key: 'consumables',
       total: totalConsumables,
       perItem: Number(totalConsumables.value / totalSpecificationItems.value).toFixed(2)
     },
     {
       id: 4,
       name: 'Цех',
+      key: 'workshop',
       total: taxTotal,
       perItem: taxTotal.value / totalSpecificationItems.value
     },
     {
       id: 5,
       name: 'Зарплата ИТР',
+      key: 'wagesOfEngineers',
       total: taxITRTotal,
       perItem: taxITRTotal.value / totalSpecificationItems.value
     },
     {
       id: 6,
       name: 'Оцинковка',
+      key: 'galvanizing',
       total: galvanizedValue.value,
       perItem: galvanizedValue.value / totalSpecificationItems.value
     },
     {
       id: 7,
       name: 'Транспорт',
+      key: 'transport',
       total: transportValue.value,
       perItem: transportValue.value / totalSpecificationItems.value
     },
     {
       id: 8,
       name: 'Аренда',
+      key: 'rent',
       total: rentalCostPerDay.value * ITRWorkedDays.value,
       perItem: (rentalCostPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value
     },
     {
       id: 9,
       name: 'Эл. эн.',
+      key: 'electricity',
       total: costOfElectricityPerDay.value * ITRWorkedDays.value,
       perItem: (costOfElectricityPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value
     },
     {
       id: 10,
+      name: 'Металл (общ)',
+      key: 'metalTotal',
+      total: totalMetal.value + totalHardware.value,
+      perItem: Number((totalMetal.value + totalHardware.value) / totalSpecificationItems.value).toFixed(2)
+    },
+    {
+      id: 11,
+      name: 'Переработка',
+      key: 'processing',
+      total: totalConsumables.value + taxTotal.value + taxITRTotal.value + galvanizedValue.value + transportValue.value + rentalCostPerDay.value * ITRWorkedDays.value + costOfElectricityPerDay.value * ITRWorkedDays.value,
+      perItem: Number(
+        (totalConsumables.value + taxTotal.value + taxITRTotal.value + galvanizedValue.value + transportValue.value + rentalCostPerDay.value * ITRWorkedDays.value + costOfElectricityPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value
+      ).toFixed(2)
+    },
+    {
+      id: 12,
       name: 'Рентабельность',
+      key: 'profitability',
       total:
         (totalMetal.value +
           totalHardware.value +
@@ -180,6 +206,7 @@ const priceData = computed(() => {
     {
       id: 11,
       name: 'Итого',
+      key: 'total',
       total:
         (totalMetal.value +
           totalHardware.value +
@@ -561,20 +588,22 @@ const formatNumber = (numberData) => {
             <DataTable :value="priceData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
               <Column field="name">
                 <template #body="{ data }">
-                  {{ data.name }}
+                  <div :class="{ 'text-[red]': data.key === 'metalTotal' || data.key === 'processing' || data.key === 'profitability' || data.key === 'total' }">
+                    {{ data.name }}
+                  </div>
                 </template>
               </Column>
 
               <Column field="total" header="Общая">
                 <template #body="{ data }">
-                  <div :class="{ 'text-[red]': data.name === 'Итого' }">
+                  <div :class="{ 'text-[red]': data.key === 'total' }">
                     {{ formatNumber(data.total) }}
                   </div>
                 </template>
 
                 <template #editor="{ data }">
-                  <InputText v-if="data.name === 'Оцинковка'" v-model="data.total" type="number" />
-                  <InputText v-if="data.name === 'Транспорт'" v-model="data.total" type="number" />
+                  <InputText v-if="data.key === 'galvanizing'" v-model="data.total" type="number" />
+                  <InputText v-if="data.key === 'transport'" v-model="data.total" type="number" />
                 </template>
               </Column>
 
