@@ -14,7 +14,6 @@
   Итоговая ведомость:
     - сделать инфографику сколько какой вид работ потянул от общей суммы
     - Выводить инфографику по кол. затраченых ресурсов
-    - Поля Оцинковка, Транспорт, Аренда, Эл эн сделать редактируемыми
   Общие затраты:
   - Научить парсить таблицы из экселя
 */
@@ -40,7 +39,6 @@ const metalData = ref([]);
 const newStaffData = ref({ name: '', numberOfHoursWorked: null, salaryPerDay: null });
 const newITRStaffData = ref({ name: '', salaryPerMonth: null });
 
-const specification = ref({ name: '', quantity: 10, weightOfOnePiece: 5 });
 const selectedStaff = ref(null);
 const selectedITRStaff = ref(null);
 const newStaffDialog = ref(false);
@@ -64,6 +62,9 @@ let ITRWorkedDays = ref(13);
 let rentalCostPerDay = ref(170);
 let costOfElectricityPerDay = ref(550);
 let coeficientOfNDS = ref(1.2);
+let galvanizedValue = ref(1000);
+let transportValue = ref(2000);
+let profitabilityCoeficient = ref(0.1);
 
 const salariesOfWorkersTotal = computed(() =>
   workersData.value.reduce((acc, item) => {
@@ -98,62 +99,155 @@ const priceData = computed(() => {
     {
       id: 1,
       name: 'Металл',
-      perItem: Number(totalMetal.value / totalSpecificationItems.value).toFixed(2),
-      total: totalMetal
+      key: 'metal',
+      total: totalMetal,
+      perItem: Number(totalMetal.value / totalSpecificationItems.value).toFixed(2)
     },
     {
       id: 2,
       name: 'Метизы',
-      perItem: Number(totalHardware.value / totalSpecificationItems.value).toFixed(2),
-      total: totalHardware
+      key: 'hardware',
+      total: totalHardware,
+      perItem: Number(totalHardware.value / totalSpecificationItems.value).toFixed(2)
     },
     {
       id: 3,
       name: 'Расходники',
-      perItem: Number(totalConsumables.value / totalSpecificationItems.value).toFixed(2),
-      total: totalConsumables
+      key: 'consumables',
+      total: totalConsumables,
+      perItem: Number(totalConsumables.value / totalSpecificationItems.value).toFixed(2)
     },
     {
       id: 4,
       name: 'Цех',
-      perItem: taxTotal.value / totalSpecificationItems.value,
-      total: taxTotal
+      key: 'workshop',
+      total: taxTotal,
+      perItem: taxTotal.value / totalSpecificationItems.value
     },
     {
       id: 5,
       name: 'Зарплата ИТР',
-      perItem: taxITRTotal.value / totalSpecificationItems.value,
-      total: taxITRTotal
+      key: 'wagesOfEngineers',
+      total: taxITRTotal,
+      perItem: taxITRTotal.value / totalSpecificationItems.value
     },
     {
       id: 6,
       name: 'Оцинковка',
-      perItem: null,
-      total: null
+      key: 'galvanizing',
+      total: galvanizedValue.value,
+      perItem: galvanizedValue.value / totalSpecificationItems.value
     },
     {
       id: 7,
       name: 'Транспорт',
-      perItem: null,
-      total: null
+      key: 'transport',
+      total: transportValue.value,
+      perItem: transportValue.value / totalSpecificationItems.value
     },
     {
       id: 8,
       name: 'Аренда',
-      perItem: (rentalCostPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value,
-      total: rentalCostPerDay.value * ITRWorkedDays.value
+      key: 'rent',
+      total: rentalCostPerDay.value * ITRWorkedDays.value,
+      perItem: (rentalCostPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value
     },
     {
       id: 9,
-      name: 'Эл эн',
-      perItem: (costOfElectricityPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value,
-      total: costOfElectricityPerDay.value * ITRWorkedDays.value
+      name: 'Эл. эн.',
+      key: 'electricity',
+      total: costOfElectricityPerDay.value * ITRWorkedDays.value,
+      perItem: (costOfElectricityPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value
     },
     {
       id: 10,
+      name: 'Металл (общ)',
+      key: 'metalTotal',
+      total: totalMetal.value + totalHardware.value,
+      perItem: Number((totalMetal.value + totalHardware.value) / totalSpecificationItems.value).toFixed(2)
+    },
+    {
+      id: 11,
+      name: 'Переработка',
+      key: 'processing',
+      total: totalConsumables.value + taxTotal.value + taxITRTotal.value + galvanizedValue.value + transportValue.value + rentalCostPerDay.value * ITRWorkedDays.value + costOfElectricityPerDay.value * ITRWorkedDays.value,
+      perItem: Number(
+        (totalConsumables.value + taxTotal.value + taxITRTotal.value + galvanizedValue.value + transportValue.value + rentalCostPerDay.value * ITRWorkedDays.value + costOfElectricityPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value
+      ).toFixed(2)
+    },
+    {
+      id: 12,
       name: 'Рентабельность',
-      perItem: null,
-      total: null
+      key: 'profitability',
+      total:
+        (totalMetal.value +
+          totalHardware.value +
+          totalConsumables.value +
+          taxTotal.value +
+          taxITRTotal.value +
+          galvanizedValue.value +
+          transportValue.value +
+          rentalCostPerDay.value * ITRWorkedDays.value +
+          costOfElectricityPerDay.value * ITRWorkedDays.value) *
+        profitabilityCoeficient.value,
+      perItem:
+        ((totalMetal.value +
+          totalHardware.value +
+          totalConsumables.value +
+          taxTotal.value +
+          taxITRTotal.value +
+          galvanizedValue.value +
+          transportValue.value +
+          rentalCostPerDay.value * ITRWorkedDays.value +
+          costOfElectricityPerDay.value * ITRWorkedDays.value) *
+          profitabilityCoeficient.value) /
+        totalSpecificationItems.value
+    },
+    {
+      id: 11,
+      name: 'Итого',
+      key: 'total',
+      total:
+        (totalMetal.value +
+          totalHardware.value +
+          totalConsumables.value +
+          taxTotal.value +
+          taxITRTotal.value +
+          galvanizedValue.value +
+          transportValue.value +
+          rentalCostPerDay.value * ITRWorkedDays.value +
+          costOfElectricityPerDay.value * ITRWorkedDays.value) *
+          profitabilityCoeficient.value +
+        (totalMetal.value +
+          totalHardware.value +
+          totalConsumables.value +
+          taxTotal.value +
+          taxITRTotal.value +
+          galvanizedValue.value +
+          transportValue.value +
+          rentalCostPerDay.value * ITRWorkedDays.value +
+          costOfElectricityPerDay.value * ITRWorkedDays.value),
+      perItem:
+        ((totalMetal.value +
+          totalHardware.value +
+          totalConsumables.value +
+          taxTotal.value +
+          taxITRTotal.value +
+          galvanizedValue.value +
+          transportValue.value +
+          rentalCostPerDay.value * ITRWorkedDays.value +
+          costOfElectricityPerDay.value * ITRWorkedDays.value) *
+          profitabilityCoeficient.value +
+          (totalMetal.value +
+            totalHardware.value +
+            totalConsumables.value +
+            taxTotal.value +
+            taxITRTotal.value +
+            galvanizedValue.value +
+            transportValue.value +
+            rentalCostPerDay.value * ITRWorkedDays.value +
+            costOfElectricityPerDay.value * ITRWorkedDays.value)) /
+        totalSpecificationItems.value
     }
   ];
 });
@@ -280,6 +374,18 @@ function onUpload() {
 
 const onCellEditComplete = (event) => {
   let { data, newValue, field } = event;
+
+  switch (data.name) {
+    case 'Оцинковка':
+      galvanizedValue.value = Number(newValue);
+      break;
+    case 'Транспорт':
+      transportValue.value = Number(newValue);
+      break;
+
+    default:
+      break;
+  }
 
   data[field] = newValue;
 };
@@ -482,17 +588,22 @@ const formatNumber = (numberData) => {
             <DataTable :value="priceData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
               <Column field="name">
                 <template #body="{ data }">
-                  {{ data.name }}
+                  <div :class="{ 'text-[red]': data.key === 'metalTotal' || data.key === 'processing' || data.key === 'profitability' || data.key === 'total' }">
+                    {{ data.name }}
+                  </div>
                 </template>
               </Column>
 
               <Column field="total" header="Общая">
                 <template #body="{ data }">
-                  {{ formatNumber(data.total) }}
+                  <div :class="{ 'text-[red]': data.key === 'total' }">
+                    {{ formatNumber(data.total) }}
+                  </div>
                 </template>
 
                 <template #editor="{ data }">
-                  <InputText v-model="data.total" type="number" />
+                  <InputText v-if="data.key === 'galvanizing'" v-model="data.total" type="number" />
+                  <InputText v-if="data.key === 'transport'" v-model="data.total" type="number" />
                 </template>
               </Column>
 
@@ -506,7 +617,7 @@ const formatNumber = (numberData) => {
         </div>
 
         <div class="specification">
-          <div class="card h-full">
+          <div class="card h-full flex flex-col gap-4">
             <div class="flex flex-row items-center justify-between gap-2">
               <div class="font-semibold text-[--primary-color] text-xl">Спецификация</div>
             </div>
@@ -560,21 +671,26 @@ const formatNumber = (numberData) => {
 
                 <div class="flex justify-end gap-4 w-full">
                   <div class="flex items-center">
-                    Итого общий вес: &nbsp;<span class="font-bold text-lg"> {{ totalSpecificationItems }} тонн</span>
+                    Итого общий вес: &nbsp;<span class="font-bold text-lg"> {{ totalSpecificationItems.toFixed(4) }} тонн</span>
                   </div>
                 </div>
               </template>
             </DataTable>
 
-            <div class="flex flex-col gap-2 mb-4">
-              <div class="flex flex-row gap-2 items-center">
+            <div class="flex flex-col gap-2 mb-4 w-[250px]">
+              <div class="flex flex-row gap-2 items-center justify-between">
                 <label for="rentalCostPerDay">Стоимость аренды в день:</label>
                 <InputNumber v-model="rentalCostPerDay" inputId="rentalCostPerDay" class="max-w-[50px]" :min="0" :max="10000" fluid />
               </div>
 
-              <div class="flex flex-row gap-2 items-center">
+              <div class="flex flex-row gap-2 items-center justify-between">
                 <label for="costOfElectricityPerDay">Стоимость эл. эн. в день:</label>
                 <InputNumber v-model="costOfElectricityPerDay" inputId="costOfElectricityPerDay" class="max-w-[50px]" :min="0" :max="10000" fluid />
+              </div>
+
+              <div class="flex flex-row gap-2 items-center justify-between">
+                <label for="costOfElectricityPerDay">Коэффициент рентабельности:</label>
+                <InputNumber v-model="profitabilityCoeficient" inputId="costOfElectricityPerDay" class="max-w-[50px]" :minFractionDigits="1" :maxFractionDigits="5" fluid />
               </div>
             </div>
           </div>
