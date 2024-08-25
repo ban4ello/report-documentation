@@ -6,25 +6,37 @@
   - Добавить возможность прикреплять файлы (чертежи) к проекту (заказу)
   - После создания "калькуляции" ("план") предлагать клонировать её (создать "факт"). В итоговый дашборд войдёт как "план" так и "факт"
   - Добавить кнопку "Сохранить"
+  - Добавить кнопку "Удалить файл"
+  - Добавить в каждый блок поле для примечаний
+  - Отделить заголовком переменные "Стоимость аренды в день" "Стоимость эл. эн. в день" "Коэффициент рентабельности"
+  - "Металл (общ)" "Переработка" "Рентабельность" "Итого" вынести в отдельную таблицу
+  - Добавить Textarea в блоки "Спецификация" и "Цех"
+  - Убрать ограничения по суммам ЗП и не только
+  - Итоговую (финальную) сумму закрепить в хедере
 
   ИТР
   Цех
   Спецификация:
   - Добавить кнопку для добвления новых записей
+  - Добавить новую колонку "единица измерения"
+  - Переименовать колонку "Вес одной штуки в тоннах" => "Значение за одну единицу"
   Итоговая ведомость:
     - сделать инфографику сколько какой вид работ потянул от общей суммы
     - Выводить инфографику по кол. затраченых ресурсов
+    - Переименовать колонку "На 1 тн" => "На 1 единицу"
   Общие затраты:
   - Научить парсить таблицы из экселя
 */
 
 import { onBeforeMount, ref, computed } from 'vue';
 import { MochDataService } from '@/service/MochDataService';
-import { useToast } from 'primevue/usetoast';
+// import { useToast } from 'primevue/usetoast';
 import SearchSelect from '@/components/custom-ui/SearchSelect.vue';
 import TaxCharges from '@/components/TaxCharges.vue';
+// import { read, writeFileXLSX } from 'xlsx';
+import * as XLS from 'xlsx';
 
-const toast = useToast();
+// const toast = useToast();
 const fileupload = ref();
 const dropdownItemsWorkerStaff = ref(['Бабенко', 'Червань Антон', 'Васильев', 'Атаманенко', 'Татарский']);
 const dropdownItemsITR = ref(['Кристина', 'Олька', 'Танюха', 'Тёмка', 'Николаев', 'Никита', 'Шеф']);
@@ -33,8 +45,8 @@ const dropdownItemsWorkersRole = ref([
   { label: 'ИТР', key: 'ITR' }
 ]);
 
-const consumables = ref([]);
-const hardware = ref([]);
+const consumablesData = ref([]);
+const hardwareData = ref([]);
 const metalData = ref([]);
 const newStaffData = ref({ name: '', numberOfHoursWorked: null, salaryPerDay: null });
 const newITRStaffData = ref({ name: '', salaryPerMonth: null });
@@ -90,8 +102,8 @@ const totalSpecificationItems = computed(() =>
   }, 0)
 );
 
-const totalConsumables = computed(() => getTotalPrice(consumables.value));
-const totalHardware = computed(() => getTotalPrice(hardware.value));
+const totalConsumables = computed(() => getTotalPrice(consumablesData.value));
+const totalHardware = computed(() => getTotalPrice(hardwareData.value));
 const totalMetal = computed(() => getTotalPrice(metalData.value));
 
 const priceData = computed(() => {
@@ -100,63 +112,63 @@ const priceData = computed(() => {
       id: 1,
       name: 'Металл',
       key: 'metal',
-      total: totalMetal,
+      total: totalMetal.value || 0,
       perItem: Number(totalMetal.value / totalSpecificationItems.value).toFixed(2)
     },
     {
       id: 2,
       name: 'Метизы',
       key: 'hardware',
-      total: totalHardware,
+      total: totalHardware.value || 0,
       perItem: Number(totalHardware.value / totalSpecificationItems.value).toFixed(2)
     },
     {
       id: 3,
       name: 'Расходники',
       key: 'consumables',
-      total: totalConsumables,
+      total: totalConsumables.value || 0,
       perItem: Number(totalConsumables.value / totalSpecificationItems.value).toFixed(2)
     },
     {
       id: 4,
       name: 'Цех',
       key: 'workshop',
-      total: taxTotal,
+      total: taxTotal.value || 0,
       perItem: taxTotal.value / totalSpecificationItems.value
     },
     {
       id: 5,
       name: 'Зарплата ИТР',
       key: 'wagesOfEngineers',
-      total: taxITRTotal,
+      total: taxITRTotal.value || 0,
       perItem: taxITRTotal.value / totalSpecificationItems.value
     },
     {
       id: 6,
       name: 'Оцинковка',
       key: 'galvanizing',
-      total: galvanizedValue.value,
+      total: galvanizedValue.value || 0,
       perItem: galvanizedValue.value / totalSpecificationItems.value
     },
     {
       id: 7,
       name: 'Транспорт',
       key: 'transport',
-      total: transportValue.value,
+      total: transportValue.value || 0,
       perItem: transportValue.value / totalSpecificationItems.value
     },
     {
       id: 8,
       name: 'Аренда',
       key: 'rent',
-      total: rentalCostPerDay.value * ITRWorkedDays.value,
+      total: rentalCostPerDay.value * ITRWorkedDays.value || 0,
       perItem: (rentalCostPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value
     },
     {
       id: 9,
       name: 'Эл. эн.',
       key: 'electricity',
-      total: costOfElectricityPerDay.value * ITRWorkedDays.value,
+      total: costOfElectricityPerDay.value * ITRWorkedDays.value || 0,
       perItem: (costOfElectricityPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value
     },
     {
@@ -330,11 +342,11 @@ const taxITRTotal = computed(() => {
 
 onBeforeMount(() => {
   MochDataService.getConsumables().then((data) => {
-    consumables.value = data;
+    consumablesData.value = data;
   });
 
   MochDataService.getHardware().then((data) => {
-    hardware.value = data;
+    hardwareData.value = data;
   });
 
   MochDataService.getMetal().then((data) => {
@@ -364,13 +376,92 @@ onBeforeMount(() => {
 
 function getTotalPrice(array) {
   return array.reduce((acc, item) => {
-    return acc + parseFloat(item.price.replaceAll(' ', '').replaceAll(',', '.'));
+    if (item.price) {
+      acc = acc + item.price;
+    }
+
+    return acc;
+    // return acc + parseFloat(item.price.replaceAll(' ', '').replaceAll(',', '.'));
   }, 0);
 }
 
-function onUpload() {
-  toast.add({ severity: 'info', summary: 'Success', detail: 'File Uploaded', life: 3000 });
-}
+const onUpload = async (e) => {
+  const newFile = e.files[0];
+  const arrayBuferFile = await newFile.arrayBuffer();
+  const wb = XLS.read(arrayBuferFile);
+  const sheet = wb.Sheets[wb.SheetNames[0]];
+
+  let consumablesDataRes = [];
+  let hardwareDataRes = [];
+  let metalDataRes = [];
+  let currentDataName = 'consumablesDataRes'; // 'hardwareDataRes' || 'metalDataRes'
+  let countOfChanges = 0;
+
+  XLS.utils.sheet_to_json(sheet).forEach((row) => {
+    const formatedRow = {};
+
+    Object.keys(row).forEach((key) => {
+      formatedRow[key.trim()] = row[key];
+    });
+
+    if (!formatedRow['Наименование']) {
+      if (countOfChanges === 1) {
+        currentDataName = 'metalDataRes';
+      } else {
+        currentDataName = 'hardwareDataRes';
+      }
+
+      countOfChanges++;
+
+      return;
+    }
+
+    switch (currentDataName) {
+      case 'consumablesDataRes':
+        consumablesDataRes.push({
+          quantity: formatedRow['К-во'],
+          name: formatedRow['Наименование'],
+          price: formatedRow['Стоимость'],
+          unitOfMeasurement: formatedRow['ед.изм.'],
+          taxPrice: formatedRow['цена НДС'],
+          order: formatedRow['№ п/п']
+        });
+        break;
+
+      case 'hardwareDataRes':
+        hardwareDataRes.push({
+          quantity: formatedRow['К-во'],
+          name: formatedRow['Наименование'],
+          price: formatedRow['Стоимость'],
+          unitOfMeasurement: formatedRow['ед.изм.'],
+          taxPrice: formatedRow['цена НДС'],
+          order: formatedRow['№ п/п']
+        });
+        break;
+      case 'metalDataRes':
+        metalDataRes.push({
+          quantity: formatedRow['К-во'],
+          name: formatedRow['Наименование'],
+          price: formatedRow['Стоимость'],
+          unitOfMeasurement: formatedRow['ед.изм.'],
+          taxPrice: formatedRow['цена НДС'],
+          order: formatedRow['№ п/п']
+        });
+        break;
+
+      default:
+        break;
+    }
+  });
+
+  consumablesData.value = consumablesDataRes;
+  hardwareData.value = hardwareDataRes;
+  metalData.value = metalDataRes;
+};
+
+const uploadFile = () => {
+  fileupload.value.upload();
+};
 
 const onCellEditComplete = (event) => {
   let { data, newValue, field } = event;
@@ -922,7 +1013,10 @@ const formatNumber = (numberData) => {
         <div class="flex flex-row justify-between gap-2">
           <div class="font-semibold text-[--primary-color] text-xl">Общие затраты</div>
 
-          <FileUpload ref="fileupload" class="max-w-full h-[30px]" mode="basic" accept=".csv, .xlsx" :maxFileSize="1000000" @uploader="onUpload" chooseLabel="Выберите файл"> </FileUpload>
+          <div class="flex gap-6 items-center justify-center">
+            <FileUpload ref="fileupload" mode="basic" name="demo[]" accept=".xlsx" chooseLabel="Выберите файл" customUpload @uploader="onUpload" />
+            <Button label="Импортировать" @click="uploadFile" severity="secondary" />
+          </div>
         </div>
 
         <Accordion :value="['0']" multiple>
@@ -930,7 +1024,7 @@ const formatNumber = (numberData) => {
             <AccordionHeader>Расходники</AccordionHeader>
 
             <AccordionContent>
-              <DataTable :value="consumables" dataKey="order" :rowHover="true" showGridlines>
+              <DataTable :value="consumablesData" dataKey="order" :rowHover="true" showGridlines>
                 <template #empty> No customers found. </template>
 
                 <template #loading> Loading customers data. Please wait. </template>
@@ -984,7 +1078,7 @@ const formatNumber = (numberData) => {
             <AccordionHeader>Метизы</AccordionHeader>
 
             <AccordionContent>
-              <DataTable :value="hardware" dataKey="order" :rowHover="true" showGridlines>
+              <DataTable :value="hardwareData" dataKey="order" :rowHover="true" showGridlines>
                 <template #empty> No customers found. </template>
 
                 <template #loading> Loading customers data. Please wait. </template>
