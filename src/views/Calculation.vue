@@ -668,127 +668,131 @@ const formatNumber = (numberData) => {
       </div>
     </div>
 
-    <div class="flex flex-col gap-4">
-      <div class="grid grid-cols-35-1fr gap-4">
-        <div class="final-statement">
-          <div class="card">
-            <div class="flex flex-row justify-between gap-2">
-              <div class="font-semibold text-[--primary-color] text-xl">Итоговая ведомость</div>
-            </div>
+    <div class="flex flex-col">
+      <div class="specification card h-full flex flex-col gap-4">
+        <Accordion :value="['0']" multiple>
+          <AccordionPanel value="0">
+            <AccordionHeader><div class="font-semibold text-[--primary-color] text-xl">Спецификация</div></AccordionHeader>
 
-            <DataTable :value="priceData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
-              <Column field="name">
-                <template #body="{ data }">
-                  <div :class="{ 'text-[red]': data.key === 'metalTotal' || data.key === 'processing' || data.key === 'profitability' || data.key === 'total' }">
+            <AccordionContent>
+              <DataTable :value="specificationData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
+                <Column field="name" header="Наименование изделия" style="width: 25%">
+                  <template #body="{ data }">
                     {{ data.name }}
+                  </template>
+
+                  <template #editor="{ data }">
+                    <InputText v-model="data.name" type="text" />
+                  </template>
+                </Column>
+
+                <Column field="quantity" header="Количество" style="width: 25%">
+                  <template #body="{ data }">
+                    {{ data.quantity }}
+                  </template>
+
+                  <template #editor="{ data }">
+                    <InputText v-model="data.quantity" type="number" />
+                  </template>
+                </Column>
+
+                <Column field="weightPerItem" header="Вес одной штуки в тоннах" style="width: 25%">
+                  <template #body="{ data }">
+                    {{ data.weightPerItem }}
+                  </template>
+
+                  <template #editor="{ data }">
+                    <InputText v-model="data.weightPerItem" type="number" />
+                  </template>
+                </Column>
+
+                <Column field="totalWeight" header="Общий вес" style="width: 25%">
+                  <template #body="{ data }">
+                    {{ Number(data.quantity * data.weightPerItem).toFixed() }}
+                  </template>
+                </Column>
+
+                <Column :exportable="false" style="min-width: 12rem">
+                  <template #body="slotProps">
+                    <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copySpecification(slotProps.data)" />
+                    <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteSpecification(slotProps.data)" />
+                  </template>
+                </Column>
+
+                <template #footer>
+                  <div class="flex justify-center items-center text-[--primary-color] hover:cursor-pointer" @click="addNewSpecification">добавить строку +</div>
+
+                  <div class="flex justify-end gap-4 w-full">
+                    <div class="flex items-center">
+                      Итого общий вес: &nbsp;<span class="font-bold text-lg"> {{ totalSpecificationItems.toFixed(4) }} тонн</span>
+                    </div>
                   </div>
                 </template>
-              </Column>
+              </DataTable>
+            </AccordionContent>
+          </AccordionPanel>
+        </Accordion>
+      </div>
 
-              <Column field="total" header="Общая">
-                <template #body="{ data }">
-                  <div :class="{ 'text-[red]': data.key === 'total' }">
-                    {{ formatNumber(data.total) }}
-                  </div>
-                </template>
-
-                <template #editor="{ data }">
-                  <InputText v-if="data.key === 'galvanizing'" v-model="data.total" type="number" />
-                  <InputText v-if="data.key === 'transport'" v-model="data.total" type="number" />
-                </template>
-              </Column>
-
-              <Column field="perItem" header="На 1 тн">
-                <template #body="{ data }">
-                  {{ formatNumber(data.perItem) }}
-                </template>
-              </Column>
-            </DataTable>
-          </div>
+      <div class="card final-statement">
+        <div class="flex flex-row justify-between gap-2">
+          <div class="font-semibold text-[--primary-color] text-xl">Итоговая ведомость</div>
         </div>
 
-        <div class="specification">
-          <div class="card h-full flex flex-col gap-4">
-            <div class="flex flex-row items-center justify-between gap-2">
-              <div class="font-semibold text-[--primary-color] text-xl">Спецификация</div>
-            </div>
-
-            <DataTable :value="specificationData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
-              <Column field="name" header="Наименование изделия" style="width: 25%">
-                <template #body="{ data }">
-                  {{ data.name }}
-                </template>
-
-                <template #editor="{ data }">
-                  <InputText v-model="data.name" type="text" />
-                </template>
-              </Column>
-
-              <Column field="quantity" header="Количество" style="width: 25%">
-                <template #body="{ data }">
-                  {{ data.quantity }}
-                </template>
-
-                <template #editor="{ data }">
-                  <InputText v-model="data.quantity" type="number" />
-                </template>
-              </Column>
-
-              <Column field="weightPerItem" header="Вес одной штуки в тоннах" style="width: 25%">
-                <template #body="{ data }">
-                  {{ data.weightPerItem }}
-                </template>
-
-                <template #editor="{ data }">
-                  <InputText v-model="data.weightPerItem" type="number" />
-                </template>
-              </Column>
-
-              <Column field="totalWeight" header="Общий вес" style="width: 25%">
-                <template #body="{ data }">
-                  {{ Number(data.quantity * data.weightPerItem).toFixed() }}
-                </template>
-              </Column>
-
-              <Column :exportable="false" style="min-width: 12rem">
-                <template #body="slotProps">
-                  <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copySpecification(slotProps.data)" />
-                  <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteSpecification(slotProps.data)" />
-                </template>
-              </Column>
-
-              <template #footer>
-                <div class="flex justify-center items-center text-[--primary-color] hover:cursor-pointer" @click="addNewSpecification">добавить строку +</div>
-
-                <div class="flex justify-end gap-4 w-full">
-                  <div class="flex items-center">
-                    Итого общий вес: &nbsp;<span class="font-bold text-lg"> {{ totalSpecificationItems.toFixed(4) }} тонн</span>
-                  </div>
-                </div>
-              </template>
-            </DataTable>
-
-            <div class="flex flex-col gap-2 mb-4 w-[250px]">
-              <div class="flex flex-row gap-2 items-center justify-between">
-                <label for="rentalCostPerDay">Стоимость аренды в день:</label>
-                <InputNumber v-model="rentalCostPerDay" inputId="rentalCostPerDay" class="max-w-[50px]" :min="0" :max="10000" fluid />
+        <DataTable :value="priceData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
+          <Column field="name">
+            <template #body="{ data }">
+              <div :class="{ 'text-[red]': data.key === 'metalTotal' || data.key === 'processing' || data.key === 'profitability' || data.key === 'total' }">
+                {{ data.name }}
               </div>
+            </template>
+          </Column>
 
-              <div class="flex flex-row gap-2 items-center justify-between">
-                <label for="costOfElectricityPerDay">Стоимость эл. эн. в день:</label>
-                <InputNumber v-model="costOfElectricityPerDay" inputId="costOfElectricityPerDay" class="max-w-[50px]" :min="0" :max="10000" fluid />
+          <Column field="total" header="Общая">
+            <template #body="{ data }">
+              <div :class="{ 'text-[red]': data.key === 'total' }">
+                {{ formatNumber(data.total) }}
               </div>
+            </template>
 
-              <div class="flex flex-row gap-2 items-center justify-between">
-                <label for="costOfElectricityPerDay">Коэффициент рентабельности:</label>
-                <InputNumber v-model="profitabilityCoeficient" inputId="costOfElectricityPerDay" class="max-w-[50px]" :minFractionDigits="1" :maxFractionDigits="5" fluid />
-              </div>
-            </div>
+            <template #editor="{ data }">
+              <InputText v-if="data.key === 'galvanizing'" v-model="data.total" type="number" />
+              <InputText v-if="data.key === 'transport'" v-model="data.total" type="number" />
+            </template>
+          </Column>
+
+          <Column field="perItem" header="На 1 тн">
+            <template #body="{ data }">
+              {{ formatNumber(data.perItem) }}
+            </template>
+          </Column>
+        </DataTable>
+      </div>
+
+      <div class="card h-full flex flex-col gap-4">
+        <div class="flex flex-row items-center justify-between gap-2">
+          <div class="font-semibold text-[--primary-color] text-xl">Переменные</div>
+        </div>
+
+        <div class="flex flex-col gap-2 mb-4 w-[250px]">
+          <div class="flex flex-row gap-2 items-center justify-between">
+            <label for="rentalCostPerDay">Стоимость аренды в день:</label>
+            <InputNumber v-model="rentalCostPerDay" inputId="rentalCostPerDay" class="max-w-[50px]" :min="0" :max="10000" fluid />
+          </div>
+
+          <div class="flex flex-row gap-2 items-center justify-between">
+            <label for="costOfElectricityPerDay">Стоимость эл. эн. в день:</label>
+            <InputNumber v-model="costOfElectricityPerDay" inputId="costOfElectricityPerDay" class="max-w-[50px]" :min="0" :max="10000" fluid />
+          </div>
+
+          <div class="flex flex-row gap-2 items-center justify-between">
+            <label for="costOfElectricityPerDay">Коэффициент рентабельности:</label>
+            <InputNumber v-model="profitabilityCoeficient" inputId="costOfElectricityPerDay" class="max-w-[50px]" :minFractionDigits="1" :maxFractionDigits="5" fluid />
           </div>
         </div>
       </div>
 
-      <div class="grid grid-cols-1fr-40 gap-4">
+      <div class="grid grid-cols-1fr-40 gap-4 mb-[2rem]">
         <div class="shop">
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2">
@@ -904,7 +908,7 @@ const formatNumber = (numberData) => {
         />
       </div>
 
-      <div class="grid grid-cols-1fr-40 gap-4">
+      <div class="grid grid-cols-1fr-40 gap-4 mb-[2rem]">
         <div class="ITR">
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2 mb-4">
