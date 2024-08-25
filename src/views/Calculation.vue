@@ -8,24 +8,18 @@
   - Добавить кнопку "Сохранить"
   - Добавить кнопку "Удалить файл"
   - Добавить в каждый блок поле для примечаний
-  - Отделить заголовком переменные "Стоимость аренды в день" "Стоимость эл. эн. в день" "Коэффициент рентабельности"
-  - "Металл (общ)" "Переработка" "Рентабельность" "Итого" вынести в отдельную таблицу
+
   - Добавить Textarea в блоки "Спецификация" и "Цех"
-  - Убрать ограничения по суммам ЗП и не только
   - Итоговую (финальную) сумму закрепить в хедере
 
   ИТР
   Цех
   Спецификация:
-  - Добавить кнопку для добвления новых записей
   - Добавить новую колонку "единица измерения"
   - Переименовать колонку "Вес одной штуки в тоннах" => "Значение за одну единицу"
   Итоговая ведомость:
-    - сделать инфографику сколько какой вид работ потянул от общей суммы
-    - Выводить инфографику по кол. затраченых ресурсов
     - Переименовать колонку "На 1 тн" => "На 1 единицу"
   Общие затраты:
-  - Научить парсить таблицы из экселя
 */
 
 import { onBeforeMount, ref, computed } from 'vue';
@@ -102,6 +96,18 @@ const totalSpecificationItems = computed(() =>
   }, 0)
 );
 
+const taxTotal = computed(() => {
+  const numberOfDecimal = 2;
+
+  return Number(parseFloat((computedWorkerTaxData.value.T + computedWorkerTaxData.value.TN + computedWorkerTaxData.value.K + computedWorkerTaxData.value.KMIL + computedWorkerTaxData.value.KESV) * coeficientOfNDS.value).toFixed(numberOfDecimal));
+});
+
+const taxITRTotal = computed(() => {
+  const numberOfDecimal = 2;
+
+  return Number(parseFloat((computedITRTaxData.value.T + computedITRTaxData.value.TN + computedITRTaxData.value.K + computedITRTaxData.value.KMIL + computedITRTaxData.value.KESV) * coeficientOfNDS.value).toFixed(numberOfDecimal));
+});
+
 const totalConsumables = computed(() => getTotalPrice(consumablesData.value));
 const totalHardware = computed(() => getTotalPrice(hardwareData.value));
 const totalMetal = computed(() => getTotalPrice(metalData.value));
@@ -112,6 +118,7 @@ const priceData = computed(() => {
       id: 1,
       name: 'Металл',
       key: 'metal',
+      statistics: getPercentOfTotal(totalMetal.value),
       total: totalMetal.value || 0,
       perItem: Number(totalMetal.value / totalSpecificationItems.value).toFixed(2)
     },
@@ -119,6 +126,7 @@ const priceData = computed(() => {
       id: 2,
       name: 'Метизы',
       key: 'hardware',
+      statistics: getPercentOfTotal(totalHardware.value),
       total: totalHardware.value || 0,
       perItem: Number(totalHardware.value / totalSpecificationItems.value).toFixed(2)
     },
@@ -126,6 +134,7 @@ const priceData = computed(() => {
       id: 3,
       name: 'Расходники',
       key: 'consumables',
+      statistics: getPercentOfTotal(totalConsumables.value),
       total: totalConsumables.value || 0,
       perItem: Number(totalConsumables.value / totalSpecificationItems.value).toFixed(2)
     },
@@ -133,6 +142,7 @@ const priceData = computed(() => {
       id: 4,
       name: 'Цех',
       key: 'workshop',
+      statistics: getPercentOfTotal(taxTotal.value),
       total: taxTotal.value || 0,
       perItem: taxTotal.value / totalSpecificationItems.value
     },
@@ -140,6 +150,7 @@ const priceData = computed(() => {
       id: 5,
       name: 'Зарплата ИТР',
       key: 'wagesOfEngineers',
+      statistics: getPercentOfTotal(taxITRTotal.value),
       total: taxITRTotal.value || 0,
       perItem: taxITRTotal.value / totalSpecificationItems.value
     },
@@ -147,6 +158,7 @@ const priceData = computed(() => {
       id: 6,
       name: 'Оцинковка',
       key: 'galvanizing',
+      statistics: getPercentOfTotal(galvanizedValue.value),
       total: galvanizedValue.value || 0,
       perItem: galvanizedValue.value / totalSpecificationItems.value
     },
@@ -154,6 +166,7 @@ const priceData = computed(() => {
       id: 7,
       name: 'Транспорт',
       key: 'transport',
+      statistics: getPercentOfTotal(transportValue.value),
       total: transportValue.value || 0,
       perItem: transportValue.value / totalSpecificationItems.value
     },
@@ -161,6 +174,7 @@ const priceData = computed(() => {
       id: 8,
       name: 'Аренда',
       key: 'rent',
+      statistics: getPercentOfTotal(rentalCostPerDay.value * ITRWorkedDays.value),
       total: rentalCostPerDay.value * ITRWorkedDays.value || 0,
       perItem: (rentalCostPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value
     },
@@ -168,29 +182,26 @@ const priceData = computed(() => {
       id: 9,
       name: 'Эл. эн.',
       key: 'electricity',
+      statistics: getPercentOfTotal(costOfElectricityPerDay.value * ITRWorkedDays.value),
       total: costOfElectricityPerDay.value * ITRWorkedDays.value || 0,
       perItem: (costOfElectricityPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value
     },
     {
       id: 10,
-      name: 'Металл (общ)',
-      key: 'metalTotal',
-      total: totalMetal.value + totalHardware.value,
-      perItem: Number((totalMetal.value + totalHardware.value) / totalSpecificationItems.value).toFixed(2)
-    },
-    {
-      id: 11,
-      name: 'Переработка',
-      key: 'processing',
-      total: totalConsumables.value + taxTotal.value + taxITRTotal.value + galvanizedValue.value + transportValue.value + rentalCostPerDay.value * ITRWorkedDays.value + costOfElectricityPerDay.value * ITRWorkedDays.value,
-      perItem: Number(
-        (totalConsumables.value + taxTotal.value + taxITRTotal.value + galvanizedValue.value + transportValue.value + rentalCostPerDay.value * ITRWorkedDays.value + costOfElectricityPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value
-      ).toFixed(2)
-    },
-    {
-      id: 12,
       name: 'Рентабельность',
       key: 'profitability',
+      statistics: getPercentOfTotal(
+        (totalMetal.value +
+          totalHardware.value +
+          totalConsumables.value +
+          taxTotal.value +
+          taxITRTotal.value +
+          galvanizedValue.value +
+          transportValue.value +
+          rentalCostPerDay.value * ITRWorkedDays.value +
+          costOfElectricityPerDay.value * ITRWorkedDays.value) *
+          profitabilityCoeficient.value
+      ),
       total:
         (totalMetal.value +
           totalHardware.value +
@@ -219,6 +230,117 @@ const priceData = computed(() => {
       id: 11,
       name: 'Итого',
       key: 'total',
+      statistics: 0,
+      total:
+        (totalMetal.value +
+          totalHardware.value +
+          totalConsumables.value +
+          taxTotal.value +
+          taxITRTotal.value +
+          galvanizedValue.value +
+          transportValue.value +
+          rentalCostPerDay.value * ITRWorkedDays.value +
+          costOfElectricityPerDay.value * ITRWorkedDays.value) *
+          profitabilityCoeficient.value +
+        (totalMetal.value +
+          totalHardware.value +
+          totalConsumables.value +
+          taxTotal.value +
+          taxITRTotal.value +
+          galvanizedValue.value +
+          transportValue.value +
+          rentalCostPerDay.value * ITRWorkedDays.value +
+          costOfElectricityPerDay.value * ITRWorkedDays.value),
+      perItem:
+        ((totalMetal.value +
+          totalHardware.value +
+          totalConsumables.value +
+          taxTotal.value +
+          taxITRTotal.value +
+          galvanizedValue.value +
+          transportValue.value +
+          rentalCostPerDay.value * ITRWorkedDays.value +
+          costOfElectricityPerDay.value * ITRWorkedDays.value) *
+          profitabilityCoeficient.value +
+          (totalMetal.value +
+            totalHardware.value +
+            totalConsumables.value +
+            taxTotal.value +
+            taxITRTotal.value +
+            galvanizedValue.value +
+            transportValue.value +
+            rentalCostPerDay.value * ITRWorkedDays.value +
+            costOfElectricityPerDay.value * ITRWorkedDays.value)) /
+        totalSpecificationItems.value
+    }
+  ];
+});
+
+const finalPriceData = computed(() => {
+  return [
+    {
+      id: 1,
+      name: 'Металл',
+      key: 'metalTotal',
+      statistics: getPercentOfTotal(totalMetal.value + totalHardware.value),
+      total: totalMetal.value + totalHardware.value,
+      perItem: Number((totalMetal.value + totalHardware.value) / totalSpecificationItems.value).toFixed(2)
+    },
+    {
+      id: 2,
+      name: 'Переработка',
+      key: 'processing',
+      statistics: getPercentOfTotal(totalConsumables.value + taxTotal.value + taxITRTotal.value + galvanizedValue.value + transportValue.value + rentalCostPerDay.value * ITRWorkedDays.value + costOfElectricityPerDay.value * ITRWorkedDays.value),
+      total: totalConsumables.value + taxTotal.value + taxITRTotal.value + galvanizedValue.value + transportValue.value + rentalCostPerDay.value * ITRWorkedDays.value + costOfElectricityPerDay.value * ITRWorkedDays.value,
+      perItem: Number(
+        (totalConsumables.value + taxTotal.value + taxITRTotal.value + galvanizedValue.value + transportValue.value + rentalCostPerDay.value * ITRWorkedDays.value + costOfElectricityPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value
+      ).toFixed(2)
+    },
+    {
+      id: 3,
+      name: 'Рентабельность',
+      key: 'profitability',
+      statistics: getPercentOfTotal(
+        (totalMetal.value +
+          totalHardware.value +
+          totalConsumables.value +
+          taxTotal.value +
+          taxITRTotal.value +
+          galvanizedValue.value +
+          transportValue.value +
+          rentalCostPerDay.value * ITRWorkedDays.value +
+          costOfElectricityPerDay.value * ITRWorkedDays.value) *
+          profitabilityCoeficient.value
+      ),
+      total:
+        (totalMetal.value +
+          totalHardware.value +
+          totalConsumables.value +
+          taxTotal.value +
+          taxITRTotal.value +
+          galvanizedValue.value +
+          transportValue.value +
+          rentalCostPerDay.value * ITRWorkedDays.value +
+          costOfElectricityPerDay.value * ITRWorkedDays.value) *
+        profitabilityCoeficient.value,
+      perItem:
+        ((totalMetal.value +
+          totalHardware.value +
+          totalConsumables.value +
+          taxTotal.value +
+          taxITRTotal.value +
+          galvanizedValue.value +
+          transportValue.value +
+          rentalCostPerDay.value * ITRWorkedDays.value +
+          costOfElectricityPerDay.value * ITRWorkedDays.value) *
+          profitabilityCoeficient.value) /
+        totalSpecificationItems.value
+    },
+    {
+      id: 4,
+      name: 'Итого',
+      key: 'total',
+      statistics: 0,
       total:
         (totalMetal.value +
           totalHardware.value +
@@ -328,17 +450,9 @@ const computedITRTaxData = computed(() => {
   );
 });
 
-const taxTotal = computed(() => {
-  const numberOfDecimal = 2;
-
-  return Number(parseFloat((computedWorkerTaxData.value.T + computedWorkerTaxData.value.TN + computedWorkerTaxData.value.K + computedWorkerTaxData.value.KMIL + computedWorkerTaxData.value.KESV) * coeficientOfNDS.value).toFixed(numberOfDecimal));
-});
-
-const taxITRTotal = computed(() => {
-  const numberOfDecimal = 2;
-
-  return Number(parseFloat((computedITRTaxData.value.T + computedITRTaxData.value.TN + computedITRTaxData.value.K + computedITRTaxData.value.KMIL + computedITRTaxData.value.KESV) * coeficientOfNDS.value).toFixed(numberOfDecimal));
-});
+const getPercentOfTotal = (totalNumber) => {
+  return (totalNumber / finalTotalPrice.value) * 100;
+};
 
 onBeforeMount(() => {
   MochDataService.getConsumables().then((data) => {
@@ -372,6 +486,30 @@ onBeforeMount(() => {
   MochDataService.getSpecificationData().then((data) => {
     specificationData.value = data;
   });
+});
+
+const finalTotalPrice = computed(() => {
+  return (
+    (totalMetal.value +
+      totalHardware.value +
+      totalConsumables.value +
+      taxTotal.value +
+      taxITRTotal.value +
+      galvanizedValue.value +
+      transportValue.value +
+      rentalCostPerDay.value * ITRWorkedDays.value +
+      costOfElectricityPerDay.value * ITRWorkedDays.value) *
+      profitabilityCoeficient.value +
+    (totalMetal.value +
+      totalHardware.value +
+      totalConsumables.value +
+      taxTotal.value +
+      taxITRTotal.value +
+      galvanizedValue.value +
+      transportValue.value +
+      rentalCostPerDay.value * ITRWorkedDays.value +
+      costOfElectricityPerDay.value * ITRWorkedDays.value)
+  );
 });
 
 function getTotalPrice(array) {
@@ -646,6 +784,11 @@ const formatNumber = (numberData) => {
     return 0;
   }
 };
+
+const truncateDecimal = (num, decimalPlaces) => {
+  const factor = Math.pow(10, decimalPlaces);
+  return Math.trunc(num * factor) / factor;
+};
 </script>
 
 <template>
@@ -734,39 +877,89 @@ const formatNumber = (numberData) => {
         </Accordion>
       </div>
 
-      <div class="card final-statement">
-        <div class="flex flex-row justify-between gap-2">
-          <div class="font-semibold text-[--primary-color] text-xl">Итоговая ведомость</div>
+      <div class="grid grid-cols-1fr-40 gap-4 mb-[2rem]">
+        <div class="card subtotal mb-0">
+          <div class="flex flex-row justify-between gap-2">
+            <div class="font-semibold text-[--primary-color] text-xl">Подытог</div>
+          </div>
+
+          <DataTable :value="priceData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
+            <Column field="name">
+              <template #body="{ data }">
+                <div>
+                  {{ data.name }}
+                </div>
+              </template>
+            </Column>
+
+            <Column field="total" header="Общая">
+              <template #body="{ data }">
+                <div :class="{ 'text-[red]': data.key === 'total' }">
+                  {{ formatNumber(data.total) }}
+                </div>
+              </template>
+
+              <template #editor="{ data }">
+                <InputText v-if="data.key === 'galvanizing'" v-model="data.total" type="number" />
+                <InputText v-if="data.key === 'transport'" v-model="data.total" type="number" />
+              </template>
+            </Column>
+
+            <Column field="perItem" header="На 1 тн">
+              <template #body="{ data }">
+                {{ formatNumber(data.perItem) }}
+              </template>
+            </Column>
+
+            <Column header="Статистика" class="progress_cell">
+              <template #body="{ data }">
+                <div v-if="data.key !== 'total'">
+                  <ProgressBar v-tooltip="`${parseFloat(data.statistics).toFixed()}%`" :showValue="false" :value="Number(parseFloat(data.statistics).toFixed())" style="border-radius: 0; background-color: transparent; height: 40px"></ProgressBar>
+                </div>
+              </template>
+            </Column>
+          </DataTable>
         </div>
 
-        <DataTable :value="priceData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
-          <Column field="name">
-            <template #body="{ data }">
-              <div :class="{ 'text-[red]': data.key === 'metalTotal' || data.key === 'processing' || data.key === 'profitability' || data.key === 'total' }">
-                {{ data.name }}
-              </div>
-            </template>
-          </Column>
+        <div class="card final-statement">
+          <div class="flex flex-row justify-between gap-2">
+            <div class="font-semibold text-[--primary-color] text-xl">Итоговая ведомость</div>
+          </div>
 
-          <Column field="total" header="Общая">
-            <template #body="{ data }">
-              <div :class="{ 'text-[red]': data.key === 'total' }">
-                {{ formatNumber(data.total) }}
-              </div>
-            </template>
+          <DataTable :value="finalPriceData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines :style="{ border: '2px solid green' }">
+            <Column field="name">
+              <template #body="{ data }">
+                <div :class="{ 'font-bold': data.key === 'total', 'text-lg': data.key === 'total' }">
+                  {{ data.name }}
+                </div>
+              </template>
+            </Column>
 
-            <template #editor="{ data }">
-              <InputText v-if="data.key === 'galvanizing'" v-model="data.total" type="number" />
-              <InputText v-if="data.key === 'transport'" v-model="data.total" type="number" />
-            </template>
-          </Column>
+            <Column field="total" header="Общая">
+              <template #body="{ data }">
+                <div :class="{ 'font-bold': data.key === 'total', 'text-lg': data.key === 'total' }">
+                  {{ formatNumber(truncateDecimal(Number(data.total), 1)) }}
+                </div>
+              </template>
+            </Column>
 
-          <Column field="perItem" header="На 1 тн">
-            <template #body="{ data }">
-              {{ formatNumber(data.perItem) }}
-            </template>
-          </Column>
-        </DataTable>
+            <Column field="perItem" header="На 1 тн">
+              <template #body="{ data }">
+                <div :class="{ 'font-bold': data.key === 'total', 'text-lg': data.key === 'total' }">
+                  {{ formatNumber(truncateDecimal(Number(data.perItem), 1)) }}
+                </div>
+              </template>
+            </Column>
+
+            <Column header="Статистика" class="progress_cell">
+              <template #body="{ data }">
+                <div v-if="data.key !== 'total'">
+                  <ProgressBar v-tooltip="`${parseFloat(data.statistics).toFixed()}%`" :showValue="false" :value="Number(parseFloat(data.statistics).toFixed())" style="border-radius: 0; background-color: transparent; height: 40px"></ProgressBar>
+                </div>
+              </template>
+            </Column>
+          </DataTable>
+        </div>
       </div>
 
       <div class="card h-full flex flex-col gap-4">
@@ -777,12 +970,12 @@ const formatNumber = (numberData) => {
         <div class="flex flex-col gap-2 mb-4 w-[250px]">
           <div class="flex flex-row gap-2 items-center justify-between">
             <label for="rentalCostPerDay">Стоимость аренды в день:</label>
-            <InputNumber v-model="rentalCostPerDay" inputId="rentalCostPerDay" class="max-w-[50px]" :min="0" :max="10000" fluid />
+            <InputNumber v-model="rentalCostPerDay" inputId="rentalCostPerDay" class="max-w-[50px]" fluid />
           </div>
 
           <div class="flex flex-row gap-2 items-center justify-between">
             <label for="costOfElectricityPerDay">Стоимость эл. эн. в день:</label>
-            <InputNumber v-model="costOfElectricityPerDay" inputId="costOfElectricityPerDay" class="max-w-[50px]" :min="0" :max="10000" fluid />
+            <InputNumber v-model="costOfElectricityPerDay" inputId="costOfElectricityPerDay" class="max-w-[50px]" fluid />
           </div>
 
           <div class="flex flex-row gap-2 items-center justify-between">
@@ -806,7 +999,7 @@ const formatNumber = (numberData) => {
 
             <div class="flex flex-row gap-2 max-w-[250px] mb-4">
               <label for="numberOfHoursPerShift">Количество часов в смене</label>
-              <InputNumber v-model="numberOfHoursPerShift" inputId="numberOfHoursPerShift" :min="0" :max="10000" fluid />
+              <InputNumber v-model="numberOfHoursPerShift" inputId="numberOfHoursPerShift" fluid />
             </div>
 
             <DataTable :value="workersData" v-model:selection="selectedStaff" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
@@ -851,7 +1044,7 @@ const formatNumber = (numberData) => {
 
               <Column field="total" header="Итого">
                 <template #body="{ data }">
-                  {{ formatNumber(Number((data.salaryPerDay / numberOfHoursPerShift) * data.numberOfHoursWorked).toFixed()) }}
+                  {{ formatNumber(truncateDecimal((data.salaryPerDay / numberOfHoursPerShift) * data.numberOfHoursWorked, 0)) }}
                 </template>
               </Column>
 
@@ -880,12 +1073,12 @@ const formatNumber = (numberData) => {
 
                 <div>
                   <label for="numberOfHoursWorked" class="block font-bold mb-3">Трудозатраты</label>
-                  <InputNumber v-model="newStaffData.numberOfHoursWorked" inputId="minmax" :min="0" :max="10000" fluid />
+                  <InputNumber v-model="newStaffData.numberOfHoursWorked" inputId="minmax" fluid />
                 </div>
 
                 <div>
                   <label for="salaryPerDay" class="block font-bold mb-3">В день</label>
-                  <InputNumber v-model="newStaffData.salaryPerDay" inputId="minmax" :min="0" :max="10000" fluid />
+                  <InputNumber v-model="newStaffData.salaryPerDay" inputId="minmax" fluid />
                 </div>
               </div>
 
@@ -923,12 +1116,12 @@ const formatNumber = (numberData) => {
             <div class="flex gap-2 mb-4 items-center">
               <div class="flex flex-row gap-2 items-center">
                 <label for="numberOfDaysPerShift">Количество дней в мес.</label>
-                <InputNumber v-model="numberOfDaysPerShift" inputId="numberOfDaysPerShift" class="max-w-[50px]" :min="0" :max="10000" fluid />
+                <InputNumber v-model="numberOfDaysPerShift" inputId="numberOfDaysPerShift" class="max-w-[50px]" fluid />
               </div>
 
               <div class="flex flex-row gap-2 items-center">
                 <label for="numberOfDaysPerShift">Количество дней (трудозатраты)</label>
-                <InputNumber v-model="ITRWorkedDays" inputId="numberOfDaysPerShift" class="max-w-[50px]" :min="0" :max="10000" fluid />
+                <InputNumber v-model="ITRWorkedDays" inputId="numberOfDaysPerShift" class="max-w-[50px]" fluid />
               </div>
             </div>
 
@@ -951,13 +1144,13 @@ const formatNumber = (numberData) => {
                 </template>
 
                 <template #editor="{ data }">
-                  <InputNumber v-model="data.salaryPerMonth" inputId="minmax" :min="0" :max="10000" fluid />
+                  <InputNumber v-model="data.salaryPerMonth" inputId="minmax" fluid />
                 </template>
               </Column>
 
               <Column field="salaryPerDay" header="ЗП по факту" style="width: 25%">
                 <template #body="{ data }">
-                  {{ formatNumber(parseFloat((data.salaryPerMonth / numberOfDaysPerShift) * ITRWorkedDays).toFixed()) }}
+                  {{ formatNumber(truncateDecimal((data.salaryPerMonth / numberOfDaysPerShift) * ITRWorkedDays, 0)) }}
                 </template>
               </Column>
 
@@ -990,7 +1183,7 @@ const formatNumber = (numberData) => {
 
                 <div>
                   <label for="salaryPerMonth" class="block font-bold mb-3">ЗП в месяц</label>
-                  <InputNumber v-model="newITRStaffData.salaryPerMonth" inputId="minmax" :min="0" :max="10000" fluid />
+                  <InputNumber v-model="newITRStaffData.salaryPerMonth" inputId="minmax" fluid />
                 </div>
               </div>
 
@@ -1241,5 +1434,21 @@ const formatNumber = (numberData) => {
 
 .grid-cols-35-1fr {
   grid-template-columns: 35% 1fr;
+}
+</style>
+
+<style lang="scss">
+.progress_cell {
+  padding: 3px 0 !important;
+  height: 40px;
+
+  .progress-bar {
+    // display: flex !important;
+    // align-items: center !important;
+  }
+
+  &.p-datatable-header-cell {
+    padding: var(--p-datatable-header-cell-padding) !important;
+  }
 }
 </style>
