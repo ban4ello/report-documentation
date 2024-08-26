@@ -7,7 +7,6 @@
   - После создания "калькуляции" ("план") предлагать клонировать её (создать "факт"). В итоговый дашборд войдёт как "план" так и "факт"
   - Добавить кнопку "Сохранить"
   - Добавить кнопку "Удалить файл"
-  - Добавить в каждый блок поле для примечаний
 
   - Добавить Textarea в блоки "Спецификация" и "Цех"
   - Итоговую (финальную) сумму закрепить в хедере
@@ -15,10 +14,7 @@
   ИТР
   Цех
   Спецификация:
-  - Добавить новую колонку "единица измерения"
-  - Переименовать колонку "Вес одной штуки в тоннах" => "Значение за одну единицу"
   Итоговая ведомость:
-    - Переименовать колонку "На 1 тн" => "На 1 единицу"
   Общие затраты:
 */
 
@@ -92,7 +88,7 @@ const salariesOfITRTotalPerMonth = computed(() =>
 
 const totalSpecificationItems = computed(() =>
   specificationData.value.reduce((acc, item) => {
-    return acc + Number(item.quantity * item.weightPerItem);
+    return acc + Number(item.quantity * item.valuePerUnit);
   }, 0)
 );
 
@@ -641,7 +637,7 @@ const copySpecification = (data) => {
     id: (Math.random() * 1000).toFixed(),
     name: data.name,
     quantity: data.quantity,
-    weightPerItem: data.weightPerItem,
+    valuePerUnit: data.valuePerUnit,
     totalWeight: data.totalWeight
   });
 };
@@ -651,7 +647,7 @@ const addNewSpecification = () => {
     id: (Math.random() * 1000).toFixed(),
     name: null,
     quantity: null,
-    weightPerItem: null,
+    valuePerUnit: null,
     totalWeight: null
   });
 };
@@ -839,19 +835,29 @@ const truncateDecimal = (num, decimalPlaces) => {
                   </template>
                 </Column>
 
-                <Column field="weightPerItem" header="Вес одной штуки в тоннах" style="width: 25%">
+                <Column field="unitOfMeasurement" header="Единица измерения" style="width: 25%">
                   <template #body="{ data }">
-                    {{ data.weightPerItem }}
+                    {{ data.unitOfMeasurement }}
                   </template>
 
                   <template #editor="{ data }">
-                    <InputText v-model="data.weightPerItem" type="number" />
+                    <InputText v-model="data.unitOfMeasurement" type="text" />
+                  </template>
+                </Column>
+
+                <Column field="valuePerUnit" header="Значение за одну единицу" style="width: 25%">
+                  <template #body="{ data }">
+                    {{ data.valuePerUnit }}
+                  </template>
+
+                  <template #editor="{ data }">
+                    <InputText v-model="data.valuePerUnit" type="number" />
                   </template>
                 </Column>
 
                 <Column field="totalWeight" header="Общий вес" style="width: 25%">
                   <template #body="{ data }">
-                    {{ Number(data.quantity * data.weightPerItem).toFixed() }}
+                    {{ Number(data.quantity * data.valuePerUnit).toFixed() }}
                   </template>
                 </Column>
 
@@ -905,7 +911,7 @@ const truncateDecimal = (num, decimalPlaces) => {
               </template>
             </Column>
 
-            <Column field="perItem" header="На 1 тн">
+            <Column field="perItem" header="На 1 единицу">
               <template #body="{ data }">
                 {{ formatNumber(data.perItem) }}
               </template>
@@ -943,7 +949,7 @@ const truncateDecimal = (num, decimalPlaces) => {
               </template>
             </Column>
 
-            <Column field="perItem" header="На 1 тн">
+            <Column field="perItem" header="На 1 единицу">
               <template #body="{ data }">
                 <div :class="{ 'font-bold': data.key === 'total', 'text-lg': data.key === 'total' }">
                   {{ formatNumber(truncateDecimal(Number(data.perItem), 1)) }}
