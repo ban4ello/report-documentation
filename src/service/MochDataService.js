@@ -293,7 +293,8 @@ export const MochDataService = {
         id: 1,
         name: 'Изделие №1',
         quantity: 1,
-        weightPerItem: 2.0018,
+        valuePerUnit: 2.0018,
+        unitOfMeasurement: 'тн', // шт кг м
         totalWeight: null
       }
     ];
