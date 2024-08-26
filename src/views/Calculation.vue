@@ -9,7 +9,6 @@
   - Добавить кнопку "Удалить файл"
 
   - Добавить Textarea в блоки "Спецификация" и "Цех"
-  - Итоговую (финальную) сумму закрепить в хедере
 
   ИТР
   Цех
@@ -506,8 +505,6 @@ const finalTotalPrice = computed(() => {
       rentalCostPerDay.value * ITRWorkedDays.value +
       costOfElectricityPerDay.value * ITRWorkedDays.value);
 
-  localStorage.setItem('finalTotalPrice', totalPrice);
-
   return totalPrice;
 });
 
@@ -792,19 +789,26 @@ const truncateDecimal = (num, decimalPlaces) => {
 
 <template>
   <Fluid>
-    <div class="card calculation-title">
-      <div class="flex flex-row justify-between gap-2">
+    <div class="card calculation-title z-50 sticky top-[60px]">
+      <div class="flex flex-row justify-between items-center gap-2">
         <div class="font-semibold text-[--primary-color] text-xl">
           <span>Название калькуляции:</span><span><InputText v-model="calculationData.title" type="text" /></span>
         </div>
 
-        <div class="font-semibold text-[--primary-color] text-xl">
-          <p>Дата создания:</p>
+        <div v-if="finalTotalPrice" class="font-semibold text-xl">
+          <div class="text-[--primary-color]">Итоговая сумма калькуляции:</div>
+          <span>
+            {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
+          </span>
+        </div>
+
+        <div class="font-semibold text-xl">
+          <p class="text-[--primary-color]">Дата создания:</p>
           <p>{{ calculationData.dateOfCreation }}</p>
         </div>
 
-        <div class="font-semibold text-[--primary-color] text-xl">
-          <p>Дата последнего редактирования:</p>
+        <div class="font-semibold text-xl">
+          <p class="text-[--primary-color]">Дата последнего редактирования:</p>
           <p>{{ calculationData.lastEditDate }}</p>
         </div>
       </div>
