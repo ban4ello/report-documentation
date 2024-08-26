@@ -6,8 +6,9 @@
   - После создания "калькуляции" ("план") предлагать клонировать её (создать "факт"). В итоговый дашборд войдёт как "план" так и "факт"
   - Добавить кнопку "Сохранить"
   - Добавить кнопку "Удалить файл"
-
   - Добавить Textarea в блоки "Спецификация" и "Цех"
+  - Добавить сумму "На 1 ед." рядом с "Итоговая сумма калькуляции"
+  - Добавить новый флаг для "Сумма без металла" который уберет из итоговой суммы сумму металла который подгружается из файла
 
   ИТР
   Цех
@@ -32,6 +33,7 @@ const dropdownItemsWorkersRole = ref([
   { label: 'Рабочий', key: 'worker' },
   { label: 'ИТР', key: 'ITR' }
 ]);
+const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м']);
 
 const consumablesData = ref([]);
 const hardwareData = ref([]);
@@ -58,12 +60,12 @@ let ITRTaxData = ref([]);
 let ITRData = ref([]);
 let numberOfHoursPerShift = ref(8);
 let numberOfDaysPerShift = ref(21);
-let ITRWorkedDays = ref(13);
+let ITRWorkedDays = ref(0);
 let rentalCostPerDay = ref(170);
 let costOfElectricityPerDay = ref(550);
 let coeficientOfNDS = ref(1.2);
-let galvanizedValue = ref(1000);
-let transportValue = ref(2000);
+let galvanizedValue = ref(0);
+let transportValue = ref(0);
 let profitabilityCoeficient = ref(0.1);
 let increaseInSalary = ref(0);
 
@@ -85,10 +87,11 @@ const salariesOfITRTotalPerMonth = computed(() =>
   }, 0)
 );
 
-const totalSpecificationItems = computed(() =>
-  specificationData.value.reduce((acc, item) => {
-    return acc + Number(item.quantity * item.valuePerUnit);
-  }, 0)
+const totalSpecificationItems = computed(
+  () =>
+    specificationData.value.reduce((acc, item) => {
+      return acc + Number(item.quantity * item.valuePerUnit);
+    }, 0) || 0
 );
 
 const taxTotal = computed(() => {
@@ -115,7 +118,7 @@ const priceData = computed(() => {
       key: 'metal',
       statistics: getPercentOfTotal(totalMetal.value),
       total: totalMetal.value || 0,
-      perItem: Number(totalMetal.value / totalSpecificationItems.value).toFixed(2)
+      perItem: truncateDecimal(totalMetal.value / totalSpecificationItems.value, 2)
     },
     {
       id: 2,
@@ -123,7 +126,7 @@ const priceData = computed(() => {
       key: 'hardware',
       statistics: getPercentOfTotal(totalHardware.value),
       total: totalHardware.value || 0,
-      perItem: Number(totalHardware.value / totalSpecificationItems.value).toFixed(2)
+      perItem: truncateDecimal(totalHardware.value / totalSpecificationItems.value, 2)
     },
     {
       id: 3,
@@ -131,7 +134,7 @@ const priceData = computed(() => {
       key: 'consumables',
       statistics: getPercentOfTotal(totalConsumables.value),
       total: totalConsumables.value || 0,
-      perItem: Number(totalConsumables.value / totalSpecificationItems.value).toFixed(2)
+      perItem: truncateDecimal(totalConsumables.value / totalSpecificationItems.value, 2)
     },
     {
       id: 4,
@@ -155,7 +158,7 @@ const priceData = computed(() => {
       key: 'galvanizing',
       statistics: getPercentOfTotal(galvanizedValue.value),
       total: galvanizedValue.value || 0,
-      perItem: galvanizedValue.value / totalSpecificationItems.value
+      perItem: totalSpecificationItems.value ? galvanizedValue.value / totalSpecificationItems.value : 0
     },
     {
       id: 7,
@@ -163,7 +166,7 @@ const priceData = computed(() => {
       key: 'transport',
       statistics: getPercentOfTotal(transportValue.value),
       total: transportValue.value || 0,
-      perItem: transportValue.value / totalSpecificationItems.value
+      perItem: totalSpecificationItems.value ? transportValue.value / totalSpecificationItems.value : 0
     },
     {
       id: 8,
@@ -171,15 +174,15 @@ const priceData = computed(() => {
       key: 'rent',
       statistics: getPercentOfTotal(rentalCostPerDay.value * ITRWorkedDays.value),
       total: rentalCostPerDay.value * ITRWorkedDays.value || 0,
-      perItem: (rentalCostPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value
+      perItem: totalSpecificationItems.value ? (rentalCostPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value : 0
     },
     {
       id: 9,
       name: 'Эл. эн.',
       key: 'electricity',
-      statistics: getPercentOfTotal(costOfElectricityPerDay.value * ITRWorkedDays.value),
+      statistics: getPercentOfTotal(costOfElectricityPerDay.value * ITRWorkedDays.value) || 0,
       total: costOfElectricityPerDay.value * ITRWorkedDays.value || 0,
-      perItem: (costOfElectricityPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value
+      perItem: totalSpecificationItems.value ? (costOfElectricityPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value : 0
     },
     {
       id: 10,
@@ -208,18 +211,19 @@ const priceData = computed(() => {
           rentalCostPerDay.value * ITRWorkedDays.value +
           costOfElectricityPerDay.value * ITRWorkedDays.value) *
         profitabilityCoeficient.value,
-      perItem:
-        ((totalMetal.value +
-          totalHardware.value +
-          totalConsumables.value +
-          taxTotal.value +
-          taxITRTotal.value +
-          galvanizedValue.value +
-          transportValue.value +
-          rentalCostPerDay.value * ITRWorkedDays.value +
-          costOfElectricityPerDay.value * ITRWorkedDays.value) *
-          profitabilityCoeficient.value) /
-        totalSpecificationItems.value
+      perItem: totalSpecificationItems.value
+        ? ((totalMetal.value +
+            totalHardware.value +
+            totalConsumables.value +
+            taxTotal.value +
+            taxITRTotal.value +
+            galvanizedValue.value +
+            transportValue.value +
+            rentalCostPerDay.value * ITRWorkedDays.value +
+            costOfElectricityPerDay.value * ITRWorkedDays.value) *
+            profitabilityCoeficient.value) /
+          totalSpecificationItems.value
+        : 0
     },
     {
       id: 11,
@@ -246,18 +250,8 @@ const priceData = computed(() => {
           transportValue.value +
           rentalCostPerDay.value * ITRWorkedDays.value +
           costOfElectricityPerDay.value * ITRWorkedDays.value),
-      perItem:
-        ((totalMetal.value +
-          totalHardware.value +
-          totalConsumables.value +
-          taxTotal.value +
-          taxITRTotal.value +
-          galvanizedValue.value +
-          transportValue.value +
-          rentalCostPerDay.value * ITRWorkedDays.value +
-          costOfElectricityPerDay.value * ITRWorkedDays.value) *
-          profitabilityCoeficient.value +
-          (totalMetal.value +
+      perItem: totalSpecificationItems.value
+        ? ((totalMetal.value +
             totalHardware.value +
             totalConsumables.value +
             taxTotal.value +
@@ -265,8 +259,19 @@ const priceData = computed(() => {
             galvanizedValue.value +
             transportValue.value +
             rentalCostPerDay.value * ITRWorkedDays.value +
-            costOfElectricityPerDay.value * ITRWorkedDays.value)) /
-        totalSpecificationItems.value
+            costOfElectricityPerDay.value * ITRWorkedDays.value) *
+            profitabilityCoeficient.value +
+            (totalMetal.value +
+              totalHardware.value +
+              totalConsumables.value +
+              taxTotal.value +
+              taxITRTotal.value +
+              galvanizedValue.value +
+              transportValue.value +
+              rentalCostPerDay.value * ITRWorkedDays.value +
+              costOfElectricityPerDay.value * ITRWorkedDays.value)) /
+          totalSpecificationItems.value
+        : 0
     }
   ];
 });
@@ -279,7 +284,7 @@ const finalPriceData = computed(() => {
       key: 'metalTotal',
       statistics: getPercentOfTotal(totalMetal.value + totalHardware.value),
       total: totalMetal.value + totalHardware.value,
-      perItem: Number((totalMetal.value + totalHardware.value) / totalSpecificationItems.value).toFixed(2)
+      perItem: totalSpecificationItems.value ? truncateDecimal((totalMetal.value + totalHardware.value) / totalSpecificationItems.value) : 0
     },
     {
       id: 2,
@@ -287,9 +292,13 @@ const finalPriceData = computed(() => {
       key: 'processing',
       statistics: getPercentOfTotal(totalConsumables.value + taxTotal.value + taxITRTotal.value + galvanizedValue.value + transportValue.value + rentalCostPerDay.value * ITRWorkedDays.value + costOfElectricityPerDay.value * ITRWorkedDays.value),
       total: totalConsumables.value + taxTotal.value + taxITRTotal.value + galvanizedValue.value + transportValue.value + rentalCostPerDay.value * ITRWorkedDays.value + costOfElectricityPerDay.value * ITRWorkedDays.value,
-      perItem: Number(
-        (totalConsumables.value + taxTotal.value + taxITRTotal.value + galvanizedValue.value + transportValue.value + rentalCostPerDay.value * ITRWorkedDays.value + costOfElectricityPerDay.value * ITRWorkedDays.value) / totalSpecificationItems.value
-      ).toFixed(2)
+      perItem: totalSpecificationItems.value
+        ? truncateDecimal(
+            (totalConsumables.value + taxTotal.value + taxITRTotal.value + galvanizedValue.value + transportValue.value + rentalCostPerDay.value * ITRWorkedDays.value + costOfElectricityPerDay.value * ITRWorkedDays.value) /
+              totalSpecificationItems.value,
+            2
+          )
+        : 0
     },
     {
       id: 3,
@@ -318,18 +327,19 @@ const finalPriceData = computed(() => {
           rentalCostPerDay.value * ITRWorkedDays.value +
           costOfElectricityPerDay.value * ITRWorkedDays.value) *
         profitabilityCoeficient.value,
-      perItem:
-        ((totalMetal.value +
-          totalHardware.value +
-          totalConsumables.value +
-          taxTotal.value +
-          taxITRTotal.value +
-          galvanizedValue.value +
-          transportValue.value +
-          rentalCostPerDay.value * ITRWorkedDays.value +
-          costOfElectricityPerDay.value * ITRWorkedDays.value) *
-          profitabilityCoeficient.value) /
-        totalSpecificationItems.value
+      perItem: totalSpecificationItems.value
+        ? ((totalMetal.value +
+            totalHardware.value +
+            totalConsumables.value +
+            taxTotal.value +
+            taxITRTotal.value +
+            galvanizedValue.value +
+            transportValue.value +
+            rentalCostPerDay.value * ITRWorkedDays.value +
+            costOfElectricityPerDay.value * ITRWorkedDays.value) *
+            profitabilityCoeficient.value) /
+          totalSpecificationItems.value
+        : 0
     },
     {
       id: 4,
@@ -356,18 +366,8 @@ const finalPriceData = computed(() => {
           transportValue.value +
           rentalCostPerDay.value * ITRWorkedDays.value +
           costOfElectricityPerDay.value * ITRWorkedDays.value),
-      perItem:
-        ((totalMetal.value +
-          totalHardware.value +
-          totalConsumables.value +
-          taxTotal.value +
-          taxITRTotal.value +
-          galvanizedValue.value +
-          transportValue.value +
-          rentalCostPerDay.value * ITRWorkedDays.value +
-          costOfElectricityPerDay.value * ITRWorkedDays.value) *
-          profitabilityCoeficient.value +
-          (totalMetal.value +
+      perItem: totalSpecificationItems.value
+        ? ((totalMetal.value +
             totalHardware.value +
             totalConsumables.value +
             taxTotal.value +
@@ -375,8 +375,19 @@ const finalPriceData = computed(() => {
             galvanizedValue.value +
             transportValue.value +
             rentalCostPerDay.value * ITRWorkedDays.value +
-            costOfElectricityPerDay.value * ITRWorkedDays.value)) /
-        totalSpecificationItems.value
+            costOfElectricityPerDay.value * ITRWorkedDays.value) *
+            profitabilityCoeficient.value +
+            (totalMetal.value +
+              totalHardware.value +
+              totalConsumables.value +
+              taxTotal.value +
+              taxITRTotal.value +
+              galvanizedValue.value +
+              transportValue.value +
+              rentalCostPerDay.value * ITRWorkedDays.value +
+              costOfElectricityPerDay.value * ITRWorkedDays.value)) /
+          totalSpecificationItems.value
+        : 0
     }
   ];
 });
@@ -446,7 +457,7 @@ const computedITRTaxData = computed(() => {
 });
 
 const getPercentOfTotal = (totalNumber) => {
-  return (totalNumber / finalTotalPrice.value) * 100;
+  return (totalNumber / finalTotalPrice.value) * 100 || 0;
 };
 
 onBeforeMount(() => {
@@ -800,7 +811,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
 <template>
   <Fluid>
-    <div class="card calculation-title z-50 sticky top-[60px]">
+    <div class="card calculation-title z-50 sticky top-[60px] shadow-md">
       <div class="flex flex-row justify-between items-center gap-2">
         <div class="font-semibold text-[--primary-color] text-xl">
           <span>Название калькуляции:</span><span><InputText v-model="calculationData.title" type="text" /></span>
@@ -833,6 +844,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
             <AccordionContent>
               <DataTable :value="specificationData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
+                <template #empty> Нет данных для отображения </template>
+
                 <Column field="name" header="Наименование изделия" style="width: 25%">
                   <template #body="{ data }">
                     {{ data.name }}
@@ -859,7 +872,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
                   </template>
 
                   <template #editor="{ data }">
-                    <InputText v-model="data.unitOfMeasurement" type="text" />
+                    <Select id="unitOfMeasurement" v-model="data.unitOfMeasurement" :options="dropdownItemsUnitOfMeasurement" class="w-full"></Select>
                   </template>
                 </Column>
 
@@ -891,7 +904,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
                   <div class="flex justify-end gap-4 w-full">
                     <div class="flex items-center">
-                      Итого общий вес: &nbsp;<span class="font-bold text-lg"> {{ totalSpecificationItems.toFixed(4) }} тонн</span>
+                      Итого: &nbsp;<span class="font-bold text-lg"> {{ formatNumber(truncateDecimal(totalSpecificationItems, 4)) }}</span>
                     </div>
                   </div>
                 </template>
@@ -908,6 +921,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
           </div>
 
           <DataTable :value="priceData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
+            <template #empty> Нет данных для отображения </template>
+
             <Column field="name">
               <template #body="{ data }">
                 <div>
@@ -951,6 +966,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
           </div>
 
           <DataTable :value="finalPriceData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines :style="{ border: '2px solid green' }">
+            <template #empty> Нет данных для отображения </template>
+
             <Column field="name">
               <template #body="{ data }">
                 <div :class="{ 'font-bold': data.key === 'total', 'text-lg': data.key === 'total' }">
@@ -1042,6 +1059,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
             </div>
 
             <DataTable :value="workersData" v-model:selection="selectedStaff" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
+              <template #empty> Нет данных для отображения </template>
+
               <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
               <Column field="name" header="Имя сотрудника">
@@ -1164,6 +1183,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
             </div>
 
             <DataTable :value="ITRData" v-model:selection="selectedITRStaff" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
+              <template #empty> Нет данных для отображения </template>
+
               <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
 
               <Column field="name" header="Имя сотрудника" style="width: 25%">
@@ -1254,15 +1275,13 @@ watch(increaseInSalary, (newValue, oldValue) => {
           </div>
         </div>
 
-        <Accordion :value="['0']" multiple>
+        <Accordion multiple>
           <AccordionPanel value="0">
             <AccordionHeader>Расходники</AccordionHeader>
 
             <AccordionContent>
               <DataTable :value="consumablesData" dataKey="order" :rowHover="true" showGridlines>
-                <template #empty> No customers found. </template>
-
-                <template #loading> Loading customers data. Please wait. </template>
+                <template #empty> Нет данных для отображения </template>
 
                 <Column field="order" header="№ п/п" style="min-width: 12rem">
                   <template #body="{ data }">
@@ -1314,9 +1333,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
             <AccordionContent>
               <DataTable :value="hardwareData" dataKey="order" :rowHover="true" showGridlines>
-                <template #empty> No customers found. </template>
-
-                <template #loading> Loading customers data. Please wait. </template>
+                <template #empty> Нет данных для отображения </template>
 
                 <Column field="order" header="№ п/п" style="min-width: 12rem">
                   <template #body="{ data }">
@@ -1368,6 +1385,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
             <AccordionContent>
               <DataTable :value="metalData" dataKey="order" :rowHover="true" showGridlines>
+                <template #empty> Нет данных для отображения </template>
+
                 <Column field="order" header="№ п/п" style="min-width: 12rem">
                   <template #body="{ data }">
                     {{ data.order }}
@@ -1479,11 +1498,6 @@ watch(increaseInSalary, (newValue, oldValue) => {
 .progress_cell {
   padding: 3px 0 !important;
   height: 40px;
-
-  .progress-bar {
-    // display: flex !important;
-    // align-items: center !important;
-  }
 
   &.p-datatable-header-cell {
     padding: var(--p-datatable-header-cell-padding) !important;
