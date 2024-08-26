@@ -289,43 +289,43 @@ export const MochDataService = {
 
   specificationData() {
     return [
-      {
-        id: 1,
-        name: 'Изделие №1',
-        quantity: 1,
-        valuePerUnit: 2.0018,
-        unitOfMeasurement: 'тн', // шт кг м
-        totalWeight: null
-      }
+      // {
+      //   id: 1,
+      //   name: 'Изделие №1',
+      //   quantity: 1,
+      //   valuePerUnit: 2.0018,
+      //   unitOfMeasurement: 'тн', // шт кг м
+      //   totalWeight: null
+      // }
     ];
   },
 
   workersData() {
     return [
-      {
-        id: 1,
-        name: 'Бабенко',
-        numberOfHoursWorked: 63,
-        salaryPerDay: 1690,
-        salaryPerHour: null,
-        total: null
-      },
-      {
-        id: 2,
-        name: 'Червань Антон',
-        numberOfHoursWorked: 79,
-        salaryPerDay: 1700,
-        salaryPerHour: null,
-        total: null
-      },
-      {
-        id: 3,
-        name: 'Атаманенко',
-        numberOfHoursWorked: 77,
-        salaryPerDay: 1680,
-        salaryPerHour: null,
-        total: null
-      }
+      // {
+      //   id: 1,
+      //   name: 'Бабенко',
+      //   numberOfHoursWorked: 63,
+      //   salaryPerDay: 1690,
+      //   salaryPerHour: null,
+      //   total: null
+      // },
+      // {
+      //   id: 2,
+      //   name: 'Червань Антон',
+      //   numberOfHoursWorked: 79,
+      //   salaryPerDay: 1700,
+      //   salaryPerHour: null,
+      //   total: null
+      // },
+      // {
+      //   id: 3,
+      //   name: 'Атаманенко',
+      //   numberOfHoursWorked: 77,
+      //   salaryPerDay: 1680,
+      //   salaryPerHour: null,
+      //   total: null
+      // }
     ];
   },
 
@@ -421,36 +421,36 @@ export const MochDataService = {
 
   ITRData() {
     return [
-      {
-        id: 1,
-        name: 'Кристина',
-        salaryPerMonth: 1000
-      },
-      {
-        id: 2,
-        name: 'Олька',
-        salaryPerMonth: 10000
-      },
-      {
-        id: 3,
-        name: 'Танюха',
-        salaryPerMonth: 0
-      },
-      {
-        id: 4,
-        name: 'Тёмка',
-        salaryPerMonth: 3000
-      },
-      {
-        id: 5,
-        name: 'Николаев',
-        salaryPerMonth: 15000
-      },
-      {
-        id: 6,
-        name: 'Шеф',
-        salaryPerMonth: 5000
-      }
+      // {
+      //   id: 1,
+      //   name: 'Кристина',
+      //   salaryPerMonth: 1000
+      // },
+      // {
+      //   id: 2,
+      //   name: 'Олька',
+      //   salaryPerMonth: 10000
+      // },
+      // {
+      //   id: 3,
+      //   name: 'Танюха',
+      //   salaryPerMonth: 0
+      // },
+      // {
+      //   id: 4,
+      //   name: 'Тёмка',
+      //   salaryPerMonth: 3000
+      // },
+      // {
+      //   id: 5,
+      //   name: 'Николаев',
+      //   salaryPerMonth: 15000
+      // },
+      // {
+      //   id: 6,
+      //   name: 'Шеф',
+      //   salaryPerMonth: 5000
+      // }
     ];
   },
 
