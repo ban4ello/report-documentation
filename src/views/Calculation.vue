@@ -2,7 +2,6 @@
 /*
   TODO:
   - Разработать функционал добавления в базу новых сотрудников
-  - Добавить возможность гибко управлять стоимостью ЗП в блоках "ИТР" и "Цех"
   - Добавить возможность прикреплять файлы (чертежи) к проекту (заказу)
   - После создания "калькуляции" ("план") предлагать клонировать её (создать "факт"). В итоговый дашборд войдёт как "план" так и "факт"
   - Добавить кнопку "Сохранить"
@@ -17,7 +16,7 @@
   Общие затраты:
 */
 
-import { onBeforeMount, ref, computed } from 'vue';
+import { onBeforeMount, ref, computed, watch } from 'vue';
 import { MochDataService } from '@/service/MochDataService';
 // import { useToast } from 'primevue/usetoast';
 import SearchSelect from '@/components/custom-ui/SearchSelect.vue';
@@ -66,6 +65,7 @@ let coeficientOfNDS = ref(1.2);
 let galvanizedValue = ref(1000);
 let transportValue = ref(2000);
 let profitabilityCoeficient = ref(0.1);
+let increaseInSalary = ref(0);
 
 const salariesOfWorkersTotal = computed(() =>
   workersData.value.reduce((acc, item) => {
@@ -785,6 +785,17 @@ const truncateDecimal = (num, decimalPlaces) => {
   const factor = Math.pow(10, decimalPlaces);
   return Math.trunc(num * factor) / factor;
 };
+
+watch(increaseInSalary, (newValue, oldValue) => {
+  let increment = newValue > oldValue ? 5 : -5;
+
+  // если меняется "increaseInSalary" - то должно меняться значение "salaryPerDay"
+  workersData.value = workersData.value.map((item) => {
+    const newPrice = Number(item.salaryPerDay) + Number(increment);
+
+    return { ...item, salaryPerDay: newPrice };
+  });
+});
 </script>
 
 <template>
@@ -1010,9 +1021,24 @@ const truncateDecimal = (num, decimalPlaces) => {
               </div>
             </div>
 
-            <div class="flex flex-row gap-2 max-w-[250px] mb-4">
-              <label for="numberOfHoursPerShift">Количество часов в смене</label>
-              <InputNumber v-model="numberOfHoursPerShift" inputId="numberOfHoursPerShift" fluid />
+            <div class="flex justify-between">
+              <div class="flex flex-row gap-2 max-w-[250px] mb-4">
+                <label for="numberOfHoursPerShift">Количество часов в смене</label>
+                <InputNumber v-model="numberOfHoursPerShift" inputId="numberOfHoursPerShift" fluid />
+              </div>
+
+              <div class="flex flex-row gap-2 items-center">
+                <label for="numberOfHoursPerShift">Увеличения ЗП</label>
+
+                <InputNumber v-model="increaseInSalary" :step="5" showButtons buttonLayout="horizontal" style="width: 140px">
+                  <template #incrementbuttonicon>
+                    <span class="pi pi-plus" />
+                  </template>
+                  <template #decrementbuttonicon>
+                    <span class="pi pi-minus" />
+                  </template>
+                </InputNumber>
+              </div>
             </div>
 
             <DataTable :value="workersData" v-model:selection="selectedStaff" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
@@ -1024,7 +1050,6 @@ const truncateDecimal = (num, decimalPlaces) => {
                 </template>
 
                 <template #editor="{ data }">
-                  <!-- <InputText v-model="data.name" /> -->
                   <Select id="staff" v-model="data.name" :options="dropdownItemsWorkerStaff" class="w-full"></Select>
                 </template>
               </Column>
@@ -1041,7 +1066,7 @@ const truncateDecimal = (num, decimalPlaces) => {
 
               <Column field="salaryPerDay" header="В день">
                 <template #body="{ data }">
-                  {{ formatNumber(data.salaryPerDay) }}
+                  {{ formatNumber(truncateDecimal(data.salaryPerDay, 0)) }}
                 </template>
 
                 <template #editor="{ data }">
@@ -1051,7 +1076,7 @@ const truncateDecimal = (num, decimalPlaces) => {
 
               <Column field="salaryPerHour" header="В час">
                 <template #body="{ data }">
-                  {{ formatNumber(data.salaryPerDay / numberOfHoursPerShift) }}
+                  {{ formatNumber(truncateDecimal(data.salaryPerDay / numberOfHoursPerShift, 2)) }}
                 </template>
               </Column>
 
