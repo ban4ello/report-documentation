@@ -5,7 +5,11 @@ const layoutConfig = reactive({
   primary: 'emerald',
   surface: null,
   darkTheme: false,
-  menuMode: 'static'
+  menuMode: 'overlay'
+});
+
+const appConfig = reactive({
+  companyName: 'Калькуляции и Анализ'
 });
 
 const layoutState = reactive({
@@ -80,5 +84,21 @@ export function useLayout() {
 
   const getSurface = computed(() => layoutConfig.surface);
 
-  return { layoutConfig: readonly(layoutConfig), layoutState: readonly(layoutState), onMenuToggle, isSidebarActive, isDarkTheme, getPrimary, getSurface, setActiveMenuItem, toggleDarkMode, setPrimary, setSurface, setPreset, resetMenu, setMenuMode };
+  return {
+    layoutConfig: readonly(layoutConfig),
+    layoutState: readonly(layoutState),
+    onMenuToggle,
+    isSidebarActive,
+    isDarkTheme,
+    getPrimary,
+    getSurface,
+    setActiveMenuItem,
+    toggleDarkMode,
+    setPrimary,
+    setSurface,
+    setPreset,
+    resetMenu,
+    setMenuMode,
+    appConfig
+  };
 }
