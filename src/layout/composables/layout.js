@@ -1,5 +1,20 @@
 import { computed, reactive, readonly } from 'vue';
 
+const truncateDecimal = (num, decimalPlaces) => {
+  const factor = Math.pow(10, decimalPlaces);
+  return Math.trunc(num * factor) / factor;
+};
+
+const formatNumber = (numberData) => {
+  if (numberData && numberData.value) {
+    return new Intl.NumberFormat('ru-RU').format(numberData.value);
+  } else if (numberData) {
+    return new Intl.NumberFormat('ru-RU').format(numberData);
+  } else {
+    return 0;
+  }
+};
+
 const layoutConfig = reactive({
   preset: 'Aura',
   primary: 'emerald',
@@ -79,6 +94,23 @@ export function useLayout() {
   const getPrimary = computed(() => layoutConfig.primary);
 
   const getSurface = computed(() => layoutConfig.surface);
+  const totalPrice = computed(() => truncateDecimal(localStorage.getItem('finalTotalPrice'), 1));
 
-  return { layoutConfig: readonly(layoutConfig), layoutState: readonly(layoutState), onMenuToggle, isSidebarActive, isDarkTheme, getPrimary, getSurface, setActiveMenuItem, toggleDarkMode, setPrimary, setSurface, setPreset, resetMenu, setMenuMode };
+  return {
+    layoutConfig: readonly(layoutConfig),
+    layoutState: readonly(layoutState),
+    onMenuToggle,
+    isSidebarActive,
+    isDarkTheme,
+    getPrimary,
+    getSurface,
+    setActiveMenuItem,
+    toggleDarkMode,
+    setPrimary,
+    setSurface,
+    setPreset,
+    resetMenu,
+    setMenuMode,
+    totalPrice: formatNumber(totalPrice)
+  };
 }

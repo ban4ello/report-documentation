@@ -485,7 +485,7 @@ onBeforeMount(() => {
 });
 
 const finalTotalPrice = computed(() => {
-  return (
+  const totalPrice =
     (totalMetal.value +
       totalHardware.value +
       totalConsumables.value +
@@ -504,8 +504,11 @@ const finalTotalPrice = computed(() => {
       galvanizedValue.value +
       transportValue.value +
       rentalCostPerDay.value * ITRWorkedDays.value +
-      costOfElectricityPerDay.value * ITRWorkedDays.value)
-  );
+      costOfElectricityPerDay.value * ITRWorkedDays.value);
+
+  localStorage.setItem('finalTotalPrice', totalPrice);
+
+  return totalPrice;
 });
 
 function getTotalPrice(array) {
