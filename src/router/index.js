@@ -14,9 +14,19 @@ const router = createRouter({
           component: () => import('@/views/Dashboard.vue')
         },
         {
-          path: '/calculation',
-          name: 'calculation',
-          component: () => import('@/views/Calculation.vue')
+          path: '/calculations',
+          name: 'calculations',
+          component: () => import('@/views/pages/calculations/index.vue')
+        },
+        {
+          path: '/calculations/:id',
+          name: 'calculation-item',
+          component: () => import('@/views/pages/calculations/_id.vue')
+        },
+        {
+          path: '/calculations/create',
+          name: 'calculation-create',
+          component: () => import('@/views/pages/calculations/create.vue')
         },
         {
           path: '/uikit/formlayout',

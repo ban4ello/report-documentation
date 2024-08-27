@@ -848,8 +848,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
 <template>
   <Fluid>
-    <div class="card calculation-title z-50 sticky top-[60px] shadow-md">
-      <div class="flex flex-row justify-between items-center gap-2">
+    <div class="card calculation-title z-50 sticky top-[60px] shadow-md flex flex-row justify-between items-center gap-4">
+      <div class="flex flex-row justify-between items-center gap-8">
         <div class="font-semibold text-[--primary-color] text-xl">
           <span>Название калькуляции:</span><span><InputText v-model="calculationData.title" type="text" /></span>
         </div>
@@ -879,6 +879,10 @@ watch(increaseInSalary, (newValue, oldValue) => {
           <p class="text-[--primary-color]">Дата последнего редактирования:</p>
           <p>{{ calculationData.lastEditDate }}</p>
         </div>
+      </div>
+
+      <div>
+        <Button label="Сохранить калькуляцию" size="large" severity="success" class="text-xs" />
       </div>
     </div>
 
