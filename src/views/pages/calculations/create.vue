@@ -6,9 +6,6 @@
   - После создания "калькуляции" ("план") предлагать клонировать её (создать "факт"). В итоговый дашборд войдёт как "план" так и "факт"
   - Добавить кнопку "Сохранить"
   - Добавить кнопку "Удалить файл"
-  - Добавить Textarea в блоки "Спецификация" и "Цех"
-  - Добавить сумму "На 1 ед." рядом с "Итоговая сумма калькуляции"
-  - Добавить новый флаг для "Сумма без металла" который уберет из итоговой суммы сумму металла который подгружается из файла
 
   ИТР
   Цех
@@ -35,6 +32,7 @@ const dropdownItemsWorkersRole = ref([
 ]);
 const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м']);
 
+const isAmountWithoutMetal = ref(false);
 const consumablesData = ref([]);
 const hardwareData = ref([]);
 const metalData = ref([]);
@@ -52,8 +50,8 @@ const today = `${currentDate.getDate()}.${currentDate.getMonth()}.${currentDate.
 const currentTime = currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds();
 
 let calculationData = ref({ title: 'Калькуляция-' + today, dateOfCreation: today, lastEditDate: today + ' ' + currentTime });
-let workersData = ref([]);
-let specificationData = ref([]);
+let workersData = ref({ table: [], notes: '' });
+let specificationData = ref({ table: [], notes: '' });
 let newWorkerData = ref({ name: '', lastname: '', role: '' });
 let workersTaxData = ref([]);
 let ITRTaxData = ref([]);
@@ -70,7 +68,7 @@ let profitabilityCoeficient = ref(0.1);
 let increaseInSalary = ref(0);
 
 const salariesOfWorkersTotal = computed(() =>
-  workersData.value.reduce((acc, item) => {
+  workersData.value.table.reduce((acc, item) => {
     return acc + parseFloat(Number((item.salaryPerDay / numberOfHoursPerShift.value) * item.numberOfHoursWorked).toFixed());
   }, 0)
 );
@@ -89,7 +87,7 @@ const salariesOfITRTotalPerMonth = computed(() =>
 
 const totalSpecificationItems = computed(
   () =>
-    specificationData.value.reduce((acc, item) => {
+    specificationData.value.table.reduce((acc, item) => {
       return acc + Number(item.quantity * item.valuePerUnit);
     }, 0) || 0
 );
@@ -97,13 +95,31 @@ const totalSpecificationItems = computed(
 const taxTotal = computed(() => {
   const numberOfDecimal = 2;
 
-  return Number(parseFloat((computedWorkerTaxData.value.T + computedWorkerTaxData.value.TN + computedWorkerTaxData.value.K + computedWorkerTaxData.value.KMIL + computedWorkerTaxData.value.KESV) * coeficientOfNDS.value).toFixed(numberOfDecimal));
+  return Number(
+    parseFloat(
+      (computedWorkerTaxData.value.T +
+        computedWorkerTaxData.value.TN +
+        computedWorkerTaxData.value.K +
+        computedWorkerTaxData.value.KMIL +
+        computedWorkerTaxData.value.KESV) *
+        coeficientOfNDS.value
+    ).toFixed(numberOfDecimal)
+  );
 });
 
 const taxITRTotal = computed(() => {
   const numberOfDecimal = 2;
 
-  return Number(parseFloat((computedITRTaxData.value.T + computedITRTaxData.value.TN + computedITRTaxData.value.K + computedITRTaxData.value.KMIL + computedITRTaxData.value.KESV) * coeficientOfNDS.value).toFixed(numberOfDecimal));
+  return Number(
+    parseFloat(
+      (computedITRTaxData.value.T +
+        computedITRTaxData.value.TN +
+        computedITRTaxData.value.K +
+        computedITRTaxData.value.KMIL +
+        computedITRTaxData.value.KESV) *
+        coeficientOfNDS.value
+    ).toFixed(numberOfDecimal)
+  );
 });
 
 const totalConsumables = computed(() => getTotalPrice(consumablesData.value));
@@ -118,7 +134,7 @@ const priceData = computed(() => {
       key: 'metal',
       statistics: getPercentOfTotal(totalMetal.value),
       total: totalMetal.value || 0,
-      perItem: truncateDecimal(totalMetal.value / totalSpecificationItems.value, 2)
+      perItem: totalSpecificationItems.value ? truncateDecimal(totalMetal.value / totalSpecificationItems.value, 2) : 0
     },
     {
       id: 2,
@@ -126,7 +142,7 @@ const priceData = computed(() => {
       key: 'hardware',
       statistics: getPercentOfTotal(totalHardware.value),
       total: totalHardware.value || 0,
-      perItem: truncateDecimal(totalHardware.value / totalSpecificationItems.value, 2)
+      perItem: totalSpecificationItems.value ? truncateDecimal(totalHardware.value / totalSpecificationItems.value, 2) : 0
     },
     {
       id: 3,
@@ -134,7 +150,7 @@ const priceData = computed(() => {
       key: 'consumables',
       statistics: getPercentOfTotal(totalConsumables.value),
       total: totalConsumables.value || 0,
-      perItem: truncateDecimal(totalConsumables.value / totalSpecificationItems.value, 2)
+      perItem: totalSpecificationItems.value ? truncateDecimal(totalConsumables.value / totalSpecificationItems.value, 2) : 0
     },
     {
       id: 4,
@@ -290,11 +306,32 @@ const finalPriceData = computed(() => {
       id: 2,
       name: 'Переработка',
       key: 'processing',
-      statistics: getPercentOfTotal(totalConsumables.value + taxTotal.value + taxITRTotal.value + galvanizedValue.value + transportValue.value + rentalCostPerDay.value * ITRWorkedDays.value + costOfElectricityPerDay.value * ITRWorkedDays.value),
-      total: totalConsumables.value + taxTotal.value + taxITRTotal.value + galvanizedValue.value + transportValue.value + rentalCostPerDay.value * ITRWorkedDays.value + costOfElectricityPerDay.value * ITRWorkedDays.value,
+      statistics: getPercentOfTotal(
+        totalConsumables.value +
+          taxTotal.value +
+          taxITRTotal.value +
+          galvanizedValue.value +
+          transportValue.value +
+          rentalCostPerDay.value * ITRWorkedDays.value +
+          costOfElectricityPerDay.value * ITRWorkedDays.value
+      ),
+      total:
+        totalConsumables.value +
+        taxTotal.value +
+        taxITRTotal.value +
+        galvanizedValue.value +
+        transportValue.value +
+        rentalCostPerDay.value * ITRWorkedDays.value +
+        costOfElectricityPerDay.value * ITRWorkedDays.value,
       perItem: totalSpecificationItems.value
         ? truncateDecimal(
-            (totalConsumables.value + taxTotal.value + taxITRTotal.value + galvanizedValue.value + transportValue.value + rentalCostPerDay.value * ITRWorkedDays.value + costOfElectricityPerDay.value * ITRWorkedDays.value) /
+            (totalConsumables.value +
+              taxTotal.value +
+              taxITRTotal.value +
+              galvanizedValue.value +
+              transportValue.value +
+              rentalCostPerDay.value * ITRWorkedDays.value +
+              costOfElectricityPerDay.value * ITRWorkedDays.value) /
               totalSpecificationItems.value,
             2
           )
@@ -474,7 +511,7 @@ onBeforeMount(() => {
   });
 
   MochDataService.getWorkersData().then((data) => {
-    workersData.value = data;
+    workersData.value.table = data;
   });
 
   MochDataService.getWorkersTaxData().then((data) => {
@@ -490,7 +527,7 @@ onBeforeMount(() => {
   });
 
   MochDataService.getSpecificationData().then((data) => {
-    specificationData.value = data;
+    specificationData.value.table = data;
   });
 });
 
@@ -644,7 +681,7 @@ const showDialog = (key, flag = true) => {
 };
 
 const copySpecification = (data) => {
-  specificationData.value.push({
+  specificationData.value.table.push({
     id: (Math.random() * 1000).toFixed(),
     name: data.name,
     quantity: data.quantity,
@@ -654,7 +691,7 @@ const copySpecification = (data) => {
 };
 
 const addNewSpecification = () => {
-  specificationData.value.push({
+  specificationData.value.table.push({
     id: (Math.random() * 1000).toFixed(),
     name: null,
     quantity: null,
@@ -664,11 +701,11 @@ const addNewSpecification = () => {
 };
 
 const confirmDeleteSpecification = (data) => {
-  specificationData.value = specificationData.value.filter((item) => item.id !== data.id);
+  specificationData.value.table = specificationData.value.table.filter((item) => item.id !== data.id);
 };
 
 const copyStaffWorker = (data) => {
-  workersData.value.push({
+  workersData.value.table.push({
     id: (Math.random() * 1000).toFixed(),
     name: data.name,
     numberOfHoursWorked: data.numberOfHoursWorked,
@@ -679,7 +716,7 @@ const copyStaffWorker = (data) => {
 };
 
 const saveNewStaff = () => {
-  workersData.value.push({
+  workersData.value.table.push({
     id: (Math.random() * 1000).toFixed(),
     name: newStaffData.value.name,
     numberOfHoursWorked: newStaffData.value.numberOfHoursWorked,
@@ -698,10 +735,10 @@ const saveNewStaff = () => {
 
 const confirmDeleteStaff = (item) => {
   if (item) {
-    workersData.value = workersData.value.filter((worker) => worker.id !== item.id);
+    workersData.value.table = workersData.value.table.filter((worker) => worker.id !== item.id);
   } else {
     selectedStaff.value.forEach((item) => {
-      workersData.value = workersData.value.filter((worker) => worker.id !== item.id);
+      workersData.value.table = workersData.value.table.filter((worker) => worker.id !== item.id);
     });
   }
 
@@ -801,7 +838,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
   let increment = newValue > oldValue ? 5 : -5;
 
   // если меняется "increaseInSalary" - то должно меняться значение "salaryPerDay"
-  workersData.value = workersData.value.map((item) => {
+  workersData.value.table = workersData.value.table.map((item) => {
     const newPrice = Number(item.salaryPerDay) + Number(increment);
 
     return { ...item, salaryPerDay: newPrice };
@@ -811,17 +848,26 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
 <template>
   <Fluid>
-    <div class="card calculation-title z-50 sticky top-[60px] shadow-md">
-      <div class="flex flex-row justify-between items-center gap-2">
+    <div class="card calculation-title z-50 sticky top-[60px] shadow-md flex flex-row justify-between items-center gap-4">
+      <div class="flex flex-row justify-between items-center gap-8">
         <div class="font-semibold text-[--primary-color] text-xl">
           <span>Название калькуляции:</span><span><InputText v-model="calculationData.title" type="text" /></span>
         </div>
 
-        <div v-if="finalTotalPrice" class="font-semibold text-xl">
-          <div class="text-[--primary-color]">Итоговая сумма калькуляции:</div>
-          <span>
-            {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
-          </span>
+        <div v-if="finalTotalPrice" class="font-semibold text-xl flex gap-4 items-center">
+          <div class="flex flex-col gap-2">
+            <div class="text-[--primary-color] max-w-[200px]">Итоговая сумма калькуляции:</div>
+            <span>
+              {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
+            </span>
+          </div>
+
+          <div v-if="totalSpecificationItems" class="flex flex-col gap-2">
+            <div class="text-[--primary-color]">На 1 ед:</div>
+            <span>
+              {{ formatNumber(truncateDecimal(finalTotalPrice / totalSpecificationItems, 1)) }}
+            </span>
+          </div>
         </div>
 
         <div class="font-semibold text-xl">
@@ -834,16 +880,22 @@ watch(increaseInSalary, (newValue, oldValue) => {
           <p>{{ calculationData.lastEditDate }}</p>
         </div>
       </div>
+
+      <div>
+        <Button label="Сохранить калькуляцию" size="large" severity="success" class="text-xs" />
+      </div>
     </div>
 
     <div class="flex flex-col">
       <div class="specification card h-full flex flex-col gap-4">
         <Accordion :value="['0']" multiple>
           <AccordionPanel value="0">
-            <AccordionHeader><div class="font-semibold text-[--primary-color] text-xl">Спецификация</div></AccordionHeader>
+            <AccordionHeader>
+              <div class="font-semibold text-[--primary-color] text-xl">Спецификация</div>
+            </AccordionHeader>
 
             <AccordionContent>
-              <DataTable :value="specificationData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
+              <DataTable :value="specificationData.table" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
                 <template #empty> Нет данных для отображения </template>
 
                 <Column field="name" header="Наименование изделия" style="width: 25%">
@@ -872,7 +924,12 @@ watch(increaseInSalary, (newValue, oldValue) => {
                   </template>
 
                   <template #editor="{ data }">
-                    <Select id="unitOfMeasurement" v-model="data.unitOfMeasurement" :options="dropdownItemsUnitOfMeasurement" class="w-full"></Select>
+                    <Select
+                      id="unitOfMeasurement"
+                      v-model="data.unitOfMeasurement"
+                      :options="dropdownItemsUnitOfMeasurement"
+                      class="w-full"
+                    ></Select>
                   </template>
                 </Column>
 
@@ -900,7 +957,9 @@ watch(increaseInSalary, (newValue, oldValue) => {
                 </Column>
 
                 <template #footer>
-                  <div class="flex justify-center items-center text-[--primary-color] hover:cursor-pointer" @click="addNewSpecification">добавить строку +</div>
+                  <div class="flex justify-center items-center text-[--primary-color] hover:cursor-pointer" @click="addNewSpecification">
+                    добавить строку +
+                  </div>
 
                   <div class="flex justify-end gap-4 w-full">
                     <div class="flex items-center">
@@ -912,6 +971,11 @@ watch(increaseInSalary, (newValue, oldValue) => {
             </AccordionContent>
           </AccordionPanel>
         </Accordion>
+
+        <div>
+          <label for="specificationData" class="text-[--primary-color]">Заметки:</label>
+          <Textarea v-model="specificationData.notes" />
+        </div>
       </div>
 
       <div class="grid grid-cols-1fr-40 gap-4 mb-[2rem]">
@@ -953,7 +1017,12 @@ watch(increaseInSalary, (newValue, oldValue) => {
             <Column header="Статистика" class="progress_cell">
               <template #body="{ data }">
                 <div v-if="data.key !== 'total'">
-                  <ProgressBar v-tooltip="`${parseFloat(data.statistics).toFixed()}%`" :showValue="false" :value="Number(parseFloat(data.statistics).toFixed())" style="border-radius: 0; background-color: transparent; height: 40px"></ProgressBar>
+                  <ProgressBar
+                    v-tooltip="`${parseFloat(data.statistics).toFixed()}%`"
+                    :showValue="false"
+                    :value="Number(parseFloat(data.statistics).toFixed())"
+                    style="border-radius: 0; background-color: transparent; height: 40px"
+                  ></ProgressBar>
                 </div>
               </template>
             </Column>
@@ -965,7 +1034,13 @@ watch(increaseInSalary, (newValue, oldValue) => {
             <div class="font-semibold text-[--primary-color] text-xl">Итоговая ведомость</div>
           </div>
 
-          <DataTable :value="finalPriceData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines :style="{ border: '2px solid green' }">
+          <DataTable
+            :value="finalPriceData"
+            editMode="cell"
+            @cell-edit-complete="onCellEditComplete"
+            showGridlines
+            :style="{ border: '2px solid green', 'margin-bottom': '2rem' }"
+          >
             <template #empty> Нет данных для отображения </template>
 
             <Column field="name">
@@ -995,11 +1070,32 @@ watch(increaseInSalary, (newValue, oldValue) => {
             <Column header="Статистика" class="progress_cell">
               <template #body="{ data }">
                 <div v-if="data.key !== 'total'">
-                  <ProgressBar v-tooltip="`${parseFloat(data.statistics).toFixed()}%`" :showValue="false" :value="Number(parseFloat(data.statistics).toFixed())" style="border-radius: 0; background-color: transparent; height: 40px"></ProgressBar>
+                  <ProgressBar
+                    v-tooltip="`${parseFloat(data.statistics).toFixed()}%`"
+                    :showValue="false"
+                    :value="Number(parseFloat(data.statistics).toFixed())"
+                    style="border-radius: 0; background-color: transparent; height: 40px"
+                  ></ProgressBar>
                 </div>
               </template>
             </Column>
           </DataTable>
+
+          <div class="flex flex-row justify-between gap-2">
+            <div class="flex gap-2 items-center">
+              <Checkbox v-model="isAmountWithoutMetal" :value="isAmountWithoutMetal" :binary="true" />
+              <label class="font-semibold items-center text-[--primary-color] text-xl">Сумма без металла</label>
+            </div>
+
+            <div class="flex flex-row justify-between gap-2 items-center">
+              <div v-if="isAmountWithoutMetal" class="font-semibold text-xl">
+                {{ formatNumber(truncateDecimal(finalTotalPrice - totalMetal, 1)) }}
+              </div>
+              <div v-else class="font-semibold text-xl">
+                {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -1021,7 +1117,14 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
           <div class="flex flex-row gap-2 items-center justify-between">
             <label for="costOfElectricityPerDay">Коэффициент рентабельности:</label>
-            <InputNumber v-model="profitabilityCoeficient" inputId="costOfElectricityPerDay" class="max-w-[50px]" :minFractionDigits="1" :maxFractionDigits="5" fluid />
+            <InputNumber
+              v-model="profitabilityCoeficient"
+              inputId="costOfElectricityPerDay"
+              class="max-w-[50px]"
+              :minFractionDigits="1"
+              :maxFractionDigits="5"
+              fluid
+            />
           </div>
         </div>
       </div>
@@ -1033,8 +1136,23 @@ watch(increaseInSalary, (newValue, oldValue) => {
               <div class="font-semibold text-[--primary-color] text-xl">Цех</div>
 
               <div>
-                <Button label="Добавить сотрудника" size="small" icon="pi pi-plus" severity="success" class="mr-2 text-xs max-w-[100px]" @click="showDialog('newStaffDialog')" />
-                <Button label="Удалить сотрудника" size="small" icon="pi pi-trash" severity="danger" class="mr-2 text-xs max-w-[100px]" @click="confirmDeleteStaff()" :disabled="!selectedStaff || !selectedStaff.length" />
+                <Button
+                  label="Добавить сотрудника"
+                  size="small"
+                  icon="pi pi-plus"
+                  severity="success"
+                  class="mr-2 text-xs max-w-[100px]"
+                  @click="showDialog('newStaffDialog')"
+                />
+                <Button
+                  label="Удалить сотрудника"
+                  size="small"
+                  icon="pi pi-trash"
+                  severity="danger"
+                  class="mr-2 text-xs max-w-[100px]"
+                  @click="confirmDeleteStaff()"
+                  :disabled="!selectedStaff || !selectedStaff.length"
+                />
               </div>
             </div>
 
@@ -1058,7 +1176,13 @@ watch(increaseInSalary, (newValue, oldValue) => {
               </div>
             </div>
 
-            <DataTable :value="workersData" v-model:selection="selectedStaff" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
+            <DataTable
+              :value="workersData.table"
+              v-model:selection="selectedStaff"
+              editMode="cell"
+              @cell-edit-complete="onCellEditComplete"
+              showGridlines
+            >
               <template #empty> Нет данных для отображения </template>
 
               <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
@@ -1121,11 +1245,21 @@ watch(increaseInSalary, (newValue, oldValue) => {
               </template>
             </DataTable>
 
+            <div>
+              <label for="workersData" class="text-[--primary-color]">Заметки:</label>
+              <Textarea v-model="workersData.notes" />
+            </div>
+
             <Dialog v-model:visible="newStaffDialog" :style="{ width: '450px' }" header="Выберте сотрудника" :modal="true">
               <div class="flex flex-col gap-6">
                 <div>
                   <label for="name" class="block font-bold mb-3">Имя</label>
-                  <SearchSelect :dropdownItemsWorkerStaff="dropdownItemsWorkerStaff" :value="newStaffData.name" @change="changeSelectedItem" @clickToHeader="showNewWorkerModal" />
+                  <SearchSelect
+                    :dropdownItemsWorkerStaff="dropdownItemsWorkerStaff"
+                    :value="newStaffData.name"
+                    @change="changeSelectedItem"
+                    @clickToHeader="showNewWorkerModal"
+                  />
                 </div>
 
                 <div>
@@ -1141,7 +1275,12 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
               <template #footer>
                 <Button label="Cancel" icon="pi pi-times" text @click="newStaffDialog = false" />
-                <Button :disabled="!newStaffData.name.trim() || newStaffData.numberOfHoursWorked === null || newStaffData.salaryPerDay === null" label="Сохранить" icon="pi pi-check" @click="saveNewStaff" />
+                <Button
+                  :disabled="!newStaffData.name.trim() || newStaffData.numberOfHoursWorked === null || newStaffData.salaryPerDay === null"
+                  label="Сохранить"
+                  icon="pi pi-check"
+                  @click="saveNewStaff"
+                />
               </template>
             </Dialog>
           </div>
@@ -1165,8 +1304,23 @@ watch(increaseInSalary, (newValue, oldValue) => {
               <div class="font-semibold text-[--primary-color] text-xl">ИТР</div>
 
               <div class="">
-                <Button label="Добавить сотрудника" size="small" icon="pi pi-plus" severity="success" class="mr-2 text-xs max-w-[100px]" @click="showDialog('newITRStaffDialog')" />
-                <Button label="Удалить сотрудника" size="small" icon="pi pi-trash" severity="danger" class="mr-2 text-xs max-w-[100px]" @click="confirmDeleteITRStaff()" :disabled="!selectedITRStaff || !selectedITRStaff.length" />
+                <Button
+                  label="Добавить сотрудника"
+                  size="small"
+                  icon="pi pi-plus"
+                  severity="success"
+                  class="mr-2 text-xs max-w-[100px]"
+                  @click="showDialog('newITRStaffDialog')"
+                />
+                <Button
+                  label="Удалить сотрудника"
+                  size="small"
+                  icon="pi pi-trash"
+                  severity="danger"
+                  class="mr-2 text-xs max-w-[100px]"
+                  @click="confirmDeleteITRStaff()"
+                  :disabled="!selectedITRStaff || !selectedITRStaff.length"
+                />
               </div>
             </div>
 
@@ -1182,7 +1336,13 @@ watch(increaseInSalary, (newValue, oldValue) => {
               </div>
             </div>
 
-            <DataTable :value="ITRData" v-model:selection="selectedITRStaff" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
+            <DataTable
+              :value="ITRData"
+              v-model:selection="selectedITRStaff"
+              editMode="cell"
+              @cell-edit-complete="onCellEditComplete"
+              showGridlines
+            >
               <template #empty> Нет данных для отображения </template>
 
               <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
@@ -1223,7 +1383,9 @@ watch(increaseInSalary, (newValue, oldValue) => {
               <template #footer>
                 <div class="flex justify-end gap-4 w-full">
                   <div class="flex items-center">
-                    Итого ЗП за полный месяц работы: &nbsp;<span class="font-bold text-lg"> {{ formatNumber(salariesOfITRTotalPerMonth) }}</span>
+                    Итого ЗП за полный месяц работы: &nbsp;<span class="font-bold text-lg">
+                      {{ formatNumber(salariesOfITRTotalPerMonth) }}</span
+                    >
                   </div>
 
                   <div class="flex items-center">
@@ -1248,7 +1410,12 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
               <template #footer>
                 <Button label="Cancel" icon="pi pi-times" text @click="newStaffDialog = false" />
-                <Button :disabled="!newITRStaffData.name.trim() || newITRStaffData.salaryPerMonth === null" label="Сохранить" icon="pi pi-check" @click="saveNewITRStaff" />
+                <Button
+                  :disabled="!newITRStaffData.name.trim() || newITRStaffData.salaryPerMonth === null"
+                  label="Сохранить"
+                  icon="pi pi-check"
+                  @click="saveNewITRStaff"
+                />
               </template>
             </Dialog>
           </div>
@@ -1270,7 +1437,15 @@ watch(increaseInSalary, (newValue, oldValue) => {
           <div class="font-semibold text-[--primary-color] text-xl">Общие затраты</div>
 
           <div class="flex gap-6 items-center justify-center">
-            <FileUpload ref="fileupload" mode="basic" name="demo[]" accept=".xlsx" chooseLabel="Выберите файл" customUpload @uploader="onUpload" />
+            <FileUpload
+              ref="fileupload"
+              mode="basic"
+              name="demo[]"
+              accept=".xlsx"
+              chooseLabel="Выберите файл"
+              customUpload
+              @uploader="onUpload"
+            />
             <Button label="Импортировать" @click="uploadFile" severity="secondary" />
           </div>
         </div>
