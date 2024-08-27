@@ -7,7 +7,6 @@
   - Добавить кнопку "Сохранить"
   - Добавить кнопку "Удалить файл"
   - Добавить Textarea в блоки "Спецификация" и "Цех"
-  - Добавить новый флаг для "Сумма без металла" который уберет из итоговой суммы сумму металла который подгружается из файла
 
   ИТР
   Цех
@@ -34,6 +33,7 @@ const dropdownItemsWorkersRole = ref([
 ]);
 const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м']);
 
+const isAmountWithoutMetal = ref(false);
 const consumablesData = ref([]);
 const hardwareData = ref([]);
 const metalData = ref([]);
@@ -135,7 +135,7 @@ const priceData = computed(() => {
       key: 'metal',
       statistics: getPercentOfTotal(totalMetal.value),
       total: totalMetal.value || 0,
-      perItem: truncateDecimal(totalMetal.value / totalSpecificationItems.value, 2)
+      perItem: totalSpecificationItems.value ? truncateDecimal(totalMetal.value / totalSpecificationItems.value, 2) : 0
     },
     {
       id: 2,
@@ -143,7 +143,7 @@ const priceData = computed(() => {
       key: 'hardware',
       statistics: getPercentOfTotal(totalHardware.value),
       total: totalHardware.value || 0,
-      perItem: truncateDecimal(totalHardware.value / totalSpecificationItems.value, 2)
+      perItem: totalSpecificationItems.value ? truncateDecimal(totalHardware.value / totalSpecificationItems.value, 2) : 0
     },
     {
       id: 3,
@@ -151,7 +151,7 @@ const priceData = computed(() => {
       key: 'consumables',
       statistics: getPercentOfTotal(totalConsumables.value),
       total: totalConsumables.value || 0,
-      perItem: truncateDecimal(totalConsumables.value / totalSpecificationItems.value, 2)
+      perItem: totalSpecificationItems.value ? truncateDecimal(totalConsumables.value / totalSpecificationItems.value, 2) : 0
     },
     {
       id: 4,
@@ -1029,7 +1029,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
             editMode="cell"
             @cell-edit-complete="onCellEditComplete"
             showGridlines
-            :style="{ border: '2px solid green' }"
+            :style="{ border: '2px solid green', 'margin-bottom': '2rem' }"
           >
             <template #empty> Нет данных для отображения </template>
 
@@ -1070,6 +1070,22 @@ watch(increaseInSalary, (newValue, oldValue) => {
               </template>
             </Column>
           </DataTable>
+
+          <div class="flex flex-row justify-between gap-2">
+            <div class="flex gap-2 items-center">
+              <Checkbox v-model="isAmountWithoutMetal" :value="isAmountWithoutMetal" :binary="true" />
+              <label class="font-semibold items-center text-[--primary-color] text-xl">Сумма без металла</label>
+            </div>
+
+            <div class="flex flex-row justify-between gap-2 items-center">
+              <div v-if="isAmountWithoutMetal" class="font-semibold text-xl">
+                {{ formatNumber(truncateDecimal(finalTotalPrice - totalMetal, 1)) }}
+              </div>
+              <div v-else class="font-semibold text-xl">
+                {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
