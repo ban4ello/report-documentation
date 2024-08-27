@@ -817,11 +817,20 @@ watch(increaseInSalary, (newValue, oldValue) => {
           <span>Название калькуляции:</span><span><InputText v-model="calculationData.title" type="text" /></span>
         </div>
 
-        <div v-if="finalTotalPrice" class="font-semibold text-xl">
-          <div class="text-[--primary-color]">Итоговая сумма калькуляции:</div>
-          <span>
-            {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
-          </span>
+        <div v-if="finalTotalPrice" class="font-semibold text-xl flex gap-4 items-center">
+          <div class="flex flex-col gap-2">
+            <div class="text-[--primary-color] max-w-[200px]">Итоговая сумма калькуляции:</div>
+            <span>
+              {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
+            </span>
+          </div>
+
+          <div v-if="totalSpecificationItems" class="flex flex-col gap-2">
+            <div class="text-[--primary-color]">На 1 ед:</div>
+            <span>
+              {{ formatNumber(truncateDecimal(finalTotalPrice / totalSpecificationItems, 1)) }}
+            </span>
+          </div>
         </div>
 
         <div class="font-semibold text-xl">
