@@ -51,8 +51,8 @@ const today = `${currentDate.getDate()}.${currentDate.getMonth()}.${currentDate.
 const currentTime = currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds();
 
 let calculationData = ref({ title: 'Калькуляция-' + today, dateOfCreation: today, lastEditDate: today + ' ' + currentTime });
-let workersData = ref([]);
-let specificationData = ref([]);
+let workersData = ref({ table: [], notes: '' });
+let specificationData = ref({ table: [], notes: '' });
 let newWorkerData = ref({ name: '', lastname: '', role: '' });
 let workersTaxData = ref([]);
 let ITRTaxData = ref([]);
@@ -69,7 +69,7 @@ let profitabilityCoeficient = ref(0.1);
 let increaseInSalary = ref(0);
 
 const salariesOfWorkersTotal = computed(() =>
-  workersData.value.reduce((acc, item) => {
+  workersData.value.table.reduce((acc, item) => {
     return acc + parseFloat(Number((item.salaryPerDay / numberOfHoursPerShift.value) * item.numberOfHoursWorked).toFixed());
   }, 0)
 );
@@ -88,7 +88,7 @@ const salariesOfITRTotalPerMonth = computed(() =>
 
 const totalSpecificationItems = computed(
   () =>
-    specificationData.value.reduce((acc, item) => {
+    specificationData.value.table.reduce((acc, item) => {
       return acc + Number(item.quantity * item.valuePerUnit);
     }, 0) || 0
 );
@@ -512,7 +512,7 @@ onBeforeMount(() => {
   });
 
   MochDataService.getWorkersData().then((data) => {
-    workersData.value = data;
+    workersData.value.table = data;
   });
 
   MochDataService.getWorkersTaxData().then((data) => {
@@ -528,7 +528,7 @@ onBeforeMount(() => {
   });
 
   MochDataService.getSpecificationData().then((data) => {
-    specificationData.value = data;
+    specificationData.value.table = data;
   });
 });
 
@@ -682,7 +682,7 @@ const showDialog = (key, flag = true) => {
 };
 
 const copySpecification = (data) => {
-  specificationData.value.push({
+  specificationData.value.table.push({
     id: (Math.random() * 1000).toFixed(),
     name: data.name,
     quantity: data.quantity,
@@ -692,7 +692,7 @@ const copySpecification = (data) => {
 };
 
 const addNewSpecification = () => {
-  specificationData.value.push({
+  specificationData.value.table.push({
     id: (Math.random() * 1000).toFixed(),
     name: null,
     quantity: null,
@@ -702,11 +702,11 @@ const addNewSpecification = () => {
 };
 
 const confirmDeleteSpecification = (data) => {
-  specificationData.value = specificationData.value.filter((item) => item.id !== data.id);
+  specificationData.value.table = specificationData.value.table.filter((item) => item.id !== data.id);
 };
 
 const copyStaffWorker = (data) => {
-  workersData.value.push({
+  workersData.value.table.push({
     id: (Math.random() * 1000).toFixed(),
     name: data.name,
     numberOfHoursWorked: data.numberOfHoursWorked,
@@ -717,7 +717,7 @@ const copyStaffWorker = (data) => {
 };
 
 const saveNewStaff = () => {
-  workersData.value.push({
+  workersData.value.table.push({
     id: (Math.random() * 1000).toFixed(),
     name: newStaffData.value.name,
     numberOfHoursWorked: newStaffData.value.numberOfHoursWorked,
@@ -736,10 +736,10 @@ const saveNewStaff = () => {
 
 const confirmDeleteStaff = (item) => {
   if (item) {
-    workersData.value = workersData.value.filter((worker) => worker.id !== item.id);
+    workersData.value.table = workersData.value.table.filter((worker) => worker.id !== item.id);
   } else {
     selectedStaff.value.forEach((item) => {
-      workersData.value = workersData.value.filter((worker) => worker.id !== item.id);
+      workersData.value.table = workersData.value.table.filter((worker) => worker.id !== item.id);
     });
   }
 
@@ -839,7 +839,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
   let increment = newValue > oldValue ? 5 : -5;
 
   // если меняется "increaseInSalary" - то должно меняться значение "salaryPerDay"
-  workersData.value = workersData.value.map((item) => {
+  workersData.value.table = workersData.value.table.map((item) => {
     const newPrice = Number(item.salaryPerDay) + Number(increment);
 
     return { ...item, salaryPerDay: newPrice };
@@ -887,10 +887,12 @@ watch(increaseInSalary, (newValue, oldValue) => {
       <div class="specification card h-full flex flex-col gap-4">
         <Accordion :value="['0']" multiple>
           <AccordionPanel value="0">
-            <AccordionHeader><div class="font-semibold text-[--primary-color] text-xl">Спецификация</div></AccordionHeader>
+            <AccordionHeader>
+              <div class="font-semibold text-[--primary-color] text-xl">Спецификация</div>
+            </AccordionHeader>
 
             <AccordionContent>
-              <DataTable :value="specificationData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
+              <DataTable :value="specificationData.table" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
                 <template #empty> Нет данных для отображения </template>
 
                 <Column field="name" header="Наименование изделия" style="width: 25%">
@@ -966,6 +968,11 @@ watch(increaseInSalary, (newValue, oldValue) => {
             </AccordionContent>
           </AccordionPanel>
         </Accordion>
+
+        <div>
+          <label for="specificationData" class="text-[--primary-color]">Заметки:</label>
+          <Textarea v-model="specificationData.notes" />
+        </div>
       </div>
 
       <div class="grid grid-cols-1fr-40 gap-4 mb-[2rem]">
@@ -1167,7 +1174,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
             </div>
 
             <DataTable
-              :value="workersData"
+              :value="workersData.table"
               v-model:selection="selectedStaff"
               editMode="cell"
               @cell-edit-complete="onCellEditComplete"
@@ -1234,6 +1241,11 @@ watch(increaseInSalary, (newValue, oldValue) => {
                 </div>
               </template>
             </DataTable>
+
+            <div>
+              <label for="workersData" class="text-[--primary-color]">Заметки:</label>
+              <Textarea v-model="workersData.notes" />
+            </div>
 
             <Dialog v-model:visible="newStaffDialog" :style="{ width: '450px' }" header="Выберте сотрудника" :modal="true">
               <div class="flex flex-col gap-6">
