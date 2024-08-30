@@ -1,7 +1,56 @@
 import api from '@/service/api';
 
 export default {
-  createCalculation({ name = 'promotion', surname = 'surname' }) {
-    return api().post('/user', { name, surname });
+  createCalculation({
+    id,
+    ITRWorkedDays,
+    coeficientOfNDS,
+    costOfElectricityPerDay,
+    galvanizedValue,
+    numberOfDaysPerShift,
+    numberOfHoursPerShift,
+    rentalCostPerDay,
+    profitabilityCoeficient,
+    title,
+    transportValue,
+    dateOfCreation,
+    lastEditDate
+  }) {
+    console.log(
+      666,
+      id,
+      ITRWorkedDays,
+      coeficientOfNDS,
+      costOfElectricityPerDay,
+      galvanizedValue,
+      numberOfDaysPerShift,
+      numberOfHoursPerShift,
+      rentalCostPerDay,
+      profitabilityCoeficient,
+      title,
+      transportValue,
+      dateOfCreation,
+      lastEditDate
+    );
+
+    return api().post('/calculation', {
+      id,
+      ITRWorkedDays,
+      coeficientOfNDS,
+      costOfElectricityPerDay,
+      galvanizedValue,
+      numberOfDaysPerShift,
+      numberOfHoursPerShift,
+      rentalCostPerDay,
+      profitabilityCoeficient,
+      title,
+      transportValue,
+      dateOfCreation,
+      lastEditDate
+    });
+  },
+
+  getCalculations() {
+    return api().get('/calculations');
   }
 };

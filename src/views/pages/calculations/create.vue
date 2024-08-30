@@ -52,8 +52,8 @@ const currentTime = currentDate.getHours() + ':' + currentDate.getMinutes() + ':
 
 let calculationData = ref({
   title: 'Калькуляция-' + today,
-  dateOfCreation: today,
-  lastEditDate: today + ' ' + currentTime,
+  dateOfCreation: today, // TODO: передавать на сервер timeshit
+  lastEditDate: today + ' ' + currentTime, // TODO: передавать на сервер timeshit
   specificationData: {
     table: [
       {
@@ -241,7 +241,6 @@ const taxITRTotal = computed(() => {
 });
 
 const totalConsumables = computed(() => getTotalPrice(calculationData.value.consumablesData));
-console.log('totalConsumables', totalConsumables);
 const totalHardware = computed(() => getTotalPrice(calculationData.value.hardwareData));
 const totalMetal = computed(() => getTotalPrice(calculationData.value.metalData));
 
@@ -968,8 +967,28 @@ const truncateDecimal = (num, decimalPlaces) => {
 
 const createCalculation = () => {
   console.log('createCalculation', calculationData.value);
+  console.log('createCalculation-JSON', JSON.stringify(calculationData.value));
 
-  // ApiService.createCalculation({ name: 'new-name-2', surname: 'surname' });
+  ApiService.createCalculation({
+    id: 1,
+    ITRWorkedDays: 13,
+    coeficientOfNDS: 1.2,
+    costOfElectricityPerDay: 550,
+    galvanizedValue: 1000,
+    numberOfDaysPerShift: 21,
+    numberOfHoursPerShift: 8,
+    rentalCostPerDay: 170,
+    profitabilityCoeficient: 0.1,
+    title: 'Калькуляция-30.7.2024',
+    transportValue: 2000,
+    dateOfCreation: '30.7.2024',
+    lastEditDate: '30.7.2024 6:24:33'
+  });
+};
+
+const getCalculations = () => {
+  const calculations = ApiService.getCalculations();
+  console.log('calculations', calculations);
 };
 
 watch(increaseInSalary, (newValue, oldValue) => {
@@ -1019,8 +1038,9 @@ watch(increaseInSalary, (newValue, oldValue) => {
         </div>
       </div>
 
-      <div>
+      <div class="flex flex-col gap-4">
         <Button label="Сохранить калькуляцию" size="large" severity="success" class="text-xs" @click="createCalculation" />
+        <Button label="Получить все" size="large" severity="success" class="text-xs" @click="getCalculations" />
       </div>
     </div>
 
