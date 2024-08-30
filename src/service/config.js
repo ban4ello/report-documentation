@@ -5,8 +5,8 @@ export default {
   baseURL: `${import.meta.env.VITE_API_HOST}/api/`,
   // baseURL: `${process.env.VITE_API_HOST}${process.env.VITE_API_VERSION_PREFIX}`,
   timeout: 1200000,
-  withCredentials: false,
-  responseType: 'text',
+  // withCredentials: false,
+  // responseType: 'text',
   maxContentLength: 2000,
   validateStatus: function (status) {
     return status >= 200 && status < 300;

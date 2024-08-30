@@ -22,8 +22,10 @@ import SearchSelect from '@/components/custom-ui/SearchSelect.vue';
 import TaxCharges from '@/components/TaxCharges.vue';
 // import { read, writeFileXLSX } from 'xlsx';
 import * as XLS from 'xlsx';
+import { useRouter } from 'vue-router';
 
 // const toast = useToast();
+const router = useRouter();
 const fileupload = ref();
 const dropdownItemsWorkerStaff = ref(['Бабенко', 'Червань Антон', 'Васильев', 'Атаманенко', 'Татарский']);
 const dropdownItemsITR = ref(['Кристина', 'Олька', 'Танюха', 'Тёмка', 'Николаев', 'Никита', 'Шеф']);
@@ -45,6 +47,7 @@ const selectedITRStaff = ref(null);
 const newStaffDialog = ref(false);
 const newITRStaffDialog = ref(false);
 const createNewWorkerDialog = ref(false);
+const loading = ref(false);
 
 let currentDate = new Date();
 const today = `${currentDate.getDate()}.${currentDate.getMonth()}.${currentDate.getFullYear()}`;
@@ -965,25 +968,33 @@ const truncateDecimal = (num, decimalPlaces) => {
   return Math.trunc(num * factor) / factor;
 };
 
-const createCalculation = () => {
-  console.log('createCalculation', calculationData.value);
-  console.log('createCalculation-JSON', JSON.stringify(calculationData.value));
+const createCalculation = async () => {
+  loading.value = true;
 
-  ApiService.createCalculation({
-    id: 1,
-    ITRWorkedDays: 13,
-    coeficientOfNDS: 1.2,
-    costOfElectricityPerDay: 550,
-    galvanizedValue: 1000,
-    numberOfDaysPerShift: 21,
-    numberOfHoursPerShift: 8,
-    rentalCostPerDay: 170,
-    profitabilityCoeficient: 0.1,
-    title: 'Калькуляция-30.7.2024',
-    transportValue: 2000,
-    dateOfCreation: '30.7.2024',
-    lastEditDate: '30.7.2024 6:24:33'
-  });
+  try {
+    const res = await ApiService.createCalculation({
+      ITRWorkedDays: 13,
+      coeficientOfNDS: 1.2,
+      costOfElectricityPerDay: 550,
+      galvanizedValue: 1000,
+      numberOfDaysPerShift: 21,
+      numberOfHoursPerShift: 8,
+      rentalCostPerDay: 170,
+      profitabilityCoeficient: 0.1,
+      title: 'Калькуляция-30.7.2024',
+      transportValue: 2000,
+      dateOfCreation: '2015-12-03 21:54:38',
+      lastEditDate: '2015-12-03 21:54:38'
+      // dateOfCreation: new Date().valueOf(),
+      // lastEditDate: new Date().valueOf()
+    });
+
+    router.push({ path: `/calculations/${res.data.id}` });
+  } catch (error) {
+    console.log(error);
+  } finally {
+    loading.value = false;
+  }
 };
 
 const getCalculations = () => {
@@ -1004,6 +1015,9 @@ watch(increaseInSalary, (newValue, oldValue) => {
 </script>
 
 <template>
+  <div v-if="loading" class="card flex justify-center items-center h-[100vh] fixed top-0 left-0 right-0 z-9999 opacity-60">
+    <ProgressSpinner />
+  </div>
   <Fluid>
     <div class="card calculation-title z-50 sticky top-[60px] shadow-md flex flex-row justify-between items-center gap-4">
       <div class="flex flex-row justify-between items-center gap-8">
@@ -1039,7 +1053,14 @@ watch(increaseInSalary, (newValue, oldValue) => {
       </div>
 
       <div class="flex flex-col gap-4">
-        <Button label="Сохранить калькуляцию" size="large" severity="success" class="text-xs" @click="createCalculation" />
+        <Button
+          label="Сохранить калькуляцию"
+          :loading="loading"
+          size="large"
+          severity="success"
+          class="text-xs"
+          @click="createCalculation"
+        />
         <Button label="Получить все" size="large" severity="success" class="text-xs" @click="getCalculations" />
       </div>
     </div>

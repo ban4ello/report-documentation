@@ -2,7 +2,6 @@ import api from '@/service/api';
 
 export default {
   createCalculation({
-    id,
     ITRWorkedDays,
     coeficientOfNDS,
     costOfElectricityPerDay,
@@ -16,25 +15,7 @@ export default {
     dateOfCreation,
     lastEditDate
   }) {
-    console.log(
-      666,
-      id,
-      ITRWorkedDays,
-      coeficientOfNDS,
-      costOfElectricityPerDay,
-      galvanizedValue,
-      numberOfDaysPerShift,
-      numberOfHoursPerShift,
-      rentalCostPerDay,
-      profitabilityCoeficient,
-      title,
-      transportValue,
-      dateOfCreation,
-      lastEditDate
-    );
-
     return api().post('/calculation', {
-      id,
       ITRWorkedDays,
       coeficientOfNDS,
       costOfElectricityPerDay,
@@ -52,5 +33,9 @@ export default {
 
   getCalculations() {
     return api().get('/calculations');
+  },
+
+  getCalculationById(id) {
+    return api().get(`/calculation/${id}`);
   }
 };
