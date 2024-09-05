@@ -20,9 +20,9 @@ const props = defineProps({
     type: Number,
     default: 0
   },
-  coeficientOfNDS: {
-    type: Number,
-    default: 0
+  coeficientOfNds: {
+    type: [Number, String],
+    default: 0 || ''
   },
   formatNumber: {
     type: Function,
@@ -54,8 +54,16 @@ const onCellEditComplete = (event) => {
         <div class="text-lg">Исходная сумма: {{ props.formatNumber(props.totalAmount) }}</div>
 
         <div class="flex flex-row gap-2 items-center">
-          <label for="coeficientOfNDS">НДС:</label>
-          <InputNumber :modelValue="props.coeficientOfNDS" @input="(data) => $emit('changeCoeficient', data)" fluid inputId="coeficientOfNDS" class="max-w-[50px]" :minFractionDigits="1" :maxFractionDigits="5" />
+          <label for="coeficientOfNds">НДС:</label>
+          <InputNumber
+            :modelValue="props.coeficientOfNds"
+            @input="(data) => $emit('changeCoeficient', data)"
+            fluid
+            inputId="coeficientOfNds"
+            class="max-w-[50px]"
+            :minFractionDigits="1"
+            :maxFractionDigits="5"
+          />
         </div>
       </div>
 
