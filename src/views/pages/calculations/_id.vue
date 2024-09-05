@@ -3,9 +3,9 @@
   TODO:
   - Разработать функционал добавления в базу новых сотрудников
   - Добавить возможность прикреплять файлы (чертежи) к проекту (заказу)
-  - После создания "калькуляции" ("план") предлагать клонировать её (создать "факт"). В итоговый дашборд войдёт как "план" так и "факт"
-  - Добавить кнопку "Сохранить"
   - Добавить кнопку "Удалить файл"
+  - Добавить "время" для  "Дата последнего редактирования"
+  - Добавить метку "План" / "Факт"
 
   ИТР
   Цех
@@ -20,7 +20,6 @@ import ApiService from '@/service/ApiService';
 // import { useToast } from 'primevue/usetoast';
 import SearchSelect from '@/components/custom-ui/SearchSelect.vue';
 import TaxCharges from '@/components/TaxCharges.vue';
-// import { read, writeFileXLSX } from 'xlsx';
 import * as XLS from 'xlsx';
 import { useRouter } from 'vue-router';
 
@@ -34,11 +33,9 @@ const dropdownItemsWorkersRole = ref([
   { label: 'ИТР', key: 'ITR' }
 ]);
 const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м']);
+const parentId = router.currentRoute.value.params.id;
 
 const isAmountWithoutMetal = ref(false);
-// const consumablesData = ref([]);
-// const hardwareData = ref([]);
-// const metalData = ref([]);
 const newStaffData = ref({ name: '', numberOfHoursWorked: null, salaryPerDay: null });
 const newITRStaffData = ref({ name: '', salaryPerMonth: null });
 
@@ -49,25 +46,27 @@ const newITRStaffDialog = ref(false);
 const createNewWorkerDialog = ref(false);
 const loading = ref(false);
 
-let currentDate = new Date();
-const today = `${currentDate.getDate()}.${currentDate.getMonth()}.${currentDate.getFullYear()}`;
-const currentTime = currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds();
+// let currentDate = new Date();
+// const today = `${currentDate.getDate()}.${currentDate.getMonth()}.${currentDate.getFullYear()}`;
+// const currentTime = currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds();
 
 let calculationData = ref({
   title: '',
   dateOfCreation: '',
   lastEditDate: '',
-  specificationData: {
-    table: [],
-    notes: ''
-  },
   galvanizedValue: 0,
   transportValue: 0,
   rentalCostPerDay: 0,
   costOfElectricityPerDay: 0,
   profitabilityCoeficient: 0,
   numberOfHoursPerShift: 0,
-  coeficientOfNds: 0,
+  coeficientOfNds: 0.2,
+  numberOfDaysPerShift: 0,
+  itrWorkedDays: 0,
+  specificationData: {
+    table: [],
+    notes: ''
+  },
   workersData: {
     table: [],
     notes: ''
@@ -75,28 +74,14 @@ let calculationData = ref({
   ITRData: {
     table: []
   },
-  numberOfDaysPerShift: 0,
-  itrWorkedDays: 0,
   consumablesData: [],
   hardwareData: [],
   metalData: []
 });
 
-// let workersData = ref({ table: [], notes: '' });
-// let specificationData = ref({ table: [], notes: '' });
 let newWorkerData = ref({ name: '', lastname: '', role: '' });
 let workersTaxData = ref([]);
 let ITRTaxData = ref([]);
-// let ITRData = ref([]);
-// let numberOfHoursPerShift = ref(8);
-// let numberOfDaysPerShift = ref(21);
-// let itrWorkedDays = ref(0);
-// let rentalCostPerDay = ref(170);
-// let costOfElectricityPerDay = ref(550);
-// let coeficientOfNds = ref(1.2);
-// let galvanizedValue = ref(0);
-// let transportValue = ref(0);
-// let profitabilityCoeficient = ref(0.1);
 let increaseInSalary = ref(0);
 
 const salariesOfWorkersTotal = computed(() =>
@@ -537,50 +522,40 @@ const getPercentOfTotal = (totalNumber) => {
 };
 
 onBeforeMount(() => {
-  const parentId = router.currentRoute.value.params.id;
+  MochDataService.getWorkersTaxData().then((data) => {
+    workersTaxData.value = data;
+  });
+
+  MochDataService.getITRTaxData().then((data) => {
+    ITRTaxData.value = data;
+  });
 
   ApiService.getCalculationById(parentId).then((res) => {
     const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase());
-    const newVal = Object.keys(res.data).reduce((acc, item) => {
-      acc[camelize(item)] = res.data[item];
+    const data = Object.keys(res.data).reduce((acc, item) => {
+      switch (camelize(item)) {
+        case 'galvanizedValue':
+        case 'transportValue':
+        case 'rentalCostPerDay':
+        case 'costOfElectricityPerDay':
+        case 'profitabilityCoeficient':
+        case 'numberOfHoursPerShift':
+        case 'coeficientOfNds':
+        case 'numberOfDaysPerShift':
+        case 'itrWorkedDays':
+          acc[camelize(item)] = Number(res.data[item]);
+          break;
+
+        default:
+          acc[camelize(item)] = res.data[item];
+          break;
+      }
 
       return acc;
     }, {});
 
-    calculationData.value = { ...calculationData.value, ...newVal };
+    calculationData.value = { ...calculationData.value, ...data };
   });
-
-  // MochDataService.getConsumables().then((data) => {
-  //   calculationData.value.consumablesData = data;
-  // });
-
-  // MochDataService.getHardware().then((data) => {
-  //   calculationData.value.hardwareData = data;
-  // });
-
-  // MochDataService.getMetal().then((data) => {
-  //   calculationData.value.metalData = data;
-  // });
-
-  // MochDataService.getWorkersData().then((data) => {
-  //   calculationData.value.workersData.table = data;
-  // });
-
-  // MochDataService.getWorkersTaxData().then((data) => {
-  //   workersTaxData.value = data;
-  // });
-
-  // MochDataService.getITRTaxData().then((data) => {
-  //   ITRTaxData.value = data;
-  // });
-
-  // MochDataService.getITRData().then((data) => {
-  //   calculationData.value.ITRData = data;
-  // });
-
-  // MochDataService.getSpecificationData().then((data) => {
-  //   calculationData.value.specificationData.table = data;
-  // });
 });
 
 const finalTotalPrice = computed(() => {
@@ -891,9 +866,22 @@ const truncateDecimal = (num, decimalPlaces) => {
   return Math.trunc(num * factor) / factor;
 };
 
-const getCalculations = () => {
-  const calculations = ApiService.getCalculations();
-  console.log('calculations', calculations);
+const saveCalculation = async () => {
+  loading.value = true;
+
+  try {
+    await ApiService.updateCalculation({
+      ...calculationData.value,
+      consumablesData: JSON.stringify(calculationData.value.consumablesData),
+      hardwareData: JSON.stringify(calculationData.value.hardwareData),
+      metalData: JSON.stringify(calculationData.value.metalData),
+      lastEditDate: new Date()
+    });
+  } catch (error) {
+    console.log(error);
+  } finally {
+    loading.value = false;
+  }
 };
 
 watch(increaseInSalary, (newValue, oldValue) => {
@@ -913,8 +901,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
     <ProgressSpinner />
   </div>
   <Fluid>
-    <div class="card calculation-title z-50 sticky top-[60px] shadow-md flex flex-row justify-between items-center gap-4">
-      <div class="flex flex-row justify-between items-center gap-8">
+    <div class="card calculation-title z-50 sticky top-[60px] shadow-md flex flex-row items-center gap-4">
+      <div class="flex flex-row justify-between items-center gap-8 w-full">
         <div class="font-semibold text-[--primary-color] text-xl">
           <span>Название калькуляции:</span><span><InputText v-model="calculationData.title" type="text" /></span>
         </div>
@@ -937,17 +925,28 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
         <div class="font-semibold text-xl">
           <p class="text-[--primary-color]">Дата создания:</p>
-          <p>{{ calculationData.dateOfCreation }}</p>
+          <p>
+            {{ new Date(calculationData.dateOfCreation).toLocaleDateString() }}
+          </p>
         </div>
 
         <div class="font-semibold text-xl">
           <p class="text-[--primary-color]">Дата последнего редактирования:</p>
-          <p>{{ calculationData.lastEditDate }}</p>
+          <p>
+            {{ new Date(calculationData.lastEditDate).toLocaleDateString() }}
+          </p>
         </div>
-      </div>
 
-      <div class="flex flex-col gap-4">
-        <Button label="Получить все" size="large" severity="success" class="text-xs" @click="getCalculations" />
+        <div class="flex flex-col gap-4">
+          <Button
+            label="Сохранить калькуляцию"
+            :loading="loading"
+            size="large"
+            severity="success"
+            class="text-xs"
+            @click="saveCalculation"
+          />
+        </div>
       </div>
     </div>
 

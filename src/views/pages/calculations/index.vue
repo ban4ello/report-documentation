@@ -6,24 +6,63 @@
 
 import { onBeforeMount, ref } from 'vue';
 import { MochDataService } from '@/service/MochDataService';
+import ApiService from '@/service/ApiService';
 // import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
 const router = useRouter();
 // const toast = useToast();
 const dropdownItemsParentCalculations = ref([]);
 const expandedRows = ref([]);
+const calculationPlanId = ref(null);
 
 let calculationsData = ref([]);
 
 onBeforeMount(() => {
   MochDataService.getCalculationsData().then((data) => {
-    calculationsData.value = data;
-  });
-
-  MochDataService.getCalculationsData().then((data) => {
     dropdownItemsParentCalculations.value = data.map((item) => item.name);
   });
+
+  ApiService.getParentCalculations().then((res) => {
+    console.log('getParentCalculations', res.data);
+
+    const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase());
+    const camelizeData = res.data.map((item) => {
+      return Object.keys(item).reduce((acc, key) => {
+        acc[camelize(key)] = item[key];
+
+        return acc;
+      }, {});
+    });
+
+    calculationsData.value = camelizeData;
+  });
 });
+
+const expandRow = (row) => {
+  ApiService.getParentCalculationChildren(row.data.id).then((res) => {
+    console.log('getParentCalculationChildren', res.data);
+    const updatedData = JSON.parse(JSON.stringify(calculationsData.value));
+    calculationPlanId.value = res.data.filter((item) => item.calculation_type === 'plan')[0].id;
+    console.log(999, calculationPlanId.value);
+
+    const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase());
+    const camelizeData = res.data.map((item) => {
+      return Object.keys(item).reduce((acc, key) => {
+        acc[camelize(key)] = item[key];
+
+        return acc;
+      }, {});
+    });
+
+    calculationsData.value = updatedData.map((item) => {
+      if (Number(item.id) === Number(row.data.id)) {
+        item.childrens = camelizeData;
+      }
+
+      return item;
+    });
+  });
+};
 </script>
 
 <template>
@@ -36,52 +75,58 @@ onBeforeMount(() => {
           class="font-semibold hover:text-[--primary-color] hover:cursor-pointer text-xl mb-4"
           @click="router.push({ path: '/calculations/create' })"
         >
-          создать новую калькуляцию +
+          создать новую калькуляцию-план +
         </div>
       </div>
       <!-- :paginator="true" -->
-      <DataTable v-model:expandedRows="expandedRows" :value="calculationsData" :rows="10" :rowHover="true" dataKey="id">
+      <DataTable
+        v-model:expandedRows="expandedRows"
+        :value="calculationsData"
+        :rows="10"
+        :rowHover="true"
+        dataKey="title"
+        @row-expand="expandRow"
+      >
         <template #empty> Нет данных для отображения </template>
 
         <template #loading> Загружается список... Пожалуйста подождите. </template>
 
         <Column expander style="width: 5rem" />
 
-        <Column field="name" header="Название" style="min-width: 12rem">
+        <Column field="title" header="Название" style="min-width: 12rem">
           <template #body="{ data }">
-            {{ data.name }}
+            {{ data.title }}
           </template>
         </Column>
 
-        <Column field="createdOn" header="Дата создания" style="min-width: 12rem">
+        <Column field="dateOfCreation" header="Дата создания" style="min-width: 12rem">
           <template #body="{ data }">
-            {{ data.createdOn }}
+            {{ new Date(data.dateOfCreation).toLocaleDateString() }}
           </template>
         </Column>
 
         <template #expansion="slotProps">
-          <!-- NOTE: план всегда вверху "sort((a, b) => b.type.localeCompare(a.type)" -->
-          <DataTable showGridlines :value="slotProps.data.childrens.sort((a, b) => b.type.localeCompare(a.type))" class="shadow-md">
-            <Column field="name" header="Название" sortable style="min-width: 12rem">
+          <DataTable showGridlines :value="slotProps.data.childrens" class="shadow-md" sortField="calculationType" :sortOrder="-1">
+            <Column field="title" header="Название" sortable style="min-width: 12rem">
               <template #body="{ data }">
                 <div
                   class="hover:text-[--primary-color] hover:cursor-pointer"
                   @click="router.push({ path: `/calculations/${data.id}`, query: { parentId: slotProps.data.id, type: data.type } })"
                 >
-                  {{ data.name }}
+                  {{ data.title }}
                 </div>
               </template>
             </Column>
 
-            <Column field="createdOn" header="Дата создания" sortable style="min-width: 12rem">
+            <Column field="dateOfCreation" header="Дата создания" sortable style="min-width: 12rem">
               <template #body="{ data }">
-                {{ data.createdOn }}
+                {{ new Date(data.dateOfCreation).toLocaleDateString() }}
               </template>
             </Column>
 
-            <Column field="type" header="Вид калькуляции" style="min-width: 12rem">
+            <Column field="calculationType" header="Вид калькуляции" sortable style="min-width: 12rem">
               <template #body="{ data }">
-                {{ data.type === 'plant' ? 'План' : 'Факт' }}
+                {{ data.calculationType === 'plan' ? 'План' : 'Факт' }}
               </template>
             </Column>
 
@@ -97,9 +142,11 @@ onBeforeMount(() => {
             <template #footer>
               <div
                 class="flex justify-center items-center text-[--primary-color] hover:cursor-pointer"
-                @click="router.push({ path: '/calculations/create', query: { parentId: slotProps.data.id, type: 'fact' } })"
+                @click="
+                  router.push({ path: '/calculations/create', query: { parentId: slotProps.data.id, type: 'fact', calculationPlanId } })
+                "
               >
-                добавить калькуляцию +
+                добавить калькуляцию-факт +
               </div>
             </template>
           </DataTable>

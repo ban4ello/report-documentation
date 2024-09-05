@@ -3,9 +3,9 @@
   TODO:
   - Разработать функционал добавления в базу новых сотрудников
   - Добавить возможность прикреплять файлы (чертежи) к проекту (заказу)
-  - После создания "калькуляции" ("план") предлагать клонировать её (создать "факт"). В итоговый дашборд войдёт как "план" так и "факт"
-  - Добавить кнопку "Сохранить"
   - Добавить кнопку "Удалить файл"
+  - Добавить нотификацию после действий: сохранение калькуляции
+  - Сделать "Переменные" инпуты шире - не видно больших чисел
 
   ИТР
   Цех
@@ -20,7 +20,6 @@ import ApiService from '@/service/ApiService';
 // import { useToast } from 'primevue/usetoast';
 import SearchSelect from '@/components/custom-ui/SearchSelect.vue';
 import TaxCharges from '@/components/TaxCharges.vue';
-// import { read, writeFileXLSX } from 'xlsx';
 import * as XLS from 'xlsx';
 import { useRouter } from 'vue-router';
 
@@ -35,10 +34,11 @@ const dropdownItemsWorkersRole = ref([
 ]);
 const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м']);
 
+const parentId = ref(null);
+const calculationType = ref(null);
+const calculationPlanId = ref(null);
 const isAmountWithoutMetal = ref(false);
-// const consumablesData = ref([]);
-// const hardwareData = ref([]);
-// const metalData = ref([]);
+const expandAccordionTotalCosts = ref([]);
 const newStaffData = ref({ name: '', numberOfHoursWorked: null, salaryPerDay: null });
 const newITRStaffData = ref({ name: '', salaryPerMonth: null });
 
@@ -49,140 +49,159 @@ const newITRStaffDialog = ref(false);
 const createNewWorkerDialog = ref(false);
 const loading = ref(false);
 
-let currentDate = new Date();
-const today = `${currentDate.getDate()}.${currentDate.getMonth()}.${currentDate.getFullYear()}`;
-const currentTime = currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds();
+// let currentDate = new Date();
+// const today = `${currentDate.getDate()}.${currentDate.getMonth()}.${currentDate.getFullYear()}`;
+// const currentTime = currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds();
 
 let calculationData = ref({
-  title: 'Калькуляция-' + today,
-  dateOfCreation: today, // TODO: передавать на сервер timeshit
-  lastEditDate: today + ' ' + currentTime, // TODO: передавать на сервер timeshit
+  itrWorkedDays: 0,
+  coeficientOfNds: 0.2,
+  costOfElectricityPerDay: 0,
+  galvanizedValue: 0,
+  numberOfDaysPerShift: 0,
+  numberOfHoursPerShift: 0,
+  rentalCostPerDay: 0,
+  profitabilityCoeficient: 0,
+  title: '',
+  transportValue: 0,
+  lastEditDate: '',
+  calculationType: calculationType.value || 'plan',
+
   specificationData: {
-    table: [
-      {
-        id: 1,
-        name: 'Изделие №1',
-        quantity: 1,
-        valuePerUnit: 2.0018,
-        unitOfMeasurement: 'тн',
-        totalWeight: null
-      }
-    ],
-    notes: 'specificationData notes'
+    table: [],
+    notes: ''
   },
-  galvanizedValue: 1000,
-  transportValue: 2000,
-  rentalCostPerDay: 170,
-  costOfElectricityPerDay: 550,
-  profitabilityCoeficient: 0.1,
-  numberOfHoursPerShift: 8,
-  coeficientOfNDS: 1.2,
   workersData: {
-    table: [
-      {
-        id: 1,
-        name: 'Бабенко',
-        numberOfHoursWorked: 63,
-        salaryPerDay: 1690
-      },
-      {
-        id: 2,
-        name: 'Червань Антон',
-        numberOfHoursWorked: 79,
-        salaryPerDay: 1700
-      },
-      {
-        id: 3,
-        name: 'Червань Артем',
-        numberOfHoursWorked: 77,
-        salaryPerDay: 1680
-      }
-    ],
-    notes: 'workersData notes'
+    table: [],
+    notes: ''
   },
   ITRData: {
-    table: [
-      {
-        id: 1,
-        name: 'Кристина',
-        salaryPerMonth: 1000
-      },
-      {
-        id: 2,
-        name: 'Олька',
-        salaryPerMonth: 10000
-      },
-      {
-        id: 3,
-        name: 'Танюха',
-        salaryPerMonth: 0
-      },
-      {
-        id: 4,
-        name: 'Тёмка',
-        salaryPerMonth: 3000
-      },
-      {
-        id: 5,
-        name: 'Николаев',
-        salaryPerMonth: 15000
-      },
-      {
-        id: 6,
-        name: 'Шеф',
-        salaryPerMonth: 5000
-      }
-    ]
+    table: []
   },
-  numberOfDaysPerShift: 21,
-  ITRWorkedDays: 13,
-  consumablesData: [
-    // {
-    //   order: 1,
-    //   name: 'Проволока сварочная 15 кг',
-    //   unitOfMeasurement: 'бухты',
-    //   quantity: 2,
-    //   taxPrice: '1 016,10',
-    //   price: '2 032,20'
-    // }
-  ],
-  hardwareData: [
-    // {
-    //   order: 17,
-    //   name: 'Болты М20*60',
-    //   unitOfMeasurement: 'шт',
-    //   quantity: 276,
-    //   taxPrice: '24,00',
-    //   price: '6 624,00'
-    // }
-  ],
-  metalData: [
-    // {
-    //   order: 1,
-    //   name: 'Лист металла',
-    //   unitOfMeasurement: 'тн',
-    //   quantity: 12,
-    //   taxPrice: '1124,00',
-    //   price: '8 624,00'
-    // }
-  ]
+  consumablesData: [],
+  hardwareData: [],
+  metalData: []
 });
 
-// let workersData = ref({ table: [], notes: '' });
-// let specificationData = ref({ table: [], notes: '' });
+// // NOTE: need for test
+// let calculationData = ref({
+//   title: 'Калькуляция-' + today,
+//   dateOfCreation: today, // TODO: передавать на сервер timeshit
+//   lastEditDate: today + ' ' + currentTime, // TODO: передавать на сервер timeshit
+//   specificationData: {
+//     table: [
+//       {
+//         id: 1,
+//         name: 'Изделие №1',
+//         quantity: 1,
+//         valuePerUnit: 2.0018,
+//         unitOfMeasurement: 'тн',
+//         totalWeight: null
+//       }
+//     ],
+//     notes: 'specificationData notes'
+//   },
+//   galvanizedValue: 1000,
+//   transportValue: 2000,
+//   rentalCostPerDay: 170,
+//   costOfElectricityPerDay: 550,
+//   profitabilityCoeficient: 0.1,
+//   numberOfHoursPerShift: 8,
+//   coeficientOfNds: 1.2,
+//   workersData: {
+//     table: [
+//       {
+//         id: 1,
+//         name: 'Бабенко',
+//         numberOfHoursWorked: 63,
+//         salaryPerDay: 1690
+//       },
+//       {
+//         id: 2,
+//         name: 'Червань Антон',
+//         numberOfHoursWorked: 79,
+//         salaryPerDay: 1700
+//       },
+//       {
+//         id: 3,
+//         name: 'Червань Артем',
+//         numberOfHoursWorked: 77,
+//         salaryPerDay: 1680
+//       }
+//     ],
+//     notes: 'workersData notes'
+//   },
+//   ITRData: {
+//     table: [
+//       {
+//         id: 1,
+//         name: 'Кристина',
+//         salaryPerMonth: 1000
+//       },
+//       {
+//         id: 2,
+//         name: 'Олька',
+//         salaryPerMonth: 10000
+//       },
+//       {
+//         id: 3,
+//         name: 'Танюха',
+//         salaryPerMonth: 0
+//       },
+//       {
+//         id: 4,
+//         name: 'Тёмка',
+//         salaryPerMonth: 3000
+//       },
+//       {
+//         id: 5,
+//         name: 'Николаев',
+//         salaryPerMonth: 15000
+//       },
+//       {
+//         id: 6,
+//         name: 'Шеф',
+//         salaryPerMonth: 5000
+//       }
+//     ]
+//   },
+//   numberOfDaysPerShift: 21,
+//   itrWorkedDays: 13,
+//   consumablesData: [
+//     // {
+//     //   order: 1,
+//     //   name: 'Проволока сварочная 15 кг',
+//     //   unitOfMeasurement: 'бухты',
+//     //   quantity: 2,
+//     //   taxPrice: '1 016,10',
+//     //   price: '2 032,20'
+//     // }
+//   ],
+//   hardwareData: [
+//     // {
+//     //   order: 17,
+//     //   name: 'Болты М20*60',
+//     //   unitOfMeasurement: 'шт',
+//     //   quantity: 276,
+//     //   taxPrice: '24,00',
+//     //   price: '6 624,00'
+//     // }
+//   ],
+//   metalData: [
+//     // {
+//     //   order: 1,
+//     //   name: 'Лист металла',
+//     //   unitOfMeasurement: 'тн',
+//     //   quantity: 12,
+//     //   taxPrice: '1124,00',
+//     //   price: '8 624,00'
+//     // }
+//   ]
+// });
+
 let newWorkerData = ref({ name: '', lastname: '', role: '' });
 let workersTaxData = ref([]);
 let ITRTaxData = ref([]);
-// let ITRData = ref([]);
-// let numberOfHoursPerShift = ref(8);
-// let numberOfDaysPerShift = ref(21);
-// let ITRWorkedDays = ref(0);
-// let rentalCostPerDay = ref(170);
-// let costOfElectricityPerDay = ref(550);
-// let coeficientOfNDS = ref(1.2);
-// let galvanizedValue = ref(0);
-// let transportValue = ref(0);
-// let profitabilityCoeficient = ref(0.1);
 let increaseInSalary = ref(0);
 
 const salariesOfWorkersTotal = computed(() =>
@@ -195,7 +214,7 @@ const salariesOfITRTotal = computed(() =>
   calculationData.value.ITRData.table.reduce((acc, item) => {
     return (
       acc +
-      Number(parseFloat((item.salaryPerMonth / calculationData.value.numberOfDaysPerShift) * calculationData.value.ITRWorkedDays).toFixed())
+      Number(parseFloat((item.salaryPerMonth / calculationData.value.numberOfDaysPerShift) * calculationData.value.itrWorkedDays).toFixed())
     );
   }, 0)
 );
@@ -223,7 +242,7 @@ const taxTotal = computed(() => {
         computedWorkerTaxData.value.K +
         computedWorkerTaxData.value.KMIL +
         computedWorkerTaxData.value.KESV) *
-        calculationData.value.coeficientOfNDS
+        calculationData.value.coeficientOfNds
     ).toFixed(numberOfDecimal)
   );
 });
@@ -238,7 +257,7 @@ const taxITRTotal = computed(() => {
         computedITRTaxData.value.K +
         computedITRTaxData.value.KMIL +
         computedITRTaxData.value.KESV) *
-        calculationData.value.coeficientOfNDS
+        calculationData.value.coeficientOfNds
     ).toFixed(numberOfDecimal)
   );
 });
@@ -309,20 +328,20 @@ const priceData = computed(() => {
       id: 8,
       name: 'Аренда',
       key: 'rent',
-      statistics: getPercentOfTotal(calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays),
-      total: calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays || 0,
+      statistics: getPercentOfTotal(calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays),
+      total: calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays || 0,
       perItem: totalSpecificationItems.value
-        ? (calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays) / totalSpecificationItems.value
+        ? (calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays) / totalSpecificationItems.value
         : 0
     },
     {
       id: 9,
       name: 'Эл. эн.',
       key: 'electricity',
-      statistics: getPercentOfTotal(calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays) || 0,
-      total: calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays || 0,
+      statistics: getPercentOfTotal(calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) || 0,
+      total: calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays || 0,
       perItem: totalSpecificationItems.value
-        ? (calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays) / totalSpecificationItems.value
+        ? (calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) / totalSpecificationItems.value
         : 0
     },
     {
@@ -337,8 +356,8 @@ const priceData = computed(() => {
           taxITRTotal.value +
           calculationData.value.galvanizedValue +
           calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays) *
+          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
           calculationData.value.profitabilityCoeficient
       ),
       total:
@@ -349,8 +368,8 @@ const priceData = computed(() => {
           taxITRTotal.value +
           calculationData.value.galvanizedValue +
           calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays) *
+          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
         calculationData.value.profitabilityCoeficient,
       perItem: totalSpecificationItems.value
         ? ((totalMetal.value +
@@ -360,8 +379,8 @@ const priceData = computed(() => {
             taxITRTotal.value +
             calculationData.value.galvanizedValue +
             calculationData.value.transportValue +
-            calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-            calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays) *
+            calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+            calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
             calculationData.value.profitabilityCoeficient) /
           totalSpecificationItems.value
         : 0
@@ -379,8 +398,8 @@ const priceData = computed(() => {
           taxITRTotal.value +
           calculationData.value.galvanizedValue +
           calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays) *
+          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
           calculationData.value.profitabilityCoeficient +
         (totalMetal.value +
           totalHardware.value +
@@ -389,8 +408,8 @@ const priceData = computed(() => {
           taxITRTotal.value +
           calculationData.value.galvanizedValue +
           calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays),
+          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays),
       perItem: totalSpecificationItems.value
         ? ((totalMetal.value +
             totalHardware.value +
@@ -399,8 +418,8 @@ const priceData = computed(() => {
             taxITRTotal.value +
             calculationData.value.galvanizedValue +
             calculationData.value.transportValue +
-            calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-            calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays) *
+            calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+            calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
             calculationData.value.profitabilityCoeficient +
             (totalMetal.value +
               totalHardware.value +
@@ -409,8 +428,8 @@ const priceData = computed(() => {
               taxITRTotal.value +
               calculationData.value.galvanizedValue +
               calculationData.value.transportValue +
-              calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-              calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays)) /
+              calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+              calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays)) /
           totalSpecificationItems.value
         : 0
     }
@@ -437,8 +456,8 @@ const finalPriceData = computed(() => {
           taxITRTotal.value +
           calculationData.value.galvanizedValue +
           calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays
+          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays
       ),
       total:
         totalConsumables.value +
@@ -446,8 +465,8 @@ const finalPriceData = computed(() => {
         taxITRTotal.value +
         calculationData.value.galvanizedValue +
         calculationData.value.transportValue +
-        calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-        calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays,
+        calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+        calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays,
       perItem: totalSpecificationItems.value
         ? truncateDecimal(
             (totalConsumables.value +
@@ -455,8 +474,8 @@ const finalPriceData = computed(() => {
               taxITRTotal.value +
               calculationData.value.galvanizedValue +
               calculationData.value.transportValue +
-              calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-              calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays) /
+              calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+              calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) /
               totalSpecificationItems.value,
             2
           )
@@ -474,8 +493,8 @@ const finalPriceData = computed(() => {
           taxITRTotal.value +
           calculationData.value.galvanizedValue +
           calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays) *
+          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
           calculationData.value.profitabilityCoeficient
       ),
       total:
@@ -486,8 +505,8 @@ const finalPriceData = computed(() => {
           taxITRTotal.value +
           calculationData.value.galvanizedValue +
           calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays) *
+          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
         calculationData.value.profitabilityCoeficient,
       perItem: totalSpecificationItems.value
         ? ((totalMetal.value +
@@ -497,8 +516,8 @@ const finalPriceData = computed(() => {
             taxITRTotal.value +
             calculationData.value.galvanizedValue +
             calculationData.value.transportValue +
-            calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-            calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays) *
+            calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+            calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
             calculationData.value.profitabilityCoeficient) /
           totalSpecificationItems.value
         : 0
@@ -516,8 +535,8 @@ const finalPriceData = computed(() => {
           taxITRTotal.value +
           calculationData.value.galvanizedValue +
           calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays) *
+          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
           calculationData.value.profitabilityCoeficient +
         (totalMetal.value +
           totalHardware.value +
@@ -526,8 +545,8 @@ const finalPriceData = computed(() => {
           taxITRTotal.value +
           calculationData.value.galvanizedValue +
           calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays),
+          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays),
       perItem: totalSpecificationItems.value
         ? ((totalMetal.value +
             totalHardware.value +
@@ -536,8 +555,8 @@ const finalPriceData = computed(() => {
             taxITRTotal.value +
             calculationData.value.galvanizedValue +
             calculationData.value.transportValue +
-            calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-            calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays) *
+            calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+            calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
             calculationData.value.profitabilityCoeficient +
             (totalMetal.value +
               totalHardware.value +
@@ -546,8 +565,8 @@ const finalPriceData = computed(() => {
               taxITRTotal.value +
               calculationData.value.galvanizedValue +
               calculationData.value.transportValue +
-              calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-              calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays)) /
+              calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+              calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays)) /
           totalSpecificationItems.value
         : 0
     }
@@ -623,25 +642,11 @@ const getPercentOfTotal = (totalNumber) => {
 };
 
 onBeforeMount(() => {
-  // MochDataService.getCalculationData().then((data) => {
-  //   calculationData.value = data;
-  // });
+  const query = router.currentRoute.value.query;
 
-  MochDataService.getConsumables().then((data) => {
-    calculationData.value.consumablesData = data;
-  });
-
-  MochDataService.getHardware().then((data) => {
-    calculationData.value.hardwareData = data;
-  });
-
-  MochDataService.getMetal().then((data) => {
-    calculationData.value.metalData = data;
-  });
-
-  // MochDataService.getWorkersData().then((data) => {
-  //   calculationData.value.workersData.table = data;
-  // });
+  parentId.value = query.parentId;
+  calculationType.value = query.type;
+  calculationPlanId.value = query.calculationPlanId;
 
   MochDataService.getWorkersTaxData().then((data) => {
     workersTaxData.value = data;
@@ -651,13 +656,22 @@ onBeforeMount(() => {
     ITRTaxData.value = data;
   });
 
-  // MochDataService.getITRData().then((data) => {
-  //   calculationData.value.ITRData = data;
-  // });
+  if (calculationType.value === 'fact') {
+    ApiService.getCalculationById(calculationPlanId.value).then((res) => {
+      const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase());
+      const camelizeData = Object.keys(res.data).reduce((acc, key) => {
+        acc[camelize(key)] = res.data[key];
 
-  // MochDataService.getSpecificationData().then((data) => {
-  //   calculationData.value.specificationData.table = data;
-  // });
+        if (key === 'calculationType') {
+          acc['calculationType'] = 'fact';
+        }
+
+        return acc;
+      }, {});
+
+      calculationData.value = { ...calculationData.value, ...camelizeData };
+    });
+  }
 });
 
 const finalTotalPrice = computed(() => {
@@ -669,8 +683,8 @@ const finalTotalPrice = computed(() => {
       taxITRTotal.value +
       calculationData.value.galvanizedValue +
       calculationData.value.transportValue +
-      calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-      calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays) *
+      calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+      calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
       calculationData.value.profitabilityCoeficient +
     (totalMetal.value +
       totalHardware.value +
@@ -679,8 +693,8 @@ const finalTotalPrice = computed(() => {
       taxITRTotal.value +
       calculationData.value.galvanizedValue +
       calculationData.value.transportValue +
-      calculationData.value.rentalCostPerDay * calculationData.value.ITRWorkedDays +
-      calculationData.value.costOfElectricityPerDay * calculationData.value.ITRWorkedDays);
+      calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+      calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays);
 
   return totalPrice;
 });
@@ -733,7 +747,6 @@ const onUpload = async (e) => {
           quantity: formatedRow['К-во'],
           name: formatedRow['Наименование'],
           price: formatedRow['Стоимость'],
-          // price: Number(formatedRow['Стоимость'].replaceAll(' ', '').replaceAll(',', '.')),
           unitOfMeasurement: formatedRow['ед.изм.'],
           taxPrice: formatedRow['цена НДС'],
           order: formatedRow['№ п/п']
@@ -745,7 +758,6 @@ const onUpload = async (e) => {
           quantity: formatedRow['К-во'],
           name: formatedRow['Наименование'],
           price: formatedRow['Стоимость'],
-          // price: Number(formatedRow['Стоимость'].replaceAll(' ', '').replaceAll(',', '.')),
           unitOfMeasurement: formatedRow['ед.изм.'],
           taxPrice: formatedRow['цена НДС'],
           order: formatedRow['№ п/п']
@@ -756,7 +768,6 @@ const onUpload = async (e) => {
           quantity: formatedRow['К-во'],
           name: formatedRow['Наименование'],
           price: formatedRow['Стоимость'],
-          // price: Number(formatedRow['Стоимость'].replaceAll(' ', '').replaceAll(',', '.')),
           unitOfMeasurement: formatedRow['ед.изм.'],
           taxPrice: formatedRow['цена НДС'],
           order: formatedRow['№ п/п']
@@ -768,11 +779,10 @@ const onUpload = async (e) => {
     }
   });
 
-  console.log(1234, consumablesDataRes);
-
   calculationData.value.consumablesData = consumablesDataRes;
   calculationData.value.hardwareData = hardwareDataRes;
   calculationData.value.metalData = metalDataRes;
+  expandAccordionTotalCosts.value = ['0', '1', '2'];
 };
 
 const uploadFile = () => {
@@ -972,34 +982,22 @@ const createCalculation = async () => {
   loading.value = true;
 
   try {
-    const res = await ApiService.createCalculation({
-      ITRWorkedDays: 13,
-      coeficientOfNDS: 1.2,
-      costOfElectricityPerDay: 550,
-      galvanizedValue: 1000,
-      numberOfDaysPerShift: 21,
-      numberOfHoursPerShift: 8,
-      rentalCostPerDay: 170,
-      profitabilityCoeficient: 0.1,
-      title: 'Калькуляция-30.7.2024',
-      transportValue: 2000,
-      dateOfCreation: '2015-12-03 21:54:38',
-      lastEditDate: '2015-12-03 21:54:38'
-      // dateOfCreation: new Date().valueOf(),
-      // lastEditDate: new Date().valueOf()
+    const calculationRes = await ApiService.createCalculation({
+      ...calculationData.value,
+      calculationType: router.currentRoute.value.query.type || 'plan',
+      lastEditDate: new Date(),
+      consumablesData: JSON.stringify(calculationData.value.consumablesData),
+      hardwareData: JSON.stringify(calculationData.value.hardwareData),
+      metalData: JSON.stringify(calculationData.value.metalData),
+      parentCalculationId: Number(parentId.value)
     });
 
-    router.push({ path: `/calculations/${res.data.id}` });
+    router.push({ path: `/calculations/${calculationRes.data.id}` });
   } catch (error) {
     console.log(error);
   } finally {
     loading.value = false;
   }
-};
-
-const getCalculations = () => {
-  const calculations = ApiService.getCalculations();
-  console.log('calculations', calculations);
 };
 
 watch(increaseInSalary, (newValue, oldValue) => {
@@ -1041,12 +1039,12 @@ watch(increaseInSalary, (newValue, oldValue) => {
           </div>
         </div>
 
-        <div class="font-semibold text-xl">
+        <div v-if="calculationData.dateOfCreation" class="font-semibold text-xl">
           <p class="text-[--primary-color]">Дата создания:</p>
           <p>{{ calculationData.dateOfCreation }}</p>
         </div>
 
-        <div class="font-semibold text-xl">
+        <div v-if="calculationData.lastEditDate" class="font-semibold text-xl">
           <p class="text-[--primary-color]">Дата последнего редактирования:</p>
           <p>{{ calculationData.lastEditDate }}</p>
         </div>
@@ -1061,7 +1059,6 @@ watch(increaseInSalary, (newValue, oldValue) => {
           class="text-xs"
           @click="createCalculation"
         />
-        <Button label="Получить все" size="large" severity="success" class="text-xs" @click="getCalculations" />
       </div>
     </div>
 
@@ -1478,8 +1475,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
           :totalAmount="salariesOfWorkersTotal"
           :taxTotal="taxTotal"
           :formatNumber="formatNumber"
-          :coeficientOfNDS="calculationData.coeficientOfNDS"
-          @changeCoeficient="(data) => (calculationData.coeficientOfNDS = data.value)"
+          :coeficientOfNds="calculationData.coeficientOfNds"
+          @changeCoeficient="(data) => (calculationData.coeficientOfNds = data.value)"
         />
       </div>
 
@@ -1517,8 +1514,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
               </div>
 
               <div class="flex flex-row gap-2 items-center">
-                <label for="ITRWorkedDays">Количество дней (трудозатраты)</label>
-                <InputNumber v-model="calculationData.ITRWorkedDays" inputId="ITRWorkedDays" class="max-w-[50px]" fluid />
+                <label for="itrWorkedDays">Количество дней (трудозатраты)</label>
+                <InputNumber v-model="calculationData.itrWorkedDays" inputId="itrWorkedDays" class="max-w-[50px]" fluid />
               </div>
             </div>
 
@@ -1557,7 +1554,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
                 <template #body="{ data }">
                   {{
                     formatNumber(
-                      truncateDecimal((data.salaryPerMonth / calculationData.numberOfDaysPerShift) * calculationData.ITRWorkedDays, 0)
+                      truncateDecimal((data.salaryPerMonth / calculationData.numberOfDaysPerShift) * calculationData.itrWorkedDays, 0)
                     )
                   }}
                 </template>
@@ -1617,8 +1614,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
           :totalAmount="salariesOfITRTotal"
           :taxTotal="taxITRTotal"
           :formatNumber="formatNumber"
-          :coeficientOfNDS="calculationData.coeficientOfNDS"
-          @changeCoeficient="(data) => (calculationData.coeficientOfNDS = data.value)"
+          :coeficientOfNds="calculationData.coeficientOfNds"
+          @changeCoeficient="(data) => (calculationData.coeficientOfNds = data.value)"
         />
       </div>
 
@@ -1640,7 +1637,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
           </div>
         </div>
 
-        <Accordion multiple>
+        <Accordion multiple :value="expandAccordionTotalCosts">
           <AccordionPanel value="0">
             <AccordionHeader>Расходники</AccordionHeader>
 
