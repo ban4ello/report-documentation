@@ -4,8 +4,9 @@
   - Разработать функционал добавления в базу новых сотрудников
   - Добавить возможность прикреплять файлы (чертежи) к проекту (заказу)
   - Добавить кнопку "Удалить файл"
-  - Добавить "время" для  "Дата последнего редактирования"
-  - Добавить метку "План" / "Факт"
+  - Добавить ссылки к братьям
+  - После сохранения изменений калькуляции (saveCalculation) обновлять данные которые приходят по запросу PUT
+  - После сохранения изменений калькуляции (saveCalculation) обновлять данные родителя (title)
 
   ИТР
   Цех
@@ -15,7 +16,7 @@
 */
 
 import { onBeforeMount, ref, computed, watch } from 'vue';
-import { MochDataService } from '@/service/MochDataService';
+// import { MochDataService } from '@/service/MochDataService';
 import ApiService from '@/service/ApiService';
 // import { useToast } from 'primevue/usetoast';
 import SearchSelect from '@/components/custom-ui/SearchSelect.vue';
@@ -39,16 +40,13 @@ const isAmountWithoutMetal = ref(false);
 const newStaffData = ref({ name: '', numberOfHoursWorked: null, salaryPerDay: null });
 const newITRStaffData = ref({ name: '', salaryPerMonth: null });
 
+const expandAccordionTotalCosts = ref([]);
 const selectedStaff = ref(null);
 const selectedITRStaff = ref(null);
 const newStaffDialog = ref(false);
 const newITRStaffDialog = ref(false);
 const createNewWorkerDialog = ref(false);
 const loading = ref(false);
-
-// let currentDate = new Date();
-// const today = `${currentDate.getDate()}.${currentDate.getMonth()}.${currentDate.getFullYear()}`;
-// const currentTime = currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds();
 
 let calculationData = ref({
   title: '',
@@ -71,17 +69,17 @@ let calculationData = ref({
     table: [],
     notes: ''
   },
-  ITRData: {
+  itrData: {
     table: []
   },
+  workersTaxData: [],
+  itrTaxData: [],
   consumablesData: [],
   hardwareData: [],
   metalData: []
 });
 
 let newWorkerData = ref({ name: '', lastname: '', role: '' });
-let workersTaxData = ref([]);
-let ITRTaxData = ref([]);
 let increaseInSalary = ref(0);
 
 const salariesOfWorkersTotal = computed(() =>
@@ -91,7 +89,7 @@ const salariesOfWorkersTotal = computed(() =>
 );
 
 const salariesOfITRTotal = computed(() =>
-  calculationData.value.ITRData.table.reduce((acc, item) => {
+  calculationData.value.itrData.table.reduce((acc, item) => {
     return (
       acc +
       Number(parseFloat((item.salaryPerMonth / calculationData.value.numberOfDaysPerShift) * calculationData.value.itrWorkedDays).toFixed())
@@ -100,7 +98,7 @@ const salariesOfITRTotal = computed(() =>
 );
 
 const salariesOfITRTotalPerMonth = computed(() =>
-  calculationData.value.ITRData.table.reduce((acc, item) => {
+  calculationData.value.itrData.table.reduce((acc, item) => {
     return acc + Number(parseFloat(item.salaryPerMonth));
   }, 0)
 );
@@ -132,11 +130,11 @@ const taxITRTotal = computed(() => {
 
   return Number(
     parseFloat(
-      (computedITRTaxData.value.T +
-        computedITRTaxData.value.TN +
-        computedITRTaxData.value.K +
-        computedITRTaxData.value.KMIL +
-        computedITRTaxData.value.KESV) *
+      (computedItrTaxData.value.T +
+        computedItrTaxData.value.TN +
+        computedItrTaxData.value.K +
+        computedItrTaxData.value.KMIL +
+        computedItrTaxData.value.KESV) *
         calculationData.value.coeficientOfNds
     ).toFixed(numberOfDecimal)
   );
@@ -456,14 +454,14 @@ const finalPriceData = computed(() => {
 const computedWorkerTaxData = computed(() => {
   const numberOfDecimal = 2;
 
-  return workersTaxData.value.reduce(
+  return calculationData.value.workersTaxData.reduce(
     (acc, item) => {
       switch (item.key) {
         case 'T':
           acc.T = Number(parseFloat(item.coefficient * salariesOfWorkersTotal.value).toFixed(numberOfDecimal));
           break;
         case 'TN':
-          acc.TN = Number(parseFloat((acc.T / item.coefficient.a) * item.coefficient.b).toFixed(numberOfDecimal));
+          acc.TN = Number(parseFloat((acc.T / item.coefficientA) * item.coefficientB).toFixed(numberOfDecimal));
           break;
         case 'K':
           acc.K = Number(parseFloat(salariesOfWorkersTotal.value - acc.T).toFixed(numberOfDecimal));
@@ -485,17 +483,17 @@ const computedWorkerTaxData = computed(() => {
   );
 });
 
-const computedITRTaxData = computed(() => {
+const computedItrTaxData = computed(() => {
   const numberOfDecimal = 2;
 
-  return ITRTaxData.value.reduce(
+  return calculationData.value.itrTaxData.reduce(
     (acc, item) => {
       switch (item.key) {
         case 'T':
           acc.T = Number(parseFloat(item.coefficient * salariesOfITRTotal.value).toFixed(numberOfDecimal));
           break;
         case 'TN':
-          acc.TN = Number(parseFloat((acc.T / item.coefficient.a) * item.coefficient.b).toFixed(numberOfDecimal));
+          acc.TN = Number(parseFloat((acc.T / item.coefficientA) * item.coefficientB).toFixed(numberOfDecimal));
           break;
         case 'K':
           acc.K = Number(parseFloat(salariesOfITRTotal.value - acc.T).toFixed(numberOfDecimal));
@@ -522,14 +520,6 @@ const getPercentOfTotal = (totalNumber) => {
 };
 
 onBeforeMount(() => {
-  MochDataService.getWorkersTaxData().then((data) => {
-    workersTaxData.value = data;
-  });
-
-  MochDataService.getITRTaxData().then((data) => {
-    ITRTaxData.value = data;
-  });
-
   ApiService.getCalculationById(parentId).then((res) => {
     const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase());
     const data = Object.keys(res.data).reduce((acc, item) => {
@@ -631,7 +621,6 @@ const onUpload = async (e) => {
           quantity: formatedRow['К-во'],
           name: formatedRow['Наименование'],
           price: formatedRow['Стоимость'],
-          // price: Number(formatedRow['Стоимость'].replaceAll(' ', '').replaceAll(',', '.')),
           unitOfMeasurement: formatedRow['ед.изм.'],
           taxPrice: formatedRow['цена НДС'],
           order: formatedRow['№ п/п']
@@ -643,7 +632,6 @@ const onUpload = async (e) => {
           quantity: formatedRow['К-во'],
           name: formatedRow['Наименование'],
           price: formatedRow['Стоимость'],
-          // price: Number(formatedRow['Стоимость'].replaceAll(' ', '').replaceAll(',', '.')),
           unitOfMeasurement: formatedRow['ед.изм.'],
           taxPrice: formatedRow['цена НДС'],
           order: formatedRow['№ п/п']
@@ -654,7 +642,6 @@ const onUpload = async (e) => {
           quantity: formatedRow['К-во'],
           name: formatedRow['Наименование'],
           price: formatedRow['Стоимость'],
-          // price: Number(formatedRow['Стоимость'].replaceAll(' ', '').replaceAll(',', '.')),
           unitOfMeasurement: formatedRow['ед.изм.'],
           taxPrice: formatedRow['цена НДС'],
           order: formatedRow['№ п/п']
@@ -666,11 +653,10 @@ const onUpload = async (e) => {
     }
   });
 
-  console.log(1234, consumablesDataRes);
-
   calculationData.value.consumablesData = consumablesDataRes;
   calculationData.value.hardwareData = hardwareDataRes;
   calculationData.value.metalData = metalDataRes;
+  expandAccordionTotalCosts.value = ['0', '1', '2'];
 };
 
 const uploadFile = () => {
@@ -714,10 +700,11 @@ const showDialog = (key, flag = true) => {
 
 const copySpecification = (data) => {
   calculationData.value.specificationData.table.push({
-    id: (Math.random() * 1000).toFixed(),
+    id: Number((Math.random() * 1000).toFixed()),
     name: data.name,
     quantity: data.quantity,
     valuePerUnit: data.valuePerUnit,
+    unitOfMeasurement: data.unitOfMeasurement,
     totalWeight: data.totalWeight
   });
 };
@@ -728,20 +715,29 @@ const addNewSpecification = () => {
     name: null,
     quantity: null,
     valuePerUnit: null,
+    unitOfMeasurement: null,
     totalWeight: null
   });
 };
 
-const confirmDeleteSpecification = (data) => {
+const confirmDeleteSpecification = async (data) => {
   calculationData.value.specificationData.table = calculationData.value.specificationData.table.filter((item) => item.id !== data.id);
+
+  try {
+    await ApiService.deleteItemFromSpecificationData(data.id);
+  } catch (error) {
+    console.log(error);
+  } finally {
+    loading.value = false;
+  }
 };
 
-const copyStaffWorker = (data) => {
+const copyWorkerData = (data) => {
   calculationData.value.workersData.table.push({
-    id: (Math.random() * 1000).toFixed(),
+    id: Number((Math.random() * 1000).toFixed()),
     name: data.name,
-    numberOfHoursWorked: data.numberOfHoursWorked,
-    salaryPerDay: data.salaryPerDay,
+    numberOfHoursWorked: Number(data.numberOfHoursWorked),
+    salaryPerDay: Number(data.salaryPerDay),
     salaryPerHour: null,
     total: null
   });
@@ -765,13 +761,23 @@ const saveNewStaff = () => {
   };
 };
 
-const confirmDeleteStaff = (item) => {
+const confirmDeleteWorker = async (item) => {
+  loading.value = true;
+
   if (item) {
     calculationData.value.workersData.table = calculationData.value.workersData.table.filter((worker) => worker.id !== item.id);
   } else {
     selectedStaff.value.forEach((item) => {
       calculationData.value.workersData.table = calculationData.value.workersData.table.filter((worker) => worker.id !== item.id);
     });
+  }
+
+  try {
+    await ApiService.deleteItemFromWorkersData(item.id);
+  } catch (error) {
+    console.log(error);
+  } finally {
+    loading.value = false;
   }
 
   newStaffDialog.value = false;
@@ -784,8 +790,8 @@ const confirmDeleteStaff = (item) => {
   };
 };
 
-const saveNewITRStaff = () => {
-  calculationData.value.ITRData.table.push({
+const saveNewItrStaff = () => {
+  calculationData.value.itrData.table.push({
     id: (Math.random() * 1000).toFixed(),
     name: newITRStaffData.value.name,
     salaryPerMonth: newITRStaffData.value.salaryPerMonth
@@ -798,13 +804,23 @@ const saveNewITRStaff = () => {
   };
 };
 
-const confirmDeleteITRStaff = (item) => {
+const confirmDeleteItrWorker = async (item) => {
+  loading.value = true;
+
   if (item) {
-    calculationData.value.ITRData.table = calculationData.value.ITRData.table.filter((worker) => worker.id !== item.id);
+    calculationData.value.itrData.table = calculationData.value.itrData.table.filter((worker) => worker.id !== item.id);
   } else {
     selectedITRStaff.value.forEach((item) => {
-      calculationData.value.ITRData.table = calculationData.value.ITRData.table.filter((worker) => worker.id !== item.id);
+      calculationData.value.itrData.table = calculationData.value.itrData.table.filter((worker) => worker.id !== item.id);
     });
+  }
+
+  try {
+    await ApiService.deleteItemFromItrData(item.id);
+  } catch (error) {
+    console.log(error);
+  } finally {
+    loading.value = false;
   }
 
   newITRStaffDialog.value = false;
@@ -816,9 +832,9 @@ const confirmDeleteITRStaff = (item) => {
   };
 };
 
-const copyITRWorker = (data) => {
-  calculationData.value.ITRData.table.push({
-    id: (Math.random() * 1000).toFixed(),
+const copyItrWorker = (data) => {
+  calculationData.value.itrData.table.push({
+    id: Number((Math.random() * 1000).toFixed()),
     name: data.name,
     salaryPerMonth: data.salaryPerMonth
   });
@@ -868,6 +884,8 @@ const truncateDecimal = (num, decimalPlaces) => {
 
 const saveCalculation = async () => {
   loading.value = true;
+  let today = new Date();
+  today.setHours(today.getHours() + 3); // TODO: refactor (set local time)
 
   try {
     await ApiService.updateCalculation({
@@ -875,7 +893,7 @@ const saveCalculation = async () => {
       consumablesData: JSON.stringify(calculationData.value.consumablesData),
       hardwareData: JSON.stringify(calculationData.value.hardwareData),
       metalData: JSON.stringify(calculationData.value.metalData),
-      lastEditDate: new Date()
+      lastEditDate: today
     });
   } catch (error) {
     console.log(error);
@@ -901,7 +919,9 @@ watch(increaseInSalary, (newValue, oldValue) => {
     <ProgressSpinner />
   </div>
   <Fluid>
-    <div class="card calculation-title z-50 sticky top-[60px] shadow-md flex flex-row items-center gap-4">
+    <div class="card calculation-title z-50 sticky top-[60px] shadow-md flex flex-col items-center gap-4">
+      <Tag :value="calculationData.calculationType === 'plan' ? 'план' : 'факт'" class="min-w-[100px]"></Tag>
+
       <div class="flex flex-row justify-between items-center gap-8 w-full">
         <div class="font-semibold text-[--primary-color] text-xl">
           <span>Название калькуляции:</span><span><InputText v-model="calculationData.title" type="text" /></span>
@@ -932,9 +952,12 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
         <div class="font-semibold text-xl">
           <p class="text-[--primary-color]">Дата последнего редактирования:</p>
-          <p>
-            {{ new Date(calculationData.lastEditDate).toLocaleDateString() }}
-          </p>
+          <div class="flex flex-col">
+            <span> {{ new Date(calculationData.lastEditDate).toLocaleDateString() }} - </span>
+            <span class="font-bold">
+              {{ new Date(calculationData.lastEditDate).toLocaleTimeString() }}
+            </span>
+          </div>
         </div>
 
         <div class="flex flex-col gap-4">
@@ -1219,7 +1242,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
                   icon="pi pi-trash"
                   severity="danger"
                   class="mr-2 text-xs max-w-[100px]"
-                  @click="confirmDeleteStaff()"
+                  @click="confirmDeleteWorker()"
                   :disabled="!selectedStaff || !selectedStaff.length"
                 />
               </div>
@@ -1302,8 +1325,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
               <Column :exportable="false" style="min-width: 12rem">
                 <template #body="slotProps">
-                  <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copyStaffWorker(slotProps.data)" />
-                  <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteStaff(slotProps.data)" />
+                  <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copyWorkerData(slotProps.data)" />
+                  <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteWorker(slotProps.data)" />
                 </template>
               </Column>
 
@@ -1359,7 +1382,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
         <TaxCharges
           :computedTaxData="computedWorkerTaxData"
-          :taxData="workersTaxData"
+          :taxData="calculationData.workersTaxData"
           :totalAmount="salariesOfWorkersTotal"
           :taxTotal="taxTotal"
           :formatNumber="formatNumber"
@@ -1389,7 +1412,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
                   icon="pi pi-trash"
                   severity="danger"
                   class="mr-2 text-xs max-w-[100px]"
-                  @click="confirmDeleteITRStaff()"
+                  @click="confirmDeleteItrWorker()"
                   :disabled="!selectedITRStaff || !selectedITRStaff.length"
                 />
               </div>
@@ -1408,7 +1431,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
             </div>
 
             <DataTable
-              :value="calculationData.ITRData.table"
+              :value="calculationData.itrData.table"
               v-model:selection="selectedITRStaff"
               editMode="cell"
               @cell-edit-complete="onCellEditComplete"
@@ -1450,8 +1473,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
               <Column :exportable="false" style="min-width: 12rem">
                 <template #body="slotProps">
-                  <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copyITRWorker(slotProps.data)" />
-                  <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteITRStaff(slotProps.data)" />
+                  <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copyItrWorker(slotProps.data)" />
+                  <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteItrWorker(slotProps.data)" />
                 </template>
               </Column>
 
@@ -1489,7 +1512,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
                   :disabled="!newITRStaffData.name.trim() || newITRStaffData.salaryPerMonth === null"
                   label="Сохранить"
                   icon="pi pi-check"
-                  @click="saveNewITRStaff"
+                  @click="saveNewItrStaff"
                 />
               </template>
             </Dialog>
@@ -1497,8 +1520,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
         </div>
 
         <TaxCharges
-          :computedTaxData="computedITRTaxData"
-          :taxData="ITRTaxData"
+          :computedTaxData="computedItrTaxData"
+          :taxData="calculationData.itrTaxData"
           :totalAmount="salariesOfITRTotal"
           :taxTotal="taxITRTotal"
           :formatNumber="formatNumber"
@@ -1525,7 +1548,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
           </div>
         </div>
 
-        <Accordion multiple>
+        <Accordion multiple :value="expandAccordionTotalCosts">
           <AccordionPanel value="0">
             <AccordionHeader>Расходники</AccordionHeader>
 

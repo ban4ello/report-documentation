@@ -335,6 +335,8 @@ export const MochDataService = {
         id: 1,
         name: 'т',
         coefficient: 0.3,
+        coefficientA: null,
+        coefficientB: null,
         key: 'T',
         subtotal: null,
         total: null
@@ -342,7 +344,9 @@ export const MochDataService = {
       {
         id: 2,
         name: 'т н',
-        coefficient: { a: 93, b: 7 },
+        coefficient: null,
+        coefficientA: 93,
+        coefficientB: 7,
         key: 'TN',
         subtotal: null,
         total: null
@@ -351,6 +355,8 @@ export const MochDataService = {
         id: 3,
         name: 'к',
         coefficient: 0.2,
+        coefficientA: null,
+        coefficientB: null,
         key: 'K',
         subtotal: null,
         total: null
@@ -359,6 +365,8 @@ export const MochDataService = {
         id: 4,
         name: 'к налог подаходн+военн',
         coefficient: 0.242236,
+        coefficientA: null,
+        coefficientB: null,
         key: 'KMIL',
         subtotal: null,
         total: null
@@ -367,6 +375,8 @@ export const MochDataService = {
         id: 5,
         name: 'к налог есв',
         coefficient: 0.22,
+        coefficientA: null,
+        coefficientB: null,
         key: 'KESV',
         subtotal: null,
         total: null
@@ -374,12 +384,14 @@ export const MochDataService = {
     ];
   },
 
-  ITRTaxData() {
+  itrTaxData() {
     return [
       {
         id: 1,
         name: 'т',
         coefficient: 0.3,
+        coefficientA: null,
+        coefficientB: null,
         key: 'T',
         subtotal: null,
         total: null
@@ -387,7 +399,9 @@ export const MochDataService = {
       {
         id: 2,
         name: 'т н',
-        coefficient: { a: 93, b: 7 },
+        coefficient: null,
+        coefficientA: 93,
+        coefficientB: 7,
         key: 'TN',
         subtotal: null,
         total: null
@@ -396,6 +410,8 @@ export const MochDataService = {
         id: 3,
         name: 'к',
         coefficient: 0.2,
+        coefficientA: null,
+        coefficientB: null,
         key: 'K',
         subtotal: null,
         total: null
@@ -404,6 +420,8 @@ export const MochDataService = {
         id: 4,
         name: 'к налог подаходн+военн',
         coefficient: 0.242236,
+        coefficientA: null,
+        coefficientB: null,
         key: 'KMIL',
         subtotal: null,
         total: null
@@ -412,6 +430,8 @@ export const MochDataService = {
         id: 5,
         name: 'к налог есв',
         coefficient: 0.22,
+        coefficientA: null,
+        coefficientB: null,
         key: 'KESV',
         subtotal: null,
         total: null
@@ -583,8 +603,8 @@ export const MochDataService = {
     return Promise.resolve(this.workersTaxData());
   },
 
-  getITRTaxData() {
-    return Promise.resolve(this.ITRTaxData());
+  getItrTaxData() {
+    return Promise.resolve(this.itrTaxData());
   },
 
   getITRData() {
