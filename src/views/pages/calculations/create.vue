@@ -4,6 +4,7 @@
   - Разработать функционал добавления в базу новых сотрудников
   - Добавить возможность прикреплять файлы (чертежи) к проекту (заказу)
   - Добавить кнопку "Удалить файл"
+  - Добавить валидацию полей
   - Добавить нотификацию после действий: сохранение калькуляции
   - Сделать "Переменные" инпуты шире - не видно больших чисел
 
@@ -55,7 +56,7 @@ const loading = ref(false);
 
 let calculationData = ref({
   itrWorkedDays: 0,
-  coeficientOfNds: 0.2,
+  coeficientOfNds: 1.2,
   costOfElectricityPerDay: 0,
   galvanizedValue: 0,
   numberOfDaysPerShift: 0,
@@ -75,12 +76,15 @@ let calculationData = ref({
     table: [],
     notes: ''
   },
-  ITRData: {
-    table: []
+  itrData: {
+    table: [],
+    notes: ''
   },
   consumablesData: [],
   hardwareData: [],
-  metalData: []
+  metalData: [],
+  workersTaxData: [],
+  itrTaxData: []
 });
 
 // // NOTE: need for test
@@ -131,7 +135,7 @@ let calculationData = ref({
 //     ],
 //     notes: 'workersData notes'
 //   },
-//   ITRData: {
+//   itrData: {
 //     table: [
 //       {
 //         id: 1,
@@ -200,8 +204,6 @@ let calculationData = ref({
 // });
 
 let newWorkerData = ref({ name: '', lastname: '', role: '' });
-let workersTaxData = ref([]);
-let ITRTaxData = ref([]);
 let increaseInSalary = ref(0);
 
 const salariesOfWorkersTotal = computed(() =>
@@ -211,7 +213,7 @@ const salariesOfWorkersTotal = computed(() =>
 );
 
 const salariesOfITRTotal = computed(() =>
-  calculationData.value.ITRData.table.reduce((acc, item) => {
+  calculationData.value.itrData.table.reduce((acc, item) => {
     return (
       acc +
       Number(parseFloat((item.salaryPerMonth / calculationData.value.numberOfDaysPerShift) * calculationData.value.itrWorkedDays).toFixed())
@@ -220,7 +222,7 @@ const salariesOfITRTotal = computed(() =>
 );
 
 const salariesOfITRTotalPerMonth = computed(() =>
-  calculationData.value.ITRData.table.reduce((acc, item) => {
+  calculationData.value.itrData.table.reduce((acc, item) => {
     return acc + Number(parseFloat(item.salaryPerMonth));
   }, 0)
 );
@@ -252,11 +254,11 @@ const taxITRTotal = computed(() => {
 
   return Number(
     parseFloat(
-      (computedITRTaxData.value.T +
-        computedITRTaxData.value.TN +
-        computedITRTaxData.value.K +
-        computedITRTaxData.value.KMIL +
-        computedITRTaxData.value.KESV) *
+      (computedItrTaxData.value.T +
+        computedItrTaxData.value.TN +
+        computedItrTaxData.value.K +
+        computedItrTaxData.value.KMIL +
+        computedItrTaxData.value.KESV) *
         calculationData.value.coeficientOfNds
     ).toFixed(numberOfDecimal)
   );
@@ -576,14 +578,14 @@ const finalPriceData = computed(() => {
 const computedWorkerTaxData = computed(() => {
   const numberOfDecimal = 2;
 
-  return workersTaxData.value.reduce(
+  return calculationData.value.workersTaxData.reduce(
     (acc, item) => {
       switch (item.key) {
         case 'T':
           acc.T = Number(parseFloat(item.coefficient * salariesOfWorkersTotal.value).toFixed(numberOfDecimal));
           break;
         case 'TN':
-          acc.TN = Number(parseFloat((acc.T / item.coefficient.a) * item.coefficient.b).toFixed(numberOfDecimal));
+          acc.TN = Number(parseFloat((acc.T / item.coefficientA) * item.coefficientB).toFixed(numberOfDecimal));
           break;
         case 'K':
           acc.K = Number(parseFloat(salariesOfWorkersTotal.value - acc.T).toFixed(numberOfDecimal));
@@ -605,17 +607,17 @@ const computedWorkerTaxData = computed(() => {
   );
 });
 
-const computedITRTaxData = computed(() => {
+const computedItrTaxData = computed(() => {
   const numberOfDecimal = 2;
 
-  return ITRTaxData.value.reduce(
+  return calculationData.value.itrTaxData.reduce(
     (acc, item) => {
       switch (item.key) {
         case 'T':
           acc.T = Number(parseFloat(item.coefficient * salariesOfITRTotal.value).toFixed(numberOfDecimal));
           break;
         case 'TN':
-          acc.TN = Number(parseFloat((acc.T / item.coefficient.a) * item.coefficient.b).toFixed(numberOfDecimal));
+          acc.TN = Number(parseFloat((acc.T / item.coefficientA) * item.coefficientB).toFixed(numberOfDecimal));
           break;
         case 'K':
           acc.K = Number(parseFloat(salariesOfITRTotal.value - acc.T).toFixed(numberOfDecimal));
@@ -649,11 +651,11 @@ onBeforeMount(() => {
   calculationPlanId.value = query.calculationPlanId;
 
   MochDataService.getWorkersTaxData().then((data) => {
-    workersTaxData.value = data;
+    calculationData.value.workersTaxData = data;
   });
 
-  MochDataService.getITRTaxData().then((data) => {
-    ITRTaxData.value = data;
+  MochDataService.getItrTaxData().then((data) => {
+    calculationData.value.itrTaxData = data;
   });
 
   if (calculationType.value === 'fact') {
@@ -830,6 +832,7 @@ const copySpecification = (data) => {
     name: data.name,
     quantity: data.quantity,
     valuePerUnit: data.valuePerUnit,
+    unitOfMeasurement: data.unitOfMeasurement,
     totalWeight: data.totalWeight
   });
 };
@@ -840,6 +843,7 @@ const addNewSpecification = () => {
     name: null,
     quantity: null,
     valuePerUnit: null,
+    unitOfMeasurement: null,
     totalWeight: null
   });
 };
@@ -877,7 +881,7 @@ const saveNewStaff = () => {
   };
 };
 
-const confirmDeleteStaff = (item) => {
+const confirmDeleteWorker = (item) => {
   if (item) {
     calculationData.value.workersData.table = calculationData.value.workersData.table.filter((worker) => worker.id !== item.id);
   } else {
@@ -897,7 +901,7 @@ const confirmDeleteStaff = (item) => {
 };
 
 const saveNewITRStaff = () => {
-  calculationData.value.ITRData.table.push({
+  calculationData.value.itrData.table.push({
     id: (Math.random() * 1000).toFixed(),
     name: newITRStaffData.value.name,
     salaryPerMonth: newITRStaffData.value.salaryPerMonth
@@ -912,10 +916,10 @@ const saveNewITRStaff = () => {
 
 const confirmDeleteITRStaff = (item) => {
   if (item) {
-    calculationData.value.ITRData.table = calculationData.value.ITRData.table.filter((worker) => worker.id !== item.id);
+    calculationData.value.itrData.table = calculationData.value.itrData.table.filter((worker) => worker.id !== item.id);
   } else {
     selectedITRStaff.value.forEach((item) => {
-      calculationData.value.ITRData.table = calculationData.value.ITRData.table.filter((worker) => worker.id !== item.id);
+      calculationData.value.itrData.table = calculationData.value.itrData.table.filter((worker) => worker.id !== item.id);
     });
   }
 
@@ -929,7 +933,7 @@ const confirmDeleteITRStaff = (item) => {
 };
 
 const copyITRWorker = (data) => {
-  calculationData.value.ITRData.table.push({
+  calculationData.value.itrData.table.push({
     id: (Math.random() * 1000).toFixed(),
     name: data.name,
     salaryPerMonth: data.salaryPerMonth
@@ -1017,48 +1021,47 @@ watch(increaseInSalary, (newValue, oldValue) => {
     <ProgressSpinner />
   </div>
   <Fluid>
-    <div class="card calculation-title z-50 sticky top-[60px] shadow-md flex flex-row justify-between items-center gap-4">
-      <div class="flex flex-row justify-between items-center gap-8">
-        <div class="font-semibold text-[--primary-color] text-xl">
-          <span>Название калькуляции:</span><span><InputText v-model="calculationData.title" type="text" /></span>
-        </div>
+    <div class="card calculation-title z-50 sticky top-[60px] shadow-md flex flex-col items-center gap-4">
+      <Tag :value="calculationType === 'plan' ? 'план' : 'факт'" class="min-w-[100px]"></Tag>
 
-        <div v-if="finalTotalPrice" class="font-semibold text-xl flex gap-4 items-center">
-          <div class="flex flex-col gap-2">
-            <div class="text-[--primary-color] max-w-[200px]">Итоговая сумма калькуляции:</div>
-            <span>
-              {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
-            </span>
+      <div class="flex justify-between w-full items-center">
+        <div class="flex flex-row justify-between items-center gap-8">
+          <div class="font-semibold text-[--primary-color] text-xl">
+            <span>Название калькуляции:</span><span><InputText v-model="calculationData.title" type="text" /></span>
           </div>
 
-          <div v-if="totalSpecificationItems" class="flex flex-col gap-2">
-            <div class="text-[--primary-color]">На 1 ед:</div>
-            <span>
-              {{ formatNumber(truncateDecimal(finalTotalPrice / totalSpecificationItems, 1)) }}
-            </span>
+          <div v-if="finalTotalPrice" class="font-semibold text-xl flex gap-4 items-center">
+            <div class="flex flex-col gap-2">
+              <div class="text-[--primary-color] max-w-[200px]">Итоговая сумма калькуляции:</div>
+              <span>
+                {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
+              </span>
+            </div>
+
+            <div v-if="totalSpecificationItems" class="flex flex-col gap-2">
+              <div class="text-[--primary-color]">На 1 ед:</div>
+              <span>
+                {{ formatNumber(truncateDecimal(finalTotalPrice / totalSpecificationItems, 1)) }}
+              </span>
+            </div>
+          </div>
+
+          <div v-if="calculationData.dateOfCreation" class="font-semibold text-xl">
+            <p class="text-[--primary-color]">Дата создания:</p>
+            <p>{{ new Date(calculationData.dateOfCreation).toLocaleDateString() }}</p>
           </div>
         </div>
 
-        <div v-if="calculationData.dateOfCreation" class="font-semibold text-xl">
-          <p class="text-[--primary-color]">Дата создания:</p>
-          <p>{{ calculationData.dateOfCreation }}</p>
+        <div class="flex flex-col gap-4">
+          <Button
+            label="Сохранить калькуляцию"
+            :loading="loading"
+            size="large"
+            severity="success"
+            class="text-xs"
+            @click="createCalculation"
+          />
         </div>
-
-        <div v-if="calculationData.lastEditDate" class="font-semibold text-xl">
-          <p class="text-[--primary-color]">Дата последнего редактирования:</p>
-          <p>{{ calculationData.lastEditDate }}</p>
-        </div>
-      </div>
-
-      <div class="flex flex-col gap-4">
-        <Button
-          label="Сохранить калькуляцию"
-          :loading="loading"
-          size="large"
-          severity="success"
-          class="text-xs"
-          @click="createCalculation"
-        />
       </div>
     </div>
 
@@ -1331,7 +1334,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
                   icon="pi pi-trash"
                   severity="danger"
                   class="mr-2 text-xs max-w-[100px]"
-                  @click="confirmDeleteStaff()"
+                  @click="confirmDeleteWorker()"
                   :disabled="!selectedStaff || !selectedStaff.length"
                 />
               </div>
@@ -1415,7 +1418,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
               <Column :exportable="false" style="min-width: 12rem">
                 <template #body="slotProps">
                   <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copyStaffWorker(slotProps.data)" />
-                  <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteStaff(slotProps.data)" />
+                  <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteWorker(slotProps.data)" />
                 </template>
               </Column>
 
@@ -1471,7 +1474,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
         <TaxCharges
           :computedTaxData="computedWorkerTaxData"
-          :taxData="workersTaxData"
+          :taxData="calculationData.workersTaxData"
           :totalAmount="salariesOfWorkersTotal"
           :taxTotal="taxTotal"
           :formatNumber="formatNumber"
@@ -1520,7 +1523,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
             </div>
 
             <DataTable
-              :value="calculationData.ITRData.table"
+              :value="calculationData.itrData.table"
               v-model:selection="selectedITRStaff"
               editMode="cell"
               @cell-edit-complete="onCellEditComplete"
@@ -1609,8 +1612,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
         </div>
 
         <TaxCharges
-          :computedTaxData="computedITRTaxData"
-          :taxData="ITRTaxData"
+          :computedTaxData="computedItrTaxData"
+          :taxData="calculationData.itrTaxData"
           :totalAmount="salariesOfITRTotal"
           :taxTotal="taxITRTotal"
           :formatNumber="formatNumber"

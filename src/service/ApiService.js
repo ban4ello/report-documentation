@@ -18,7 +18,12 @@ export default {
     calculationType,
     consumablesData,
     hardwareData,
-    metalData
+    metalData,
+    specificationData,
+    workersData,
+    itrData,
+    workersTaxData,
+    itrTaxData
   }) {
     return api().post('/calculation', {
       itrWorkedDays,
@@ -37,7 +42,12 @@ export default {
       calculationType,
       consumablesData,
       hardwareData,
-      metalData
+      metalData,
+      specificationData,
+      workersData,
+      itrData,
+      workersTaxData,
+      itrTaxData
     });
   },
 
@@ -56,7 +66,12 @@ export default {
     id,
     consumablesData,
     hardwareData,
-    metalData
+    metalData,
+    specificationData,
+    workersData,
+    itrData,
+    workersTaxData,
+    itrTaxData
   }) {
     return api().put(`/calculation/${id}`, {
       itrWorkedDays,
@@ -72,7 +87,12 @@ export default {
       lastEditDate,
       consumablesData,
       hardwareData,
-      metalData
+      metalData,
+      specificationData,
+      workersData,
+      itrData,
+      workersTaxData,
+      itrTaxData
     });
   },
 
@@ -98,5 +118,25 @@ export default {
 
   getParentCalculationChildren(parentId) {
     return api().get(`/calculation?id=${parentId}`);
+  },
+
+  deleteItemFromWorkersData(workerId) {
+    return api().delete(`/workers-data-table/${workerId}`);
+  },
+
+  deleteItemFromItrData(workerId) {
+    return api().delete(`/itr-data-table/${workerId}`);
+  },
+
+  deleteItemFromSpecificationData(specificationId) {
+    return api().delete(`/specification-data-table/${specificationId}`);
+  },
+
+  deleteItemFromParentCalculation(parentCalculationId) {
+    return api().delete(`/parent-calculation/${parentCalculationId}`);
+  },
+
+  deleteCalculation(calculationId) {
+    return api().delete(`/calculation/${calculationId}`);
   }
 };

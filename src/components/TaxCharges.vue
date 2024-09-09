@@ -37,9 +37,14 @@ const columns = [
 ];
 
 const onCellEditComplete = (event) => {
-  let { data, newValue, field } = event;
+  let { data, newValue, field, newData } = event;
 
-  data[field] = newValue;
+  if (newData.coefficientA || newData.coefficientB) {
+    data['coefficientA'] = newData.coefficientA;
+    data['coefficientB'] = newData.coefficientB;
+  } else {
+    data[field] = newValue;
+  }
 };
 </script>
 
@@ -74,7 +79,7 @@ const onCellEditComplete = (event) => {
               {{ data[col.field] }}
             </div>
             <div v-else-if="col.field === 'coefficient'">
-              <div v-if="typeof data.coefficient === 'object'">{{ data.coefficient.a }} | {{ data.coefficient.b }}</div>
+              <div v-if="data.coefficientA || data.coefficientB">{{ data.coefficientA }} | {{ data.coefficientB }}</div>
               <div v-else-if="data.key === 'T'">
                 <span class="text-[red]">
                   {{ data[col.field] }}
@@ -92,9 +97,9 @@ const onCellEditComplete = (event) => {
           </template>
 
           <template v-if="col.field === 'coefficient'" #editor="{ data }">
-            <div v-if="typeof data.coefficient === 'object'">
-              <InputNumber v-model="data.coefficient.a" fluid />
-              <InputNumber v-model="data.coefficient.b" fluid />
+            <div v-if="data.coefficientA !== null || data.coefficientB !== null">
+              <InputNumber v-model="data.coefficientA" fluid />
+              <InputNumber v-model="data.coefficientB" fluid />
             </div>
             <div v-else>
               <InputNumber v-model="data.coefficient" fluid />
