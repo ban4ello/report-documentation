@@ -187,7 +187,7 @@ const expandRow = (row) => {
             <Column :exportable="false" style="min-width: 12rem">
               <template #body="{ data }">
                 <div>
-                  <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" />
+                  <!-- <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" /> -->
                   <Button
                     v-if="data.calculationType === 'fact'"
                     icon="pi pi-trash"

@@ -337,6 +337,7 @@ export const MochDataService = {
         coefficient: 0.3,
         coefficientA: null,
         coefficientB: null,
+        orderId: 1,
         key: 'T',
         subtotal: null,
         total: null
@@ -347,6 +348,7 @@ export const MochDataService = {
         coefficient: null,
         coefficientA: 93,
         coefficientB: 7,
+        orderId: 2,
         key: 'TN',
         subtotal: null,
         total: null
@@ -357,6 +359,7 @@ export const MochDataService = {
         coefficient: 0.2,
         coefficientA: null,
         coefficientB: null,
+        orderId: 3,
         key: 'K',
         subtotal: null,
         total: null
@@ -367,6 +370,7 @@ export const MochDataService = {
         coefficient: 0.242236,
         coefficientA: null,
         coefficientB: null,
+        orderId: 4,
         key: 'KMIL',
         subtotal: null,
         total: null
@@ -377,6 +381,7 @@ export const MochDataService = {
         coefficient: 0.22,
         coefficientA: null,
         coefficientB: null,
+        orderId: 5,
         key: 'KESV',
         subtotal: null,
         total: null
@@ -392,6 +397,7 @@ export const MochDataService = {
         coefficient: 0.3,
         coefficientA: null,
         coefficientB: null,
+        orderId: 1,
         key: 'T',
         subtotal: null,
         total: null
@@ -402,6 +408,7 @@ export const MochDataService = {
         coefficient: null,
         coefficientA: 93,
         coefficientB: 7,
+        orderId: 2,
         key: 'TN',
         subtotal: null,
         total: null
@@ -412,6 +419,7 @@ export const MochDataService = {
         coefficient: 0.2,
         coefficientA: null,
         coefficientB: null,
+        orderId: 3,
         key: 'K',
         subtotal: null,
         total: null
@@ -422,6 +430,7 @@ export const MochDataService = {
         coefficient: 0.242236,
         coefficientA: null,
         coefficientB: null,
+        orderId: 4,
         key: 'KMIL',
         subtotal: null,
         total: null
@@ -432,6 +441,7 @@ export const MochDataService = {
         coefficient: 0.22,
         coefficientA: null,
         coefficientB: null,
+        orderId: 5,
         key: 'KESV',
         subtotal: null,
         total: null

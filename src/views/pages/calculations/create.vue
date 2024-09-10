@@ -36,7 +36,7 @@ const dropdownItemsWorkersRole = ref([
 const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м']);
 
 const parentId = ref(null);
-const calculationType = ref(null);
+const currentCalculationType = ref(null);
 const calculationPlanId = ref(null);
 const isAmountWithoutMetal = ref(false);
 const expandAccordionTotalCosts = ref([]);
@@ -55,31 +55,88 @@ const loading = ref(false);
 // const currentTime = currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds();
 
 let calculationData = ref({
-  itrWorkedDays: 0,
+  itrWorkedDays: 13,
+  numberOfDaysPerShift: 21,
+  numberOfHoursPerShift: 8,
   coeficientOfNds: 1.2,
   costOfElectricityPerDay: 0,
   galvanizedValue: 0,
-  numberOfDaysPerShift: 0,
-  numberOfHoursPerShift: 0,
   rentalCostPerDay: 0,
   profitabilityCoeficient: 0,
   title: '',
   transportValue: 0,
   lastEditDate: '',
-  calculationType: calculationType.value || 'plan',
+  calculationType: 'plan',
 
   specificationData: {
     table: [],
     notes: ''
   },
   workersData: {
-    table: [],
-    notes: ''
+    table: [
+      {
+        id: 1,
+        name: 'Бабенко',
+        numberOfHoursWorked: 63,
+        salaryPerDay: 1690
+      },
+      {
+        id: 2,
+        name: 'Червань Антон',
+        numberOfHoursWorked: 79,
+        salaryPerDay: 1700
+      },
+      {
+        id: 3,
+        name: 'Червань Артем',
+        numberOfHoursWorked: 77,
+        salaryPerDay: 1680
+      }
+    ],
+    notes: 'workersData notes'
   },
   itrData: {
-    table: [],
-    notes: ''
+    table: [
+      {
+        id: 1,
+        name: 'Кристина',
+        salaryPerMonth: 1000
+      },
+      {
+        id: 2,
+        name: 'Олька',
+        salaryPerMonth: 10000
+      },
+      {
+        id: 3,
+        name: 'Танюха',
+        salaryPerMonth: 0
+      },
+      {
+        id: 4,
+        name: 'Тёмка',
+        salaryPerMonth: 3000
+      },
+      {
+        id: 5,
+        name: 'Николаев',
+        salaryPerMonth: 15000
+      },
+      {
+        id: 6,
+        name: 'Шеф',
+        salaryPerMonth: 5000
+      }
+    ]
   },
+  // workersData: {
+  //   table: [],
+  //   notes: ''
+  // },
+  // itrData: {
+  //   table: [],
+  //   notes: ''
+  // },
   consumablesData: [],
   hardwareData: [],
   metalData: [],
@@ -646,8 +703,11 @@ const getPercentOfTotal = (totalNumber) => {
 onBeforeMount(() => {
   const query = router.currentRoute.value.query;
 
+  console.log(1234, query.type);
+
   parentId.value = query.parentId;
-  calculationType.value = query.type;
+  currentCalculationType.value = query.type;
+  // calculationData.value.calculationType = query.type;
   calculationPlanId.value = query.calculationPlanId;
 
   MochDataService.getWorkersTaxData().then((data) => {
@@ -658,7 +718,7 @@ onBeforeMount(() => {
     calculationData.value.itrTaxData = data;
   });
 
-  if (calculationType.value === 'fact') {
+  if (currentCalculationType.value === 'fact') {
     ApiService.getCalculationById(calculationPlanId.value).then((res) => {
       const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase());
       const camelizeData = Object.keys(res.data).reduce((acc, key) => {
@@ -1022,7 +1082,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
   </div>
   <Fluid>
     <div class="card calculation-title z-50 sticky top-[60px] shadow-md flex flex-col items-center gap-4">
-      <Tag :value="calculationType === 'plan' ? 'план' : 'факт'" class="min-w-[100px]"></Tag>
+      <Tag :value="currentCalculationType === 'fact' ? 'факт' : 'план'" class="min-w-[100px]"></Tag>
 
       <div class="flex justify-between w-full items-center">
         <div class="flex flex-row justify-between items-center gap-8">
