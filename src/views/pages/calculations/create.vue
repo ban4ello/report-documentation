@@ -36,7 +36,7 @@ const dropdownItemsWorkersRole = ref([
 const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м']);
 
 const parentId = ref(null);
-const calculationType = ref(null);
+const currentCalculationType = ref(null);
 const calculationPlanId = ref(null);
 const isAmountWithoutMetal = ref(false);
 const expandAccordionTotalCosts = ref([]);
@@ -55,18 +55,18 @@ const loading = ref(false);
 // const currentTime = currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds();
 
 let calculationData = ref({
-  itrWorkedDays: 0,
+  itrWorkedDays: 1,
+  numberOfDaysPerShift: 21,
+  numberOfHoursPerShift: 8,
   coeficientOfNds: 1.2,
   costOfElectricityPerDay: 0,
   galvanizedValue: 0,
-  numberOfDaysPerShift: 0,
-  numberOfHoursPerShift: 0,
   rentalCostPerDay: 0,
   profitabilityCoeficient: 0,
   title: '',
   transportValue: 0,
   lastEditDate: '',
-  calculationType: calculationType.value || 'plan',
+  calculationType: 'plan',
 
   specificationData: {
     table: [],
@@ -647,7 +647,8 @@ onBeforeMount(() => {
   const query = router.currentRoute.value.query;
 
   parentId.value = query.parentId;
-  calculationType.value = query.type;
+  currentCalculationType.value = query.type;
+  // calculationData.value.calculationType = query.type;
   calculationPlanId.value = query.calculationPlanId;
 
   MochDataService.getWorkersTaxData().then((data) => {
@@ -658,7 +659,7 @@ onBeforeMount(() => {
     calculationData.value.itrTaxData = data;
   });
 
-  if (calculationType.value === 'fact') {
+  if (currentCalculationType.value === 'fact') {
     ApiService.getCalculationById(calculationPlanId.value).then((res) => {
       const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase());
       const camelizeData = Object.keys(res.data).reduce((acc, key) => {
@@ -1022,7 +1023,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
   </div>
   <Fluid>
     <div class="card calculation-title z-50 sticky top-[60px] shadow-md flex flex-col items-center gap-4">
-      <Tag :value="calculationType === 'plan' ? 'план' : 'факт'" class="min-w-[100px]"></Tag>
+      <Tag :value="currentCalculationType === 'fact' ? 'факт' : 'план'" class="min-w-[100px]"></Tag>
 
       <div class="flex justify-between w-full items-center">
         <div class="flex flex-row justify-between items-center gap-8">
