@@ -55,7 +55,7 @@ const loading = ref(false);
 // const currentTime = currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds();
 
 let calculationData = ref({
-  itrWorkedDays: 13,
+  itrWorkedDays: 1,
   numberOfDaysPerShift: 21,
   numberOfHoursPerShift: 8,
   coeficientOfNds: 1.2,
@@ -73,70 +73,13 @@ let calculationData = ref({
     notes: ''
   },
   workersData: {
-    table: [
-      {
-        id: 1,
-        name: 'Бабенко',
-        numberOfHoursWorked: 63,
-        salaryPerDay: 1690
-      },
-      {
-        id: 2,
-        name: 'Червань Антон',
-        numberOfHoursWorked: 79,
-        salaryPerDay: 1700
-      },
-      {
-        id: 3,
-        name: 'Червань Артем',
-        numberOfHoursWorked: 77,
-        salaryPerDay: 1680
-      }
-    ],
-    notes: 'workersData notes'
+    table: [],
+    notes: ''
   },
   itrData: {
-    table: [
-      {
-        id: 1,
-        name: 'Кристина',
-        salaryPerMonth: 1000
-      },
-      {
-        id: 2,
-        name: 'Олька',
-        salaryPerMonth: 10000
-      },
-      {
-        id: 3,
-        name: 'Танюха',
-        salaryPerMonth: 0
-      },
-      {
-        id: 4,
-        name: 'Тёмка',
-        salaryPerMonth: 3000
-      },
-      {
-        id: 5,
-        name: 'Николаев',
-        salaryPerMonth: 15000
-      },
-      {
-        id: 6,
-        name: 'Шеф',
-        salaryPerMonth: 5000
-      }
-    ]
+    table: [],
+    notes: ''
   },
-  // workersData: {
-  //   table: [],
-  //   notes: ''
-  // },
-  // itrData: {
-  //   table: [],
-  //   notes: ''
-  // },
   consumablesData: [],
   hardwareData: [],
   metalData: [],
@@ -702,8 +645,6 @@ const getPercentOfTotal = (totalNumber) => {
 
 onBeforeMount(() => {
   const query = router.currentRoute.value.query;
-
-  console.log(1234, query.type);
 
   parentId.value = query.parentId;
   currentCalculationType.value = query.type;
