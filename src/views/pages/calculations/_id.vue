@@ -1279,23 +1279,23 @@ watch(increaseInSalary, (newValue, oldValue) => {
           <div :class="computedStyleClass" class="font-semibold text-xl">Переменные</div>
         </div>
 
-        <div class="flex flex-col gap-2 mb-4 w-[250px]">
-          <div class="flex flex-row gap-2 items-center justify-between">
+        <div class="flex flex-col gap-2 mb-4 max-w-[450px]">
+          <div class="grid grid-cols-1fr-40 gap-2 items-center">
             <label for="rentalCostPerDay">Стоимость аренды в день:</label>
-            <InputNumber v-model="calculationData.rentalCostPerDay" inputId="rentalCostPerDay" class="max-w-[50px]" fluid />
+            <InputNumber v-model="calculationData.rentalCostPerDay" inputId="rentalCostPerDay" class="" fluid />
           </div>
 
-          <div class="flex flex-row gap-2 items-center justify-between">
+          <div class="grid grid-cols-1fr-40 gap-2 items-center">
             <label for="costOfElectricityPerDay">Стоимость эл. эн. в день:</label>
-            <InputNumber v-model="calculationData.costOfElectricityPerDay" inputId="costOfElectricityPerDay" class="max-w-[50px]" fluid />
+            <InputNumber v-model="calculationData.costOfElectricityPerDay" inputId="costOfElectricityPerDay" class="" fluid />
           </div>
 
-          <div class="flex flex-row gap-2 items-center justify-between">
+          <div class="grid grid-cols-1fr-40 gap-2 items-center">
             <label for="profitabilityCoeficient">Коэффициент рентабельности:</label>
             <InputNumber
               v-model="calculationData.profitabilityCoeficient"
               inputId="profitabilityCoeficient"
-              class="max-w-[50px]"
+              class=""
               :minFractionDigits="1"
               :maxFractionDigits="5"
               fluid
