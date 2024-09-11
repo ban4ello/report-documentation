@@ -3,7 +3,7 @@ import { useLayout } from '@/layout/composables/layout';
 import { $t, updatePreset, updateSurfacePalette } from '@primevue/themes';
 import Aura from '@primevue/themes/aura';
 import Lara from '@primevue/themes/lara';
-import { ref } from 'vue';
+import { ref, onBeforeMount } from 'vue';
 
 const { layoutConfig, setPrimary, setSurface, setPreset, isDarkTheme, setMenuMode } = useLayout();
 
@@ -508,6 +508,10 @@ function getPresetExt() {
     };
   }
 }
+
+onBeforeMount(() => {
+  onPresetChange();
+});
 
 function updateColors(type, color) {
   if (type === 'primary') {

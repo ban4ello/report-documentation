@@ -43,16 +43,13 @@ const expandAccordionTotalCosts = ref([]);
 const newStaffData = ref({ name: '', numberOfHoursWorked: null, salaryPerDay: null });
 const newITRStaffData = ref({ name: '', salaryPerMonth: null });
 
+const calculationPlanTotal = ref(null);
 const selectedStaff = ref(null);
 const selectedITRStaff = ref(null);
 const newStaffDialog = ref(false);
 const newITRStaffDialog = ref(false);
 const createNewWorkerDialog = ref(false);
 const loading = ref(false);
-
-// let currentDate = new Date();
-// const today = `${currentDate.getDate()}.${currentDate.getMonth()}.${currentDate.getFullYear()}`;
-// const currentTime = currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds();
 
 let calculationData = ref({
   itrWorkedDays: 1,
@@ -84,14 +81,29 @@ let calculationData = ref({
   hardwareData: [],
   metalData: [],
   workersTaxData: [],
-  itrTaxData: []
+  itrTaxData: [],
+  total: null
 });
 
 // // NOTE: need for test
+// let currentDate = new Date();
+// const today = `${currentDate.getDate()}.${currentDate.getMonth()}.${currentDate.getFullYear()}`;
+// const currentTime = currentDate.getHours() + ':' + currentDate.getMinutes() + ':' + currentDate.getSeconds();
+
 // let calculationData = ref({
 //   title: 'Калькуляция-' + today,
-//   dateOfCreation: today, // TODO: передавать на сервер timeshit
-//   lastEditDate: today + ' ' + currentTime, // TODO: передавать на сервер timeshit
+//   dateOfCreation: today,
+//   lastEditDate: today + ' ' + currentTime,
+//   calculationType: 'plan',
+//   galvanizedValue: 1000,
+//   transportValue: 2000,
+//   rentalCostPerDay: 170,
+//   costOfElectricityPerDay: 550,
+//   profitabilityCoeficient: 0.1,
+//   numberOfHoursPerShift: 8,
+//   coeficientOfNds: 1.2,
+//   numberOfDaysPerShift: 21,
+//   itrWorkedDays: 13,
 //   specificationData: {
 //     table: [
 //       {
@@ -105,13 +117,6 @@ let calculationData = ref({
 //     ],
 //     notes: 'specificationData notes'
 //   },
-//   galvanizedValue: 1000,
-//   transportValue: 2000,
-//   rentalCostPerDay: 170,
-//   costOfElectricityPerDay: 550,
-//   profitabilityCoeficient: 0.1,
-//   numberOfHoursPerShift: 8,
-//   coeficientOfNds: 1.2,
 //   workersData: {
 //     table: [
 //       {
@@ -169,8 +174,6 @@ let calculationData = ref({
 //       }
 //     ]
 //   },
-//   numberOfDaysPerShift: 21,
-//   itrWorkedDays: 13,
 //   consumablesData: [
 //     // {
 //     //   order: 1,
@@ -200,7 +203,10 @@ let calculationData = ref({
 //     //   taxPrice: '1124,00',
 //     //   price: '8 624,00'
 //     // }
-//   ]
+//   ],
+//   workersTaxData: [],
+//   itrTaxData: [],
+//   total: null
 // });
 
 let newWorkerData = ref({ name: '', lastname: '', role: '' });
@@ -643,12 +649,11 @@ const getPercentOfTotal = (totalNumber) => {
   return (totalNumber / finalTotalPrice.value) * 100 || 0;
 };
 
-onBeforeMount(() => {
+onBeforeMount(async () => {
   const query = router.currentRoute.value.query;
 
   parentId.value = query.parentId;
   currentCalculationType.value = query.type;
-  // calculationData.value.calculationType = query.type;
   calculationPlanId.value = query.calculationPlanId;
 
   MochDataService.getWorkersTaxData().then((data) => {
@@ -659,11 +664,23 @@ onBeforeMount(() => {
     calculationData.value.itrTaxData = data;
   });
 
-  if (currentCalculationType.value === 'fact') {
-    ApiService.getCalculationById(calculationPlanId.value).then((res) => {
-      const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase());
-      const camelizeData = Object.keys(res.data).reduce((acc, key) => {
-        acc[camelize(key)] = res.data[key];
+  // !!! NOTE: need for testing
+  // MochDataService.getConsumables().then((data) => {
+  //   calculationData.value.consumablesData = data;
+  // });
+  // MochDataService.getHardware().then((data) => {
+  //   calculationData.value.hardwareData = data;
+  // });
+  // MochDataService.getMetal().then((data) => {
+  //   calculationData.value.metalData = data;
+  // });
+
+  try {
+    if (currentCalculationType.value === 'fact') {
+      const calculationPlanRes = await ApiService.getCalculationById(calculationPlanId.value);
+      const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase()); // TODO: refactor
+      const camelizeData = Object.keys(calculationPlanRes.data).reduce((acc, key) => {
+        acc[camelize(key)] = calculationPlanRes.data[key];
 
         if (key === 'calculationType') {
           acc['calculationType'] = 'fact';
@@ -672,32 +689,58 @@ onBeforeMount(() => {
         return acc;
       }, {});
 
+      calculationPlanTotal.value = Number(camelizeData.total);
       calculationData.value = { ...calculationData.value, ...camelizeData };
-    });
+    }
+  } catch (error) {
+    console.log(error);
   }
 });
 
 const finalTotalPrice = computed(() => {
-  const totalPrice =
-    (totalMetal.value +
-      totalHardware.value +
-      totalConsumables.value +
-      taxTotal.value +
-      taxITRTotal.value +
-      calculationData.value.galvanizedValue +
-      calculationData.value.transportValue +
-      calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-      calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
-      calculationData.value.profitabilityCoeficient +
-    (totalMetal.value +
-      totalHardware.value +
-      totalConsumables.value +
-      taxTotal.value +
-      taxITRTotal.value +
-      calculationData.value.galvanizedValue +
-      calculationData.value.transportValue +
-      calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-      calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays);
+  let totalPrice = null;
+
+  if (isAmountWithoutMetal.value) {
+    totalPrice =
+      (totalHardware.value +
+        totalConsumables.value +
+        taxTotal.value +
+        taxITRTotal.value +
+        calculationData.value.galvanizedValue +
+        calculationData.value.transportValue +
+        calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+        calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
+        calculationData.value.profitabilityCoeficient +
+      (totalHardware.value +
+        totalConsumables.value +
+        taxTotal.value +
+        taxITRTotal.value +
+        calculationData.value.galvanizedValue +
+        calculationData.value.transportValue +
+        calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+        calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays);
+  } else {
+    totalPrice =
+      (totalMetal.value +
+        totalHardware.value +
+        totalConsumables.value +
+        taxTotal.value +
+        taxITRTotal.value +
+        calculationData.value.galvanizedValue +
+        calculationData.value.transportValue +
+        calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+        calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
+        calculationData.value.profitabilityCoeficient +
+      (totalMetal.value +
+        totalHardware.value +
+        totalConsumables.value +
+        taxTotal.value +
+        taxITRTotal.value +
+        calculationData.value.galvanizedValue +
+        calculationData.value.transportValue +
+        calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+        calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays);
+  }
 
   return totalPrice;
 });
@@ -994,7 +1037,8 @@ const createCalculation = async () => {
       consumablesData: JSON.stringify(calculationData.value.consumablesData),
       hardwareData: JSON.stringify(calculationData.value.hardwareData),
       metalData: JSON.stringify(calculationData.value.metalData),
-      parentCalculationId: Number(parentId.value)
+      parentCalculationId: Number(parentId.value),
+      total: finalTotalPrice.value
     });
 
     router.push({ path: `/calculations/${calculationRes.data.id}` });
@@ -1015,6 +1059,24 @@ watch(increaseInSalary, (newValue, oldValue) => {
     return { ...item, salaryPerDay: newPrice };
   });
 });
+
+const changeTaxValue = ({ data, newValue, field }, dataName) => {
+  // TODO: refactor: почему-то не работает реактивность на обновление значения "К" из "Налоговые начисления"
+  calculationData.value[dataName] = calculationData.value[dataName].map((item) => {
+    if (item.key === data.key) {
+      item[field] = newValue;
+    }
+
+    return item;
+  });
+};
+
+const computedStyleClass = computed(() => {
+  return {
+    'text-[--secondary-color]': currentCalculationType.value === 'fact',
+    'text-[--primary-color]': currentCalculationType.value === 'plan'
+  };
+});
 </script>
 
 <template>
@@ -1022,47 +1084,109 @@ watch(increaseInSalary, (newValue, oldValue) => {
     <ProgressSpinner />
   </div>
   <Fluid>
-    <div class="card calculation-title z-50 sticky top-[60px] shadow-md flex flex-col items-center gap-4">
-      <Tag :value="currentCalculationType === 'fact' ? 'факт' : 'план'" class="min-w-[100px]"></Tag>
-
-      <div class="flex justify-between w-full items-center">
-        <div class="flex flex-row justify-between items-center gap-8">
-          <div class="font-semibold text-[--primary-color] text-xl">
-            <span>Название калькуляции:</span><span><InputText v-model="calculationData.title" type="text" /></span>
-          </div>
-
-          <div v-if="finalTotalPrice" class="font-semibold text-xl flex gap-4 items-center">
-            <div class="flex flex-col gap-2">
-              <div class="text-[--primary-color] max-w-[200px]">Итоговая сумма калькуляции:</div>
-              <span>
-                {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
-              </span>
+    <div class="card calculation-title z-50 sticky top-[60px] shadow-md flex flex-row items-center justify-between gap-2">
+      <div class="flex flex-row justify-between items-center gap-2">
+        <div class="flex gap-2">
+          <div class="flex flex-col gap-2">
+            <div class="font-semibold text-md" :class="computedStyleClass">
+              <span>Название калькуляции-{{ currentCalculationType === 'fact' ? 'факт' : 'план' }}:</span
+              ><span><InputText v-model="calculationData.title" type="text" /></span>
             </div>
 
-            <div v-if="totalSpecificationItems" class="flex flex-col gap-2">
-              <div class="text-[--primary-color]">На 1 ед:</div>
-              <span>
-                {{ formatNumber(truncateDecimal(finalTotalPrice / totalSpecificationItems, 1)) }}
-              </span>
+            <div v-if="calculationData.dateOfCreation" class="font-semibold text-md">
+              <span :class="computedStyleClass">Дата создания: </span>
+              <span> {{ new Date(calculationData.dateOfCreation).toLocaleDateString() }}</span>
             </div>
           </div>
 
-          <div v-if="calculationData.dateOfCreation" class="font-semibold text-xl">
-            <p class="text-[--primary-color]">Дата создания:</p>
-            <p>{{ new Date(calculationData.dateOfCreation).toLocaleDateString() }}</p>
-          </div>
+          <Divider layout="vertical" />
         </div>
 
-        <div class="flex flex-col gap-4">
-          <Button
-            label="Сохранить калькуляцию"
-            :loading="loading"
-            size="large"
-            severity="success"
-            class="text-xs"
-            @click="createCalculation"
-          />
+        <div class="flex gap-2">
+          <div v-if="finalTotalPrice" class="font-semibold text-md flex items-center">
+            <div class="flex flex-col">
+              <div
+                class="flex flex-row gap-2 items-center"
+                :style="{
+                  border: finalTotalPrice > calculationPlanTotal && currentCalculationType === 'fact' ? '1px solid red' : '',
+                  'border-radius': '5px',
+                  padding: '5px'
+                }"
+              >
+                <div :class="computedStyleClass" class="max-w-[200px]">Итоговая сумма калькуляции:</div>
+                <span
+                  class="font-bold"
+                  :class="{ 'text-[red]': finalTotalPrice > calculationPlanTotal, 'text-xl': finalTotalPrice > calculationPlanTotal }"
+                >
+                  {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
+                </span>
+              </div>
+
+              <Divider layout="horizontal" />
+
+              <div v-if="totalSpecificationItems" class="flex flex-row gap-2">
+                <div :class="computedStyleClass">На 1 ед:</div>
+                <span class="font-bold">
+                  {{ formatNumber(truncateDecimal(finalTotalPrice / totalSpecificationItems, 1)) }}
+                </span>
+              </div>
+
+              <Divider layout="horizontal" />
+
+              <div class="flex gap-2 items-center">
+                <Checkbox v-model="isAmountWithoutMetal" :value="isAmountWithoutMetal" :binary="true" />
+                <label :class="computedStyleClass" class="font-semibold items-center text-md">Сумма без металла</label>
+              </div>
+            </div>
+          </div>
+
+          <Divider layout="vertical" />
         </div>
+
+        <div v-if="currentCalculationType === 'fact'" class="flex gap-2">
+          <div v-if="finalTotalPrice" class="font-semibold text-md flex items-center">
+            <div class="flex flex-col">
+              <div class="flex flex-row gap-2 items-center">
+                <div class="text-[--primary-color] max-w-[200px]">Сумма калькуляции-плана:</div>
+                <span class="font-bold">
+                  {{ formatNumber(truncateDecimal(calculationPlanTotal, 1)) }}
+                </span>
+              </div>
+
+              <Divider layout="horizontal" />
+
+              <div v-if="totalSpecificationItems" class="flex flex-row gap-2">
+                <div class="text-[--primary-color]">На 1 ед:</div>
+                <span class="font-bold">
+                  {{ formatNumber(truncateDecimal(calculationPlanTotal / totalSpecificationItems, 1)) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <Divider layout="vertical" />
+        </div>
+
+        <div class="font-semibold text-lg">
+          <p :class="computedStyleClass">Общее кол-во:</p>
+          <p>
+            {{ truncateDecimal(totalSpecificationItems, 5) }}
+            <span v-if="calculationData.specificationData?.table.length">
+              {{ calculationData.specificationData.table[0].unitOfMeasurement }}
+            </span>
+          </p>
+        </div>
+      </div>
+
+      <div class="flex flex-col gap-4">
+        <Button
+          label="Сохранить калькуляцию"
+          :loading="loading"
+          size="large"
+          severity="success"
+          class="text-xs"
+          @click="createCalculation"
+        />
       </div>
     </div>
 
@@ -1071,7 +1195,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
         <Accordion :value="['0']" multiple>
           <AccordionPanel value="0">
             <AccordionHeader>
-              <div class="font-semibold text-[--primary-color] text-xl">Спецификация</div>
+              <div class="font-semibold text-xl" :class="computedStyleClass">Спецификация</div>
             </AccordionHeader>
 
             <AccordionContent>
@@ -1130,7 +1254,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
                 <Column field="totalWeight" header="Общий вес" style="width: 25%">
                   <template #body="{ data }">
-                    {{ Number(data.quantity * data.valuePerUnit).toFixed() }}
+                    {{ truncateDecimal(data.quantity * data.valuePerUnit, 5) }}
                   </template>
                 </Column>
 
@@ -1142,7 +1266,11 @@ watch(increaseInSalary, (newValue, oldValue) => {
                 </Column>
 
                 <template #footer>
-                  <div class="flex justify-center items-center text-[--primary-color] hover:cursor-pointer" @click="addNewSpecification">
+                  <div
+                    class="flex justify-center items-center hover:cursor-pointer"
+                    :class="computedStyleClass"
+                    @click="addNewSpecification"
+                  >
                     добавить строку +
                   </div>
 
@@ -1158,7 +1286,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
         </Accordion>
 
         <div>
-          <label for="specificationData" class="text-[--primary-color]">Заметки:</label>
+          <label for="specificationData" :class="computedStyleClass">Заметки:</label>
           <Textarea v-model="calculationData.specificationData.notes" />
         </div>
       </div>
@@ -1166,7 +1294,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
       <div class="grid grid-cols-1fr-40 gap-4 mb-[2rem]">
         <div class="card subtotal mb-0">
           <div class="flex flex-row justify-between gap-2">
-            <div class="font-semibold text-[--primary-color] text-xl">Подытог</div>
+            <div class="font-semibold text-xl" :class="computedStyleClass">Подытог</div>
           </div>
 
           <DataTable :value="priceData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
@@ -1216,7 +1344,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
         <div class="card final-statement">
           <div class="flex flex-row justify-between gap-2">
-            <div class="font-semibold text-[--primary-color] text-xl">Итоговая ведомость</div>
+            <div class="font-semibold text-xl" :class="computedStyleClass">Итоговая ведомость</div>
           </div>
 
           <DataTable
@@ -1265,28 +1393,12 @@ watch(increaseInSalary, (newValue, oldValue) => {
               </template>
             </Column>
           </DataTable>
-
-          <div class="flex flex-row justify-between gap-2">
-            <div class="flex gap-2 items-center">
-              <Checkbox v-model="isAmountWithoutMetal" :value="isAmountWithoutMetal" :binary="true" />
-              <label class="font-semibold items-center text-[--primary-color] text-xl">Сумма без металла</label>
-            </div>
-
-            <div class="flex flex-row justify-between gap-2 items-center">
-              <div v-if="isAmountWithoutMetal" class="font-semibold text-xl">
-                {{ formatNumber(truncateDecimal(finalTotalPrice - totalMetal, 1)) }}
-              </div>
-              <div v-else class="font-semibold text-xl">
-                {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
       <div class="card h-full flex flex-col gap-4">
         <div class="flex flex-row items-center justify-between gap-2">
-          <div class="font-semibold text-[--primary-color] text-xl">Переменные</div>
+          <div class="font-semibold text-xl" :class="computedStyleClass">Переменные</div>
         </div>
 
         <div class="flex flex-col gap-2 mb-4 w-[250px]">
@@ -1318,7 +1430,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
         <div class="shop">
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2">
-              <div class="font-semibold text-[--primary-color] text-xl">Цех</div>
+              <div class="font-semibold text-xl" :class="computedStyleClass">Цех</div>
 
               <div>
                 <Button
@@ -1433,7 +1545,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
             </DataTable>
 
             <div>
-              <label for="workersData" class="text-[--primary-color]">Заметки:</label>
+              <label for="workersData" :class="computedStyleClass">Заметки:</label>
               <Textarea v-model="calculationData.workersData.notes" />
             </div>
 
@@ -1481,6 +1593,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
           :formatNumber="formatNumber"
           :coeficientOfNds="calculationData.coeficientOfNds"
           @changeCoeficient="(data) => (calculationData.coeficientOfNds = data.value)"
+          @changeValue="(data) => changeTaxValue(data, 'workersTaxData')"
         />
       </div>
 
@@ -1488,7 +1601,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
         <div class="ITR">
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2 mb-4">
-              <div class="font-semibold text-[--primary-color] text-xl">ИТР</div>
+              <div class="font-semibold text-xl" :class="computedStyleClass">ИТР</div>
 
               <div class="">
                 <Button
@@ -1620,12 +1733,13 @@ watch(increaseInSalary, (newValue, oldValue) => {
           :formatNumber="formatNumber"
           :coeficientOfNds="calculationData.coeficientOfNds"
           @changeCoeficient="(data) => (calculationData.coeficientOfNds = data.value)"
+          @changeValue="(data) => changeTaxValue(data, 'itrTaxData')"
         />
       </div>
 
       <div class="card total-costs">
         <div class="flex flex-row justify-between gap-2">
-          <div class="font-semibold text-[--primary-color] text-xl">Общие затраты</div>
+          <div class="font-semibold text-xl" :class="computedStyleClass">Общие затраты</div>
 
           <div class="flex gap-6 items-center justify-center">
             <FileUpload
@@ -1643,7 +1757,14 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
         <Accordion multiple :value="expandAccordionTotalCosts">
           <AccordionPanel value="0">
-            <AccordionHeader>Расходники</AccordionHeader>
+            <AccordionHeader>
+              <span class="flex items-center gap-2 w-full">
+                Расходники
+                <div v-if="totalConsumables" class="flex justify-end items-center font-bold w-full mr-4">
+                  Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalConsumables) }}</span>
+                </div>
+              </span>
+            </AccordionHeader>
 
             <AccordionContent>
               <DataTable :value="calculationData.consumablesData" dataKey="order" :rowHover="true" showGridlines>
@@ -1695,7 +1816,12 @@ watch(increaseInSalary, (newValue, oldValue) => {
           </AccordionPanel>
 
           <AccordionPanel value="1">
-            <AccordionHeader>Метизы</AccordionHeader>
+            <AccordionHeader>
+              Метизы
+              <div v-if="totalHardware" class="flex justify-end items-center font-bold w-full mr-4">
+                Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalHardware) }}</span>
+              </div>
+            </AccordionHeader>
 
             <AccordionContent>
               <DataTable :value="calculationData.hardwareData" dataKey="order" :rowHover="true" showGridlines>
@@ -1747,7 +1873,12 @@ watch(increaseInSalary, (newValue, oldValue) => {
           </AccordionPanel>
 
           <AccordionPanel value="2">
-            <AccordionHeader>Металл</AccordionHeader>
+            <AccordionHeader>
+              Металл
+              <div v-if="totalMetal" class="flex justify-end items-center font-bold w-full mr-4">
+                Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalMetal) }}</span>
+              </div>
+            </AccordionHeader>
 
             <AccordionContent>
               <DataTable :value="calculationData.metalData" dataKey="order" :rowHover="true" showGridlines>
