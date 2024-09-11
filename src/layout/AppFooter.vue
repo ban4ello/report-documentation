@@ -2,7 +2,9 @@
 
 <template>
   <div class="layout-footer">
-    SAKAI by
-    <a href="https://primevue.org" target="_blank" rel="noopener noreferrer" class="text-primary font-bold hover:underline">PrimeVue</a>
+    "Calculations and Analysis" by
+    <a href="https://ban4ello.github.io/resume/" target="_blank" rel="noopener noreferrer" class="text-primary font-bold hover:underline">
+      MIRI
+    </a>
   </div>
 </template>
