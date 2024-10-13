@@ -197,27 +197,27 @@ export const MochDataService = {
     return [
       {
         order: 1,
-        name: 'Лист металла',
-        unitOfMeasurement: 'тн',
-        quantity: 12,
-        taxPrice: '1124,00',
-        price: 8624.0
+        name: 'Труба 1',
+        unitOfMeasurement: 'шт',
+        quantity: 276,
+        taxPrice: '24',
+        price: 6624
       },
       {
         order: 2,
-        name: 'Труба круглая',
-        unitOfMeasurement: 'тн',
-        quantity: 5,
-        taxPrice: '2250,00',
-        price: 11250.0
+        name: 'Труба 2',
+        unitOfMeasurement: 'шт',
+        quantity: 276,
+        taxPrice: '6',
+        price: 1656
       },
       {
         order: 3,
-        name: 'Труба квадратная',
-        unitOfMeasurement: 'тн',
-        quantity: 10,
-        taxPrice: '1500,00',
-        price: 1500.0
+        name: 'Труба 3',
+        unitOfMeasurement: 'шт',
+        quantity: 552,
+        taxPrice: '2',
+        price: 1104
       }
     ];
   },
@@ -589,12 +589,12 @@ export const MochDataService = {
     ];
   },
 
-  getConsumables() {
-    return Promise.resolve(this.сonsumables());
-  },
-
   getCalculationsData() {
     return Promise.resolve(this.calculationsData());
+  },
+
+  getConsumables() {
+    return Promise.resolve(this.сonsumables());
   },
 
   getHardware() {

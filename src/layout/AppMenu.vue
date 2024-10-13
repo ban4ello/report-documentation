@@ -38,11 +38,6 @@ const model = ref([
     to: '/pages',
     items: [
       {
-        label: 'Landing',
-        icon: 'pi pi-fw pi-globe',
-        to: '/landing'
-      },
-      {
         label: 'Auth',
         icon: 'pi pi-fw pi-user',
         items: [
@@ -121,22 +116,6 @@ const model = ref([
             items: [{ label: 'Submenu 2.2.1', icon: 'pi pi-fw pi-bookmark' }]
           }
         ]
-      }
-    ]
-  },
-  {
-    label: 'Get Started',
-    items: [
-      {
-        label: 'Documentation',
-        icon: 'pi pi-fw pi-book',
-        to: '/documentation'
-      },
-      {
-        label: 'View Source',
-        icon: 'pi pi-fw pi-github',
-        url: 'https://github.com/primefaces/sakai-vue',
-        target: '_blank'
       }
     ]
   }

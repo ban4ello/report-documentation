@@ -6,14 +6,6 @@
   - Добавить кнопку "Удалить файл"
   - Добавить ссылки к братьям
   - После сохранения изменений калькуляции (saveCalculation) обновлять данные которые приходят по запросу PUT
-  - После сохранения изменений калькуляции (saveCalculation) обновлять данные родителя (title)
-  !!!! скастить налоги к числу
-
-  ИТР
-  Цех
-  Спецификация:
-  Итоговая ведомость:
-  Общие затраты:
 */
 
 import { onBeforeMount, ref, computed, watch } from 'vue';
@@ -35,12 +27,13 @@ const dropdownItemsWorkersRole = ref([
   { label: 'ИТР', key: 'ITR' }
 ]);
 const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м']);
-const parentId = router.currentRoute.value.params.id;
+const calculationId = ref(null);
 
 const isAmountWithoutMetal = ref(false);
 const newStaffData = ref({ name: '', numberOfHoursWorked: null, salaryPerDay: null });
 const newITRStaffData = ref({ name: '', salaryPerMonth: null });
 
+const calculationPlanTotal = ref(null);
 const expandAccordionTotalCosts = ref([]);
 const selectedStaff = ref(null);
 const selectedITRStaff = ref(null);
@@ -520,10 +513,13 @@ const getPercentOfTotal = (totalNumber) => {
   return (totalNumber / finalTotalPrice.value) * 100 || 0;
 };
 
-onBeforeMount(() => {
-  ApiService.getCalculationById(parentId).then((res) => {
+onBeforeMount(async () => {
+  calculationId.value = router.currentRoute.value.params.id;
+
+  try {
+    const calculationRes = await ApiService.getCalculationById(calculationId.value);
     const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase());
-    const data = Object.keys(res.data).reduce((acc, item) => {
+    const data = Object.keys(calculationRes.data).reduce((acc, item) => {
       switch (camelize(item)) {
         case 'galvanizedValue':
         case 'transportValue':
@@ -534,11 +530,11 @@ onBeforeMount(() => {
         case 'coeficientOfNds':
         case 'numberOfDaysPerShift':
         case 'itrWorkedDays':
-          acc[camelize(item)] = Number(res.data[item]);
+          acc[camelize(item)] = Number(calculationRes.data[item]);
           break;
 
         default:
-          acc[camelize(item)] = res.data[item];
+          acc[camelize(item)] = calculationRes.data[item];
           break;
       }
 
@@ -546,30 +542,58 @@ onBeforeMount(() => {
     }, {});
 
     calculationData.value = { ...calculationData.value, ...data };
-  });
+
+    const parentCalculationRes = await ApiService.getParentCalculationChildren(calculationData.value.parentCalculationId);
+    calculationPlanTotal.value = Number(parentCalculationRes.data.filter((item) => item.calculation_type === 'plan')[0].total);
+  } catch (error) {
+    console.log(error);
+  }
 });
 
 const finalTotalPrice = computed(() => {
-  const totalPrice =
-    (totalMetal.value +
-      totalHardware.value +
-      totalConsumables.value +
-      taxTotal.value +
-      taxITRTotal.value +
-      calculationData.value.galvanizedValue +
-      calculationData.value.transportValue +
-      calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-      calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
-      calculationData.value.profitabilityCoeficient +
-    (totalMetal.value +
-      totalHardware.value +
-      totalConsumables.value +
-      taxTotal.value +
-      taxITRTotal.value +
-      calculationData.value.galvanizedValue +
-      calculationData.value.transportValue +
-      calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-      calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays);
+  let totalPrice = null;
+
+  if (isAmountWithoutMetal.value) {
+    totalPrice =
+      (totalHardware.value +
+        totalConsumables.value +
+        taxTotal.value +
+        taxITRTotal.value +
+        calculationData.value.galvanizedValue +
+        calculationData.value.transportValue +
+        calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+        calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
+        calculationData.value.profitabilityCoeficient +
+      (totalHardware.value +
+        totalConsumables.value +
+        taxTotal.value +
+        taxITRTotal.value +
+        calculationData.value.galvanizedValue +
+        calculationData.value.transportValue +
+        calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+        calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays);
+  } else {
+    totalPrice =
+      (totalMetal.value +
+        totalHardware.value +
+        totalConsumables.value +
+        taxTotal.value +
+        taxITRTotal.value +
+        calculationData.value.galvanizedValue +
+        calculationData.value.transportValue +
+        calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+        calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
+        calculationData.value.profitabilityCoeficient +
+      (totalMetal.value +
+        totalHardware.value +
+        totalConsumables.value +
+        taxTotal.value +
+        taxITRTotal.value +
+        calculationData.value.galvanizedValue +
+        calculationData.value.transportValue +
+        calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
+        calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays);
+  }
 
   return totalPrice;
 });
@@ -851,8 +875,6 @@ const showNewWorkerModal = () => {
 };
 
 const saveNewWorker = (worker) => {
-  console.log('saveNewWorker', worker);
-
   switch (worker.role.key) {
     case 'worker':
       dropdownItemsWorkerStaff.value.push(worker.name);
@@ -894,7 +916,8 @@ const saveCalculation = async () => {
       consumablesData: JSON.stringify(calculationData.value.consumablesData),
       hardwareData: JSON.stringify(calculationData.value.hardwareData),
       metalData: JSON.stringify(calculationData.value.metalData),
-      lastEditDate: today
+      lastEditDate: today,
+      total: finalTotalPrice.value
     });
   } catch (error) {
     console.log(error);
@@ -902,6 +925,13 @@ const saveCalculation = async () => {
     loading.value = false;
   }
 };
+
+const computedStyleClass = computed(() => {
+  return {
+    'text-[--secondary-color]': calculationData.value.calculationType === 'fact',
+    'text-[--primary-color]': calculationData.value.calculationType === 'plan'
+  };
+});
 
 watch(increaseInSalary, (newValue, oldValue) => {
   let increment = newValue > oldValue ? 5 : -5;
@@ -920,57 +950,113 @@ watch(increaseInSalary, (newValue, oldValue) => {
     <ProgressSpinner />
   </div>
   <Fluid>
-    <div class="card calculation-title z-50 sticky top-[60px] shadow-md flex flex-col items-center gap-4">
-      <Tag :value="calculationData.calculationType === 'plan' ? 'план' : 'факт'" class="min-w-[100px]"></Tag>
-
-      <div class="flex flex-row justify-between items-center gap-8 w-full">
-        <div class="font-semibold text-[--primary-color] text-xl">
-          <span>Название калькуляции:</span><span><InputText v-model="calculationData.title" type="text" /></span>
-        </div>
-
-        <div v-if="finalTotalPrice" class="font-semibold text-xl flex gap-4 items-center">
+    <div class="card calculation-title z-50 sticky top-[60px] shadow-md flex flex-row items-center justify-between gap-4">
+      <div class="flex flex-row justify-between items-center gap-2">
+        <div class="flex gap-2">
           <div class="flex flex-col gap-2">
-            <div class="text-[--primary-color] max-w-[200px]">Итоговая сумма калькуляции:</div>
-            <span>
-              {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
-            </span>
+            <div class="font-semibold text-lg" :class="computedStyleClass">
+              <span>Название калькуляции-{{ calculationData.calculationType === 'fact' ? 'факт' : 'план' }}:</span
+              ><span><InputText v-model="calculationData.title" type="text" /></span>
+            </div>
+
+            <div v-if="calculationData.dateOfCreation" class="font-semibold text-lg">
+              <span :class="computedStyleClass">Дата создания: </span>
+              <span> {{ new Date(calculationData.dateOfCreation).toLocaleDateString() }}</span>
+            </div>
+
+            <div class="font-semibold text-lg">
+              <span :class="computedStyleClass">Дата последнего редактирования: </span>
+              <span> {{ new Date(calculationData.lastEditDate).toLocaleDateString() }} - </span>
+              <span class="font-bold">
+                {{ new Date(calculationData.lastEditDate).toLocaleTimeString() }}
+              </span>
+            </div>
           </div>
 
-          <div v-if="totalSpecificationItems" class="flex flex-col gap-2">
-            <div class="text-[--primary-color]">На 1 ед:</div>
-            <span>
-              {{ formatNumber(truncateDecimal(finalTotalPrice / totalSpecificationItems, 1)) }}
-            </span>
-          </div>
+          <Divider layout="vertical" />
         </div>
 
-        <div class="font-semibold text-xl">
-          <p class="text-[--primary-color]">Дата создания:</p>
+        <div class="flex gap-2">
+          <div v-if="finalTotalPrice" class="font-semibold text-md flex items-center">
+            <div class="flex flex-col">
+              <div
+                class="flex flex-row gap-2 items-center"
+                :style="{
+                  border: finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact' ? '1px solid red' : '',
+                  'border-radius': '5px',
+                  padding: '5px'
+                }"
+              >
+                <div :class="computedStyleClass" class="max-w-[200px]">Итоговая сумма калькуляции:</div>
+                <span
+                  class="font-bold"
+                  :class="{
+                    'text-[red]': finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact',
+                    'text-xl': finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact'
+                  }"
+                >
+                  {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
+                </span>
+              </div>
+
+              <Divider layout="horizontal" />
+
+              <div v-if="totalSpecificationItems" class="flex flex-row gap-2">
+                <div :class="computedStyleClass">На 1 ед:</div>
+                <span class="font-bold">
+                  {{ formatNumber(truncateDecimal(finalTotalPrice / totalSpecificationItems, 1)) }}
+                </span>
+              </div>
+
+              <Divider layout="horizontal" />
+
+              <div class="flex gap-2 items-center">
+                <Checkbox v-model="isAmountWithoutMetal" :value="isAmountWithoutMetal" :binary="true" />
+                <label :class="computedStyleClass" class="font-semibold items-center text-md">Сумма без металла</label>
+              </div>
+            </div>
+          </div>
+
+          <Divider layout="vertical" />
+        </div>
+
+        <div v-if="calculationData.calculationType === 'fact'" class="flex gap-2">
+          <div v-if="finalTotalPrice" class="font-semibold text-md flex items-center">
+            <div class="flex flex-col">
+              <div class="flex flex-row gap-2 items-center">
+                <div class="text-[--primary-color] max-w-[200px]">Сумма калькуляции-плана:</div>
+                <span class="font-bold">
+                  {{ formatNumber(truncateDecimal(calculationPlanTotal, 1)) }}
+                </span>
+              </div>
+
+              <Divider layout="horizontal" />
+
+              <div v-if="totalSpecificationItems" class="flex flex-row gap-2">
+                <div class="text-[--primary-color]">На 1 ед:</div>
+                <span class="font-bold">
+                  {{ formatNumber(truncateDecimal(calculationPlanTotal / totalSpecificationItems, 1)) }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <Divider layout="vertical" />
+        </div>
+
+        <div class="font-semibold text-lg">
+          <p :class="computedStyleClass">Общее кол-во:</p>
           <p>
-            {{ new Date(calculationData.dateOfCreation).toLocaleDateString() }}
+            {{ truncateDecimal(totalSpecificationItems, 5) }}
+            <span v-if="calculationData.specificationData?.table.length">
+              {{ calculationData.specificationData.table[0].unitOfMeasurement }}
+            </span>
           </p>
         </div>
+      </div>
 
-        <div class="font-semibold text-xl">
-          <p class="text-[--primary-color]">Дата последнего редактирования:</p>
-          <div class="flex flex-col">
-            <span> {{ new Date(calculationData.lastEditDate).toLocaleDateString() }} - </span>
-            <span class="font-bold">
-              {{ new Date(calculationData.lastEditDate).toLocaleTimeString() }}
-            </span>
-          </div>
-        </div>
-
-        <div class="flex flex-col gap-4">
-          <Button
-            label="Сохранить калькуляцию"
-            :loading="loading"
-            size="large"
-            severity="success"
-            class="text-xs"
-            @click="saveCalculation"
-          />
-        </div>
+      <div class="flex flex-col gap-4">
+        <Button label="Сохранить калькуляцию" :loading="loading" size="large" severity="success" class="text-xs" @click="saveCalculation" />
       </div>
     </div>
 
@@ -979,7 +1065,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
         <Accordion :value="['0']" multiple>
           <AccordionPanel value="0">
             <AccordionHeader>
-              <div class="font-semibold text-[--primary-color] text-xl">Спецификация</div>
+              <div :class="computedStyleClass" class="font-semibold text-xl">Спецификация</div>
             </AccordionHeader>
 
             <AccordionContent>
@@ -1050,7 +1136,11 @@ watch(increaseInSalary, (newValue, oldValue) => {
                 </Column>
 
                 <template #footer>
-                  <div class="flex justify-center items-center text-[--primary-color] hover:cursor-pointer" @click="addNewSpecification">
+                  <div
+                    class="flex justify-center items-center hover:cursor-pointer"
+                    :class="computedStyleClass"
+                    @click="addNewSpecification"
+                  >
                     добавить строку +
                   </div>
 
@@ -1066,7 +1156,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
         </Accordion>
 
         <div>
-          <label for="specificationData" class="text-[--primary-color]">Заметки:</label>
+          <label for="specificationData" :class="computedStyleClass">Заметки:</label>
           <Textarea v-model="calculationData.specificationData.notes" />
         </div>
       </div>
@@ -1074,7 +1164,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
       <div class="grid grid-cols-1fr-40 gap-4 mb-[2rem]">
         <div class="card subtotal mb-0">
           <div class="flex flex-row justify-between gap-2">
-            <div class="font-semibold text-[--primary-color] text-xl">Подытог</div>
+            <div class="font-semibold text-xl" :class="computedStyleClass">Подытог</div>
           </div>
 
           <DataTable :value="priceData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
@@ -1124,7 +1214,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
         <div class="card final-statement">
           <div class="flex flex-row justify-between gap-2">
-            <div class="font-semibold text-[--primary-color] text-xl">Итоговая ведомость</div>
+            <div class="font-semibold text-xl" :class="computedStyleClass">Итоговая ведомость</div>
           </div>
 
           <DataTable
@@ -1173,47 +1263,31 @@ watch(increaseInSalary, (newValue, oldValue) => {
               </template>
             </Column>
           </DataTable>
-
-          <div class="flex flex-row justify-between gap-2">
-            <div class="flex gap-2 items-center">
-              <Checkbox v-model="isAmountWithoutMetal" :value="isAmountWithoutMetal" :binary="true" />
-              <label class="font-semibold items-center text-[--primary-color] text-xl">Сумма без металла</label>
-            </div>
-
-            <div class="flex flex-row justify-between gap-2 items-center">
-              <div v-if="isAmountWithoutMetal" class="font-semibold text-xl">
-                {{ formatNumber(truncateDecimal(finalTotalPrice - totalMetal, 1)) }}
-              </div>
-              <div v-else class="font-semibold text-xl">
-                {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
-              </div>
-            </div>
-          </div>
         </div>
       </div>
 
       <div class="card h-full flex flex-col gap-4">
         <div class="flex flex-row items-center justify-between gap-2">
-          <div class="font-semibold text-[--primary-color] text-xl">Переменные</div>
+          <div :class="computedStyleClass" class="font-semibold text-xl">Переменные</div>
         </div>
 
-        <div class="flex flex-col gap-2 mb-4 w-[250px]">
-          <div class="flex flex-row gap-2 items-center justify-between">
+        <div class="flex flex-col gap-2 mb-4 max-w-[450px]">
+          <div class="grid grid-cols-1fr-40 gap-2 items-center">
             <label for="rentalCostPerDay">Стоимость аренды в день:</label>
-            <InputNumber v-model="calculationData.rentalCostPerDay" inputId="rentalCostPerDay" class="max-w-[50px]" fluid />
+            <InputNumber v-model="calculationData.rentalCostPerDay" inputId="rentalCostPerDay" class="" fluid />
           </div>
 
-          <div class="flex flex-row gap-2 items-center justify-between">
+          <div class="grid grid-cols-1fr-40 gap-2 items-center">
             <label for="costOfElectricityPerDay">Стоимость эл. эн. в день:</label>
-            <InputNumber v-model="calculationData.costOfElectricityPerDay" inputId="costOfElectricityPerDay" class="max-w-[50px]" fluid />
+            <InputNumber v-model="calculationData.costOfElectricityPerDay" inputId="costOfElectricityPerDay" class="" fluid />
           </div>
 
-          <div class="flex flex-row gap-2 items-center justify-between">
+          <div class="grid grid-cols-1fr-40 gap-2 items-center">
             <label for="profitabilityCoeficient">Коэффициент рентабельности:</label>
             <InputNumber
               v-model="calculationData.profitabilityCoeficient"
               inputId="profitabilityCoeficient"
-              class="max-w-[50px]"
+              class=""
               :minFractionDigits="1"
               :maxFractionDigits="5"
               fluid
@@ -1226,7 +1300,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
         <div class="shop">
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2">
-              <div class="font-semibold text-[--primary-color] text-xl">Цех</div>
+              <div class="font-semibold text-xl" :class="computedStyleClass">Цех</div>
 
               <div>
                 <Button
@@ -1341,7 +1415,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
             </DataTable>
 
             <div>
-              <label for="workersData" class="text-[--primary-color]">Заметки:</label>
+              <label for="workersData" :class="computedStyleClass">Заметки:</label>
               <Textarea v-model="calculationData.workersData.notes" />
             </div>
 
@@ -1396,7 +1470,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
         <div class="ITR">
           <div class="card h-full">
             <div class="flex flex-row items-center justify-between gap-2 mb-4">
-              <div class="font-semibold text-[--primary-color] text-xl">ИТР</div>
+              <div class="font-semibold text-xl" :class="computedStyleClass">ИТР</div>
 
               <div class="">
                 <Button
@@ -1533,7 +1607,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
       <div class="card total-costs">
         <div class="flex flex-row justify-between gap-2">
-          <div class="font-semibold text-[--primary-color] text-xl">Общие затраты</div>
+          <div class="font-semibold text-xl" :class="computedStyleClass">Общие затраты</div>
 
           <div class="flex gap-6 items-center justify-center">
             <FileUpload

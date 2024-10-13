@@ -1,4 +1,6 @@
 <script setup>
+const emit = defineEmits(['changeValue']);
+
 const props = defineProps({
   title: {
     type: String,
@@ -45,6 +47,8 @@ const onCellEditComplete = (event) => {
   } else {
     data[field] = newValue;
   }
+
+  emit('changeValue', { data, newValue, field });
 };
 </script>
 
@@ -56,7 +60,7 @@ const onCellEditComplete = (event) => {
       </div>
 
       <div class="flex flex-row items-center justify-between gap-2">
-        <div class="text-lg">Исходная сумма: {{ props.formatNumber(props.totalAmount) }}</div>
+        <div class="text-lg">До налоговых начислений: {{ props.formatNumber(props.totalAmount) }}</div>
 
         <div class="flex flex-row gap-2 items-center">
           <label for="coeficientOfNds">НДС:</label>
@@ -98,11 +102,11 @@ const onCellEditComplete = (event) => {
 
           <template v-if="col.field === 'coefficient'" #editor="{ data }">
             <div v-if="data.coefficientA !== null || data.coefficientB !== null">
-              <InputNumber v-model="data.coefficientA" fluid />
-              <InputNumber v-model="data.coefficientB" fluid />
+              <InputNumber v-model="data.coefficientA" fluid :minFractionDigits="1" :maxFractionDigits="5" />
+              <InputNumber v-model="data.coefficientB" fluid :minFractionDigits="1" :maxFractionDigits="5" />
             </div>
             <div v-else>
-              <InputNumber v-model="data.coefficient" fluid />
+              <InputNumber v-model="data.coefficient" fluid :minFractionDigits="1" :maxFractionDigits="5" />
             </div>
           </template>
         </Column>

@@ -23,7 +23,8 @@ export default {
     workersData,
     itrData,
     workersTaxData,
-    itrTaxData
+    itrTaxData,
+    total
   }) {
     return api().post('/calculation', {
       itrWorkedDays,
@@ -47,7 +48,8 @@ export default {
       workersData,
       itrData,
       workersTaxData,
-      itrTaxData
+      itrTaxData,
+      total
     });
   },
 
@@ -71,7 +73,8 @@ export default {
     workersData,
     itrData,
     workersTaxData,
-    itrTaxData
+    itrTaxData,
+    total
   }) {
     return api().put(`/calculation/${id}`, {
       itrWorkedDays,
@@ -92,7 +95,8 @@ export default {
       workersData,
       itrData,
       workersTaxData,
-      itrTaxData
+      itrTaxData,
+      total
     });
   },
 
