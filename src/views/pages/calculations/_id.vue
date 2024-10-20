@@ -20,8 +20,10 @@ import { useRouter } from 'vue-router';
 // const toast = useToast();
 const router = useRouter();
 const fileupload = ref();
-const dropdownItemsWorkerStaff = ref(['Бабенко', 'Червань Антон', 'Васильев', 'Атаманенко', 'Татарский']);
-const dropdownItemsITR = ref(['Кристина', 'Олька', 'Танюха', 'Тёмка', 'Николаев', 'Никита', 'Шеф']);
+// const dropdownItemsWorkerStaff = ref(['Бабенко', 'Червань Антон', 'Васильев', 'Атаманенко', 'Татарский']);
+const dropdownItemsWorkerStaff = ref([]);
+// const dropdownItemsITR = ref(['Кристина', 'Олька', 'Танюха', 'Тёмка', 'Николаев', 'Никита', 'Шеф']);
+// const dropdownItemsITR = ref([]);
 const dropdownItemsWorkersRole = ref([
   { label: 'Рабочий', key: 'worker' },
   { label: 'ИТР', key: 'ITR' }
@@ -41,6 +43,7 @@ const newStaffDialog = ref(false);
 const newITRStaffDialog = ref(false);
 const createNewWorkerDialog = ref(false);
 const loading = ref(false);
+const showNewWorkerDialog = ref(false);
 
 let calculationData = ref({
   title: '',
@@ -73,7 +76,7 @@ let calculationData = ref({
   metalData: []
 });
 
-let newWorkerData = ref({ name: '', lastname: '', role: '' });
+let newWorkerData = ref({ name: '', lastname: '', position: '' });
 let increaseInSalary = ref(0);
 
 const salariesOfWorkersTotal = computed(() =>
@@ -316,7 +319,9 @@ const finalPriceData = computed(() => {
       key: 'metalTotal',
       statistics: getPercentOfTotal(totalMetal.value + totalHardware.value),
       total: totalMetal.value + totalHardware.value,
-      perItem: totalSpecificationItems.value ? truncateDecimal((totalMetal.value + totalHardware.value) / totalSpecificationItems.value) : 0
+      perItem: totalSpecificationItems.value
+        ? truncateDecimal((totalMetal.value + totalHardware.value) / totalSpecificationItems.value, 2)
+        : 0
     },
     {
       id: 2,
@@ -706,7 +711,12 @@ const onCellEditComplete = (event) => {
   data[field] = newValue;
 };
 
-const showDialog = (key, flag = true) => {
+const showDialog = async (key, flag = true) => {
+  let workersRes = {};
+  workersRes = await getWorkers();
+
+  dropdownItemsWorkerStaff.value = workersRes.data.map((item) => item.name);
+
   switch (key) {
     case 'newStaffDialog':
       newStaffDialog.value = flag;
@@ -750,6 +760,30 @@ const confirmDeleteSpecification = async (data) => {
 
   try {
     await ApiService.deleteItemFromSpecificationData(data.id);
+  } catch (error) {
+    console.log(error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const addNewWorkerToDB = async ({ name, lastname, position }) => {
+  loading.value = true;
+
+  try {
+    await ApiService.createWorker({ name, lastname, position: position.key });
+  } catch (error) {
+    console.log(error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const getWorkers = async () => {
+  loading.value = true;
+
+  try {
+    return await ApiService.getWorkers();
   } catch (error) {
     console.log(error);
   } finally {
@@ -865,28 +899,31 @@ const copyItrWorker = (data) => {
   });
 };
 
-const changeSelectedItem = (event) => {
-  console.log(event);
-  newStaffData.value.name = event.value;
+const changeSelectedItem = (event, type) => {
+  if (type === 'workers') {
+    newStaffData.value.name = event.value;
+  } else {
+    newITRStaffData.value.name = event.value;
+  }
 };
 
 const showNewWorkerModal = () => {
   showDialog('createNewWorkerDialog');
 };
 
-const saveNewWorker = (worker) => {
-  switch (worker.role.key) {
-    case 'worker':
-      dropdownItemsWorkerStaff.value.push(worker.name);
-      break;
-    case 'ITR':
-      dropdownItemsITR.value.push(worker.name);
-      break;
+const saveNewWorker = async (worker) => {
+  dropdownItemsWorkerStaff.value.push(worker.name);
+  await addNewWorkerToDB(worker);
 
-    default:
-      break;
+  if (newStaffDialog.value) {
+    newStaffData.value.name = newWorkerData.value.name;
   }
 
+  if (newITRStaffDialog.value) {
+    newITRStaffData.value.name = newWorkerData.value.name;
+  }
+
+  newWorkerData.value = { name: '', lastname: '', position: '' };
   showDialog('createNewWorkerDialog', false);
 };
 
@@ -1419,15 +1456,16 @@ watch(increaseInSalary, (newValue, oldValue) => {
               <Textarea v-model="calculationData.workersData.notes" />
             </div>
 
-            <Dialog v-model:visible="newStaffDialog" :style="{ width: '450px' }" header="Выберте сотрудника" :modal="true">
+            <Dialog v-model:visible="newStaffDialog" :style="{ width: '450px' }" header="Выберите сотрудника" :modal="true">
               <div class="flex flex-col gap-6">
                 <div>
                   <label for="name" class="block font-bold mb-3">Имя</label>
                   <SearchSelect
                     :dropdownItemsWorkerStaff="dropdownItemsWorkerStaff"
-                    :value="newStaffData.name"
-                    @change="changeSelectedItem"
-                    @clickToHeader="showNewWorkerModal"
+                    :value="newStaffData.name || ''"
+                    actionName="Добавить нового сотрудника"
+                    @change="(data) => changeSelectedItem(data, 'workers')"
+                    @clickToAction="showNewWorkerModal"
                   />
                 </div>
 
@@ -1444,12 +1482,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
               <template #footer>
                 <Button label="Cancel" icon="pi pi-times" text @click="newStaffDialog = false" />
-                <Button
-                  :disabled="!newStaffData.name.trim() || newStaffData.numberOfHoursWorked === null || newStaffData.salaryPerDay === null"
-                  label="Сохранить"
-                  icon="pi pi-check"
-                  @click="saveNewStaff"
-                />
+                <!-- :disabled="!newStaffData.name.trim() || newStaffData.numberOfHoursWorked === null || newStaffData.salaryPerDay === null" -->
+                <Button label="Сохранить" icon="pi pi-check" @click="saveNewStaff" />
               </template>
             </Dialog>
           </div>
@@ -1522,7 +1556,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
                 </template>
 
                 <template #editor="{ data }">
-                  <Select id="staff" v-model="data.name" :options="dropdownItemsITR" class="w-full"></Select>
+                  <Select id="staff" v-model="data.name" :options="dropdownItemsWorkerStaff" class="w-full"></Select>
                 </template>
               </Column>
 
@@ -1568,11 +1602,17 @@ watch(increaseInSalary, (newValue, oldValue) => {
               </template>
             </DataTable>
 
-            <Dialog v-model:visible="newITRStaffDialog" :style="{ width: '450px' }" header="Выберте сотрудника" :modal="true">
+            <Dialog v-model:visible="newITRStaffDialog" :style="{ width: '450px' }" header="Выберите сотрудника" :modal="true">
               <div class="flex flex-col gap-6">
                 <div>
                   <label for="name" class="block font-bold mb-3">Имя</label>
-                  <Select id="staff" v-model="newITRStaffData.name" :options="dropdownItemsITR" class="w-full"></Select>
+                  <SearchSelect
+                    :dropdownItemsWorkerStaff="dropdownItemsWorkerStaff"
+                    :value="newITRStaffData.name || ''"
+                    actionName="Добавить нового сотрудника"
+                    @change="(data) => changeSelectedItem(data, 'itr')"
+                    @clickToAction="showNewWorkerModal"
+                  />
                 </div>
 
                 <div>
@@ -1583,12 +1623,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
               <template #footer>
                 <Button label="Cancel" icon="pi pi-times" text @click="newStaffDialog = false" />
-                <Button
-                  :disabled="!newITRStaffData.name.trim() || newITRStaffData.salaryPerMonth === null"
-                  label="Сохранить"
-                  icon="pi pi-check"
-                  @click="saveNewItrStaff"
-                />
+                <!-- :disabled="!newITRStaffData.name.trim() || newITRStaffData.salaryPerMonth === null" -->
+                <Button label="Сохранить" icon="pi pi-check" @click="saveNewItrStaff" />
               </template>
             </Dialog>
           </div>
@@ -1786,18 +1822,13 @@ watch(increaseInSalary, (newValue, oldValue) => {
     <Dialog v-model:visible="createNewWorkerDialog" header="Новый сотрудник" :style="{ width: '450px' }" modal>
       <div class="flex flex-col gap-6">
         <div>
-          <label for="name" class="block font-bold mb-3">Имя</label>
+          <label for="name" class="block font-bold mb-3">ФИО</label>
           <InputText v-model="newWorkerData.name" type="text" />
         </div>
 
         <div>
-          <label for="lastname" class="block font-bold mb-3">Фамилия</label>
-          <InputText v-model="newWorkerData.lastname" type="text" />
-        </div>
-
-        <div>
           <label for="numberOfHoursWorked" class="block font-bold mb-3">Должность</label>
-          <Select id="role" v-model="newWorkerData.role" :options="dropdownItemsWorkersRole" class="w-full">
+          <Select id="role" v-model="newWorkerData.position" :options="dropdownItemsWorkersRole" class="w-full">
             <template #value="slotProps">
               <div class="flex items-center h-[25px]">
                 <div>{{ slotProps.value.label }}</div>

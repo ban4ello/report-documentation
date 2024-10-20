@@ -20,7 +20,8 @@ import { useRouter } from 'vue-router';
 // const toast = useToast();
 const router = useRouter();
 const fileupload = ref();
-const dropdownItemsWorkerStaff = ref(['Бабенко', 'Червань Антон', 'Васильев', 'Атаманенко', 'Татарский']);
+// const dropdownItemsWorkerStaff = ref(['Бабенко', 'Червань Антон', 'Васильев', 'Атаманенко', 'Татарский']);
+const dropdownItemsWorkerStaff = ref([]);
 const dropdownItemsITR = ref(['Кристина', 'Олька', 'Танюха', 'Тёмка', 'Николаев', 'Никита', 'Шеф']);
 const dropdownItemsWorkersRole = ref([
   { label: 'Рабочий', key: 'worker' },
@@ -202,7 +203,7 @@ let calculationData = ref({
 //   total: null
 // });
 
-let newWorkerData = ref({ name: '', lastname: '', role: '' });
+let newWorkerData = ref({ name: '', lastname: '', position: '' });
 let increaseInSalary = ref(0);
 
 const salariesOfWorkersTotal = computed(() =>
@@ -846,7 +847,12 @@ const onCellEditComplete = (event) => {
   data[field] = newValue;
 };
 
-const showDialog = (key, flag = true) => {
+const showDialog = async (key, flag = true) => {
+  let workersRes = {};
+  workersRes = await getWorkers();
+
+  dropdownItemsWorkerStaff.value = workersRes.data.map((item) => item.name);
+
   switch (key) {
     case 'newStaffDialog':
       newStaffDialog.value = flag;
@@ -860,6 +866,30 @@ const showDialog = (key, flag = true) => {
 
     default:
       break;
+  }
+};
+
+const addNewWorkerToDB = async ({ name, lastname, position }) => {
+  loading.value = true;
+
+  try {
+    await ApiService.createWorker({ name, lastname, position: position.key });
+  } catch (error) {
+    console.log(error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const getWorkers = async () => {
+  loading.value = true;
+
+  try {
+    return await ApiService.getWorkers();
+  } catch (error) {
+    console.log(error);
+  } finally {
+    loading.value = false;
   }
 };
 
@@ -977,30 +1007,32 @@ const copyITRWorker = (data) => {
   });
 };
 
-const changeSelectedItem = (event) => {
-  console.log(event);
-  newStaffData.value.name = event.value;
+const changeSelectedItem = (event, type) => {
+  if (type === 'workers') {
+    newStaffData.value.name = event.value;
+  } else {
+    newITRStaffData.value.name = event.value;
+  }
 };
 
 const showNewWorkerModal = () => {
+  console.log(1111111, 'showNewWorkerModal');
   showDialog('createNewWorkerDialog');
 };
 
-const saveNewWorker = (worker) => {
-  console.log('saveNewWorker', worker);
+const saveNewWorker = async (worker) => {
+  dropdownItemsWorkerStaff.value.push(worker.name);
+  await addNewWorkerToDB(worker);
 
-  switch (worker.role.key) {
-    case 'worker':
-      dropdownItemsWorkerStaff.value.push(worker.name);
-      break;
-    case 'ITR':
-      dropdownItemsITR.value.push(worker.name);
-      break;
-
-    default:
-      break;
+  if (newStaffDialog.value) {
+    newStaffData.value.name = newWorkerData.value.name;
   }
 
+  if (newITRStaffDialog.value) {
+    newITRStaffData.value.name = newWorkerData.value.name;
+  }
+
+  newWorkerData.value = { name: '', lastname: '', position: '' };
   showDialog('createNewWorkerDialog', false);
 };
 
@@ -1542,15 +1574,22 @@ const computedStyleClass = computed(() => {
               <Textarea v-model="calculationData.workersData.notes" />
             </div>
 
-            <Dialog v-model:visible="newStaffDialog" :style="{ width: '450px' }" header="Выберте сотрудника" :modal="true">
+            <Dialog v-model:visible="newStaffDialog" :style="{ width: '450px' }" header="Выберите сотрудника" :modal="true">
               <div class="flex flex-col gap-6">
                 <div>
                   <label for="name" class="block font-bold mb-3">Имя</label>
-                  <SearchSelect
+                  <!-- <SearchSelect
                     :dropdownItemsWorkerStaff="dropdownItemsWorkerStaff"
                     :value="newStaffData.name"
                     @change="changeSelectedItem"
                     @clickToHeader="showNewWorkerModal"
+                  /> -->
+                  <SearchSelect
+                    :dropdownItemsWorkerStaff="dropdownItemsWorkerStaff"
+                    :value="newStaffData.name || ''"
+                    actionName="Добавить нового сотрудника"
+                    @change="(data) => changeSelectedItem(data, 'workers')"
+                    @clickToAction="showNewWorkerModal"
                   />
                 </div>
 
@@ -1692,11 +1731,18 @@ const computedStyleClass = computed(() => {
               </template>
             </DataTable>
 
-            <Dialog v-model:visible="newITRStaffDialog" :style="{ width: '450px' }" header="Выберте сотрудника" :modal="true">
+            <Dialog v-model:visible="newITRStaffDialog" :style="{ width: '450px' }" header="Выберите сотрудника" :modal="true">
               <div class="flex flex-col gap-6">
                 <div>
                   <label for="name" class="block font-bold mb-3">Имя</label>
-                  <Select id="staff" v-model="newITRStaffData.name" :options="dropdownItemsITR" class="w-full"></Select>
+
+                  <SearchSelect
+                    :dropdownItemsWorkerStaff="dropdownItemsWorkerStaff"
+                    :value="newITRStaffData.name || ''"
+                    actionName="Добавить нового сотрудника"
+                    @change="(data) => changeSelectedItem(data, 'itr')"
+                    @clickToAction="showNewWorkerModal"
+                  />
                 </div>
 
                 <div>
@@ -1928,18 +1974,13 @@ const computedStyleClass = computed(() => {
     <Dialog v-model:visible="createNewWorkerDialog" header="Новый сотрудник" :style="{ width: '450px' }" modal>
       <div class="flex flex-col gap-6">
         <div>
-          <label for="name" class="block font-bold mb-3">Имя</label>
+          <label for="name" class="block font-bold mb-3">ФИО</label>
           <InputText v-model="newWorkerData.name" type="text" />
         </div>
 
         <div>
-          <label for="lastname" class="block font-bold mb-3">Фамилия</label>
-          <InputText v-model="newWorkerData.lastname" type="text" />
-        </div>
-
-        <div>
           <label for="numberOfHoursWorked" class="block font-bold mb-3">Должность</label>
-          <Select id="role" v-model="newWorkerData.role" :options="dropdownItemsWorkersRole" class="w-full">
+          <Select id="role" v-model="newWorkerData.position" :options="dropdownItemsWorkersRole" class="w-full">
             <template #value="slotProps">
               <div class="flex items-center h-[25px]">
                 <div>{{ slotProps.value.label }}</div>
