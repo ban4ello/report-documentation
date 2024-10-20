@@ -142,5 +142,17 @@ export default {
 
   deleteCalculation(calculationId) {
     return api().delete(`/calculation/${calculationId}`);
+  },
+
+  createWorker({ name, lastname, position }) {
+    return api().post('/worker', {
+      name,
+      lastname,
+      position
+    });
+  },
+
+  getWorkers() {
+    return api().get('/workers');
   }
 };

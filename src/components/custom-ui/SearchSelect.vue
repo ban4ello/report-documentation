@@ -1,20 +1,20 @@
 <script setup>
 const props = defineProps({
   dropdownItemsWorkerStaff: Array,
-  value: String
-  // headerTitle: String
+  value: String,
+  actionName: String
 });
 </script>
 
 <template>
-  <Select id="staff" :value="props.value" :options="props.dropdownItemsWorkerStaff" filter class="w-full" @change="(event) => $emit('input', event.value)">
-    <!-- TODO: расширить функционал возможностью "Добавлять нового сотрудника" -->
-    <!-- <template #header>
-      <div v-if="props.headerTitle" class="flex p-4">
-        <span class="hover:text-[--primary-color] hover:cursor-pointer" @click="$emit('clickToHeader')">{{ props.title }}</span>
-      </div>
-    </template> -->
-
+  <Select
+    id="staff"
+    :value="props.value"
+    :options="dropdownItemsWorkerStaff"
+    filter
+    class="w-full"
+    @change="(event) => $emit('input', event.value)"
+  >
     <template #value>
       <div class="flex items-center h-[25px]">
         <p>{{ props.value }}</p>
@@ -23,7 +23,15 @@ const props = defineProps({
 
     <template #option="slotProps">
       <div class="flex items-center">
-        <div>{{ slotProps.option }}</div>
+        <div>
+          <span>{{ slotProps.option }}</span>
+        </div>
+      </div>
+    </template>
+
+    <template #footer>
+      <div class="p-3 text-[--primary-color]">
+        <Button :label="actionName" fluid text size="small" icon="pi pi-plus" @click="$emit('clickToAction')" />
       </div>
     </template>
   </Select>
