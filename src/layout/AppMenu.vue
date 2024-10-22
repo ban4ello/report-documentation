@@ -3,6 +3,8 @@ import { ref } from 'vue';
 
 import AppMenuItem from './AppMenuItem.vue';
 
+const mode = import.meta.env.MODE;
+
 const model = ref([
   {
     label: 'Аналитика',
@@ -14,6 +16,7 @@ const model = ref([
   },
   {
     label: 'UI Components',
+    permission: 'admin',
     items: [
       { label: 'Form Layout', icon: 'pi pi-fw pi-id-card', to: '/uikit/formlayout' },
       { label: 'Input', icon: 'pi pi-fw pi-check-square', to: '/uikit/input' },
@@ -34,6 +37,7 @@ const model = ref([
   },
   {
     label: 'Pages',
+    permission: 'admin',
     icon: 'pi pi-fw pi-briefcase',
     to: '/pages',
     items: [
@@ -74,50 +78,6 @@ const model = ref([
         to: '/pages/empty'
       }
     ]
-  },
-  {
-    label: 'Hierarchy',
-    items: [
-      {
-        label: 'Submenu 1',
-        icon: 'pi pi-fw pi-bookmark',
-        items: [
-          {
-            label: 'Submenu 1.1',
-            icon: 'pi pi-fw pi-bookmark',
-            items: [
-              { label: 'Submenu 1.1.1', icon: 'pi pi-fw pi-bookmark' },
-              { label: 'Submenu 1.1.2', icon: 'pi pi-fw pi-bookmark' },
-              { label: 'Submenu 1.1.3', icon: 'pi pi-fw pi-bookmark' }
-            ]
-          },
-          {
-            label: 'Submenu 1.2',
-            icon: 'pi pi-fw pi-bookmark',
-            items: [{ label: 'Submenu 1.2.1', icon: 'pi pi-fw pi-bookmark' }]
-          }
-        ]
-      },
-      {
-        label: 'Submenu 2',
-        icon: 'pi pi-fw pi-bookmark',
-        items: [
-          {
-            label: 'Submenu 2.1',
-            icon: 'pi pi-fw pi-bookmark',
-            items: [
-              { label: 'Submenu 2.1.1', icon: 'pi pi-fw pi-bookmark' },
-              { label: 'Submenu 2.1.2', icon: 'pi pi-fw pi-bookmark' }
-            ]
-          },
-          {
-            label: 'Submenu 2.2',
-            icon: 'pi pi-fw pi-bookmark',
-            items: [{ label: 'Submenu 2.2.1', icon: 'pi pi-fw pi-bookmark' }]
-          }
-        ]
-      }
-    ]
   }
 ]);
 </script>
@@ -125,8 +85,8 @@ const model = ref([
 <template>
   <ul class="layout-menu">
     <template v-for="(item, i) in model" :key="item">
-      <app-menu-item v-if="!item.separator" :item="item" :index="i"></app-menu-item>
-      <li v-if="item.separator" class="menu-separator"></li>
+      <app-menu-item v-if="item.permission === 'admin' && mode === 'development'" :item="item" :index="i"></app-menu-item>
+      <app-menu-item v-else-if="item.permission !== 'admin'" :item="item" :index="i"></app-menu-item>
     </template>
   </ul>
 </template>

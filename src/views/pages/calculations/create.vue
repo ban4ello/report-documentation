@@ -1016,7 +1016,6 @@ const changeSelectedItem = (event, type) => {
 };
 
 const showNewWorkerModal = () => {
-  console.log(1111111, 'showNewWorkerModal');
   showDialog('createNewWorkerDialog');
 };
 
