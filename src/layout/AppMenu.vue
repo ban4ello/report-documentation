@@ -3,16 +3,20 @@ import { ref } from 'vue';
 
 import AppMenuItem from './AppMenuItem.vue';
 
+const mode = import.meta.env.MODE;
+
 const model = ref([
   {
-    label: 'Home',
-    items: [
-      { label: 'Dashboard', icon: 'pi pi-fw pi-home', to: '/' },
-      { label: 'Калькуляция', icon: 'pi-receipt', to: '/calculation' }
-    ]
+    label: 'Аналитика',
+    items: [{ label: 'Отчётная статистика', icon: 'pi pi-fw pi-home', to: '/' }]
+  },
+  {
+    label: 'Калькуляции',
+    items: [{ label: 'Калькуляции', icon: 'pi-receipt', to: '/calculations' }]
   },
   {
     label: 'UI Components',
+    permission: 'admin',
     items: [
       { label: 'Form Layout', icon: 'pi pi-fw pi-id-card', to: '/uikit/formlayout' },
       { label: 'Input', icon: 'pi pi-fw pi-check-square', to: '/uikit/input' },
@@ -33,14 +37,10 @@ const model = ref([
   },
   {
     label: 'Pages',
+    permission: 'admin',
     icon: 'pi pi-fw pi-briefcase',
     to: '/pages',
     items: [
-      {
-        label: 'Landing',
-        icon: 'pi pi-fw pi-globe',
-        to: '/landing'
-      },
       {
         label: 'Auth',
         icon: 'pi pi-fw pi-user',
@@ -78,66 +78,6 @@ const model = ref([
         to: '/pages/empty'
       }
     ]
-  },
-  {
-    label: 'Hierarchy',
-    items: [
-      {
-        label: 'Submenu 1',
-        icon: 'pi pi-fw pi-bookmark',
-        items: [
-          {
-            label: 'Submenu 1.1',
-            icon: 'pi pi-fw pi-bookmark',
-            items: [
-              { label: 'Submenu 1.1.1', icon: 'pi pi-fw pi-bookmark' },
-              { label: 'Submenu 1.1.2', icon: 'pi pi-fw pi-bookmark' },
-              { label: 'Submenu 1.1.3', icon: 'pi pi-fw pi-bookmark' }
-            ]
-          },
-          {
-            label: 'Submenu 1.2',
-            icon: 'pi pi-fw pi-bookmark',
-            items: [{ label: 'Submenu 1.2.1', icon: 'pi pi-fw pi-bookmark' }]
-          }
-        ]
-      },
-      {
-        label: 'Submenu 2',
-        icon: 'pi pi-fw pi-bookmark',
-        items: [
-          {
-            label: 'Submenu 2.1',
-            icon: 'pi pi-fw pi-bookmark',
-            items: [
-              { label: 'Submenu 2.1.1', icon: 'pi pi-fw pi-bookmark' },
-              { label: 'Submenu 2.1.2', icon: 'pi pi-fw pi-bookmark' }
-            ]
-          },
-          {
-            label: 'Submenu 2.2',
-            icon: 'pi pi-fw pi-bookmark',
-            items: [{ label: 'Submenu 2.2.1', icon: 'pi pi-fw pi-bookmark' }]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    label: 'Get Started',
-    items: [
-      {
-        label: 'Documentation',
-        icon: 'pi pi-fw pi-book',
-        to: '/documentation'
-      },
-      {
-        label: 'View Source',
-        icon: 'pi pi-fw pi-github',
-        url: 'https://github.com/primefaces/sakai-vue',
-        target: '_blank'
-      }
-    ]
   }
 ]);
 </script>
@@ -145,8 +85,8 @@ const model = ref([
 <template>
   <ul class="layout-menu">
     <template v-for="(item, i) in model" :key="item">
-      <app-menu-item v-if="!item.separator" :item="item" :index="i"></app-menu-item>
-      <li v-if="item.separator" class="menu-separator"></li>
+      <app-menu-item v-if="item.permission === 'admin' && mode === 'development'" :item="item" :index="i"></app-menu-item>
+      <app-menu-item v-else-if="item.permission !== 'admin'" :item="item" :index="i"></app-menu-item>
     </template>
   </ul>
 </template>

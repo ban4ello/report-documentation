@@ -1,11 +1,11 @@
 import { computed, reactive, readonly } from 'vue';
 
 const layoutConfig = reactive({
-  preset: 'Aura',
+  preset: 'Lara', // Aura, Lara
   primary: 'emerald',
   surface: null,
   darkTheme: false,
-  menuMode: 'overlay'
+  menuMode: 'overlay' // static, overlay
 });
 
 const appConfig = reactive({
