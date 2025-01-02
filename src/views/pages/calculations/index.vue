@@ -1,9 +1,4 @@
 <script setup>
-/*
-  TODO:
-  - Запоминать какой выпадающий список был выбран чтобы когда возвращаеься на страницу - список быд открыт в том же месте
-*/
-
 import ApiService from '@/service/ApiService';
 import { MochDataService } from '@/service/MochDataService';
 import { onBeforeMount, ref } from 'vue';

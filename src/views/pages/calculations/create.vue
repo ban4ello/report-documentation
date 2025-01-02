@@ -1,13 +1,4 @@
 <script setup>
-/*
-  TODO:
-  - Разработать функционал добавления в базу новых сотрудников
-  - Добавить возможность прикреплять файлы (чертежи) к проекту (заказу)
-  - Добавить кнопку "Удалить файл"
-  - Добавить валидацию полей
-  - Добавить нотификацию после действий: сохранение калькуляции
-*/
-
 import { onBeforeMount, ref, computed, watch } from 'vue';
 import { MochDataService } from '@/service/MochDataService';
 import ApiService from '@/service/ApiService';
@@ -750,8 +741,8 @@ function getTotalPrice(array) {
   }, 0);
 }
 
-const onUpload = async (e) => {
-  const newFile = e.files[0];
+const onUpload = async ({ event, tableName, accordionIndex }) => {
+  const newFile = event.files[0];
   const arrayBuferFile = await newFile.arrayBuffer();
   const wb = XLS.read(arrayBuferFile);
   const sheet = wb.Sheets[wb.SheetNames[0]];
@@ -759,8 +750,19 @@ const onUpload = async (e) => {
   let consumablesDataRes = [];
   let hardwareDataRes = [];
   let metalDataRes = [];
-  let currentDataName = 'consumablesDataRes'; // 'hardwareDataRes' || 'metalDataRes'
-  let countOfChanges = 0;
+
+  const setTableData = (array, formatedRow) => {
+    if (formatedRow['Наименование']) {
+      array.push({
+        quantity: formatedRow['К-во'],
+        name: formatedRow['Наименование'],
+        price: formatedRow['Стоимость'],
+        unitOfMeasurement: formatedRow['ед.изм.'],
+        taxPrice: formatedRow['цена НДС'],
+        order: formatedRow['№ п/п']
+      });
+    }
+  };
 
   XLS.utils.sheet_to_json(sheet).forEach((row) => {
     const formatedRow = {};
@@ -769,49 +771,16 @@ const onUpload = async (e) => {
       formatedRow[key.trim()] = row[key];
     });
 
-    if (!formatedRow['Наименование']) {
-      if (countOfChanges === 1) {
-        currentDataName = 'metalDataRes';
-      } else {
-        currentDataName = 'hardwareDataRes';
-      }
-
-      countOfChanges++;
-
-      return;
-    }
-
-    switch (currentDataName) {
+    switch (tableName) {
       case 'consumablesDataRes':
-        consumablesDataRes.push({
-          quantity: formatedRow['К-во'],
-          name: formatedRow['Наименование'],
-          price: formatedRow['Стоимость'],
-          unitOfMeasurement: formatedRow['ед.изм.'],
-          taxPrice: formatedRow['цена НДС'],
-          order: formatedRow['№ п/п']
-        });
+        setTableData(consumablesDataRes, formatedRow);
         break;
 
       case 'hardwareDataRes':
-        hardwareDataRes.push({
-          quantity: formatedRow['К-во'],
-          name: formatedRow['Наименование'],
-          price: formatedRow['Стоимость'],
-          unitOfMeasurement: formatedRow['ед.изм.'],
-          taxPrice: formatedRow['цена НДС'],
-          order: formatedRow['№ п/п']
-        });
+        setTableData(hardwareDataRes, formatedRow);
         break;
       case 'metalDataRes':
-        metalDataRes.push({
-          quantity: formatedRow['К-во'],
-          name: formatedRow['Наименование'],
-          price: formatedRow['Стоимость'],
-          unitOfMeasurement: formatedRow['ед.изм.'],
-          taxPrice: formatedRow['цена НДС'],
-          order: formatedRow['№ п/п']
-        });
+        setTableData(metalDataRes, formatedRow);
         break;
 
       default:
@@ -819,14 +788,23 @@ const onUpload = async (e) => {
     }
   });
 
-  calculationData.value.consumablesData = consumablesDataRes;
-  calculationData.value.hardwareData = hardwareDataRes;
-  calculationData.value.metalData = metalDataRes;
-  expandAccordionTotalCosts.value = ['0', '1', '2'];
-};
+  switch (tableName) {
+    case 'consumablesDataRes':
+      calculationData.value.consumablesData = consumablesDataRes;
+      break;
 
-const uploadFile = () => {
-  fileupload.value.upload();
+    case 'hardwareDataRes':
+      calculationData.value.hardwareData = hardwareDataRes;
+      break;
+    case 'metalDataRes':
+      calculationData.value.metalData = metalDataRes;
+      break;
+
+    default:
+      break;
+  }
+
+  expandAccordionTotalCosts.value = [accordionIndex];
 };
 
 const onCellEditComplete = (event) => {
@@ -1604,7 +1582,7 @@ const computedStyleClass = computed(() => {
               </div>
 
               <template #footer>
-                <Button label="Cancel" icon="pi pi-times" text @click="newStaffDialog = false" />
+                <Button label="Отменить" icon="pi pi-times" text @click="newStaffDialog = false" />
                 <Button
                   :disabled="!newStaffData.name.trim() || newStaffData.numberOfHoursWorked === null || newStaffData.salaryPerDay === null"
                   label="Сохранить"
@@ -1751,7 +1729,7 @@ const computedStyleClass = computed(() => {
               </div>
 
               <template #footer>
-                <Button label="Cancel" icon="pi pi-times" text @click="newStaffDialog = false" />
+                <Button label="Отменить" icon="pi pi-times" text @click="newStaffDialog = false" />
                 <Button
                   :disabled="!newITRStaffData.name.trim() || newITRStaffData.salaryPerMonth === null"
                   label="Сохранить"
@@ -1778,30 +1756,32 @@ const computedStyleClass = computed(() => {
       <div class="card total-costs">
         <div class="flex flex-row justify-between gap-2">
           <div class="font-semibold text-xl" :class="computedStyleClass">Общие затраты</div>
-
-          <div class="flex gap-6 items-center justify-center">
-            <FileUpload
-              ref="fileupload"
-              mode="basic"
-              name="demo[]"
-              accept=".xlsx"
-              chooseLabel="Выберите файл"
-              customUpload
-              @uploader="onUpload"
-            />
-            <Button label="Импортировать" @click="uploadFile" severity="secondary" />
-          </div>
         </div>
 
         <Accordion multiple :value="expandAccordionTotalCosts">
           <AccordionPanel value="0">
             <AccordionHeader>
-              <span class="flex items-center gap-2 w-full">
-                Расходники
+              <div class="flex gap-6 items-center justify-between w-full">
+                <div class="flex gap-6 items-center gap-2 w-full">
+                  <span>
+                    Расходники
+                  </span>
+
+                  <FileUpload
+                    ref="consumablesDataFileupload"
+                    mode="basic"
+                    accept=".xlsx"
+                    chooseLabel="Выберите файл"
+                    customUpload
+                    auto
+                    @uploader="(e) => onUpload({ event: e, tableName: 'consumablesDataRes', accordionIndex: 0 })"
+                  />
+                </div>
+                
                 <div v-if="totalConsumables" class="flex justify-end items-center font-bold w-full mr-4">
                   Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalConsumables) }}</span>
                 </div>
-              </span>
+              </div>
             </AccordionHeader>
 
             <AccordionContent>
@@ -1855,9 +1835,26 @@ const computedStyleClass = computed(() => {
 
           <AccordionPanel value="1">
             <AccordionHeader>
-              Метизы
-              <div v-if="totalHardware" class="flex justify-end items-center font-bold w-full mr-4">
-                Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalHardware) }}</span>
+              <div class="flex gap-6 items-center justify-between w-full">
+                <div class="flex gap-6 items-center gap-2 w-full">
+                  <span>
+                    Метизы
+                  </span>
+
+                  <FileUpload
+                    ref="hardwareDataFileupload"
+                    mode="basic"
+                    accept=".xlsx"
+                    chooseLabel="Выберите файл"
+                    customUpload
+                    auto
+                    @uploader="(e) => onUpload({ event: e, tableName: 'hardwareDataRes', accordionIndex: 1 })"
+                  />
+                </div>
+                
+                <div v-if="totalHardware" class="flex justify-end items-center font-bold w-full mr-4">
+                  Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalHardware) }}</span>
+                </div>
               </div>
             </AccordionHeader>
 
@@ -1912,9 +1909,26 @@ const computedStyleClass = computed(() => {
 
           <AccordionPanel value="2">
             <AccordionHeader>
-              Металл
-              <div v-if="totalMetal" class="flex justify-end items-center font-bold w-full mr-4">
-                Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalMetal) }}</span>
+              <div class="flex gap-6 items-center justify-between w-full">
+                <div class="flex gap-6 items-center gap-2 w-full">
+                  <span>
+                    Металл
+                  </span>
+
+                  <FileUpload
+                    ref="metalDataFileupload"
+                    mode="basic"
+                    accept=".xlsx"
+                    chooseLabel="Выберите файл"
+                    customUpload
+                    auto
+                    @uploader="(e) => onUpload({ event: e, tableName: 'metalDataRes', accordionIndex: 2 })"
+                  />
+                </div>
+                
+                <div v-if="totalMetal" class="flex justify-end items-center font-bold w-full mr-4">
+                  Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalMetal) }}</span>
+                </div>
               </div>
             </AccordionHeader>
 
@@ -1995,7 +2009,7 @@ const computedStyleClass = computed(() => {
       </div>
 
       <template #footer>
-        <Button label="Cancel" icon="pi pi-times" text @click="createNewWorkerDialog = false" />
+        <Button label="Отменить" icon="pi pi-times" text @click="createNewWorkerDialog = false" />
         <Button :disabled="!newWorkerData.name.trim()" label="Сохранить" icon="pi pi-check" @click="saveNewWorker(newWorkerData)" />
       </template>
     </Dialog>
