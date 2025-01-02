@@ -154,5 +154,9 @@ export default {
 
   getWorkers() {
     return api().get('/workers');
+  },
+
+  test() {
+    return api().get('/test');
   }
 };
