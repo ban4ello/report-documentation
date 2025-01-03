@@ -965,115 +965,120 @@ watch(increaseInSalary, (newValue, oldValue) => {
   <div v-if="loading" class="card flex justify-center items-center h-[100vh] fixed top-0 left-0 right-0 z-9999 opacity-60">
     <ProgressSpinner />
   </div>
+
   <Fluid>
-    <div class="card calculation-title z-50 sticky top-[60px] shadow-md flex flex-row items-center justify-between gap-4">
-      <div class="flex flex-row justify-between items-center gap-2">
-        <div class="flex gap-2">
-          <div class="flex flex-col gap-2">
-            <div class="font-semibold text-lg" :class="computedStyleClass">
-              <span>Название калькуляции-{{ calculationData.calculationType === 'fact' ? 'факт' : 'план' }}:</span
-              ><span><InputText v-model="calculationData.title" type="text" /></span>
-            </div>
-
-            <div v-if="calculationData.dateOfCreation" class="font-semibold text-lg">
-              <span :class="computedStyleClass">Дата создания: </span>
-              <span> {{ new Date(calculationData.dateOfCreation).toLocaleDateString() }}</span>
-            </div>
-
-            <div class="font-semibold text-lg">
-              <span :class="computedStyleClass">Дата последнего редактирования: </span>
-              <span> {{ new Date(calculationData.lastEditDate).toLocaleDateString() }} - </span>
-              <span class="font-bold">
-                {{ new Date(calculationData.lastEditDate).toLocaleTimeString() }}
-              </span>
-            </div>
-          </div>
-
-          <Divider layout="vertical" />
-        </div>
-
-        <div class="flex gap-2">
-          <div v-if="finalTotalPrice" class="font-semibold text-md flex items-center">
-            <div class="flex flex-col">
-              <div
-                class="flex flex-row gap-2 items-center"
-                :style="{
-                  border: finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact' ? '1px solid red' : '',
-                  'border-radius': '5px',
-                  padding: '5px'
-                }"
-              >
-                <div :class="computedStyleClass" class="max-w-[200px]">Итоговая сумма калькуляции:</div>
-                <span
-                  class="font-bold"
-                  :class="{
-                    'text-[red]': finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact',
-                    'text-xl': finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact'
-                  }"
-                >
-                  {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
-                </span>
-              </div>
-
-              <Divider layout="horizontal" />
-
-              <div v-if="totalSpecificationItems" class="flex flex-row gap-2">
-                <div :class="computedStyleClass">На 1 ед:</div>
-                <span class="font-bold">
-                  {{ formatNumber(truncateDecimal(finalTotalPrice / totalSpecificationItems, 1)) }}
-                </span>
-              </div>
-
-              <Divider layout="horizontal" />
-
-              <div class="flex gap-2 items-center">
-                <Checkbox v-model="isAmountWithoutMetal" :value="isAmountWithoutMetal" :binary="true" />
-                <label :class="computedStyleClass" class="font-semibold items-center text-md">Сумма без металла</label>
-              </div>
-            </div>
-          </div>
-
-          <Divider layout="vertical" />
-        </div>
-
-        <div v-if="calculationData.calculationType === 'fact'" class="flex gap-2">
-          <div v-if="finalTotalPrice" class="font-semibold text-md flex items-center">
-            <div class="flex flex-col">
-              <div class="flex flex-row gap-2 items-center">
-                <div class="text-[--primary-color] max-w-[200px]">Сумма калькуляции-плана:</div>
-                <span class="font-bold">
-                  {{ formatNumber(truncateDecimal(calculationPlanTotal, 1)) }}
-                </span>
-              </div>
-
-              <Divider layout="horizontal" />
-
-              <div v-if="totalSpecificationItems" class="flex flex-row gap-2">
-                <div class="text-[--primary-color]">На 1 ед:</div>
-                <span class="font-bold">
-                  {{ formatNumber(truncateDecimal(calculationPlanTotal / totalSpecificationItems, 1)) }}
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <Divider layout="vertical" />
-        </div>
-
-        <div class="font-semibold text-lg">
-          <p :class="computedStyleClass">Общее кол-во:</p>
-          <p>
-            {{ truncateDecimal(totalSpecificationItems, 5) }}
-            <span v-if="calculationData.specificationData?.table.length">
-              {{ calculationData.specificationData.table[0].unitOfMeasurement }}
-            </span>
-          </p>
-        </div>
-      </div>
-
-      <div class="flex flex-col gap-4">
-        <Button label="Сохранить калькуляцию" :loading="loading" size="large" severity="success" class="text-xs" @click="saveCalculation" />
-      </div>
+    <div class="calculation-title z-50 sticky top-[60px] shadow-md bg-[#fff] mb-4">
+      <Panel toggleable :header="`Калькуляция-${calculationData.calculationType === 'fact' ? 'факт' : 'план'}`" >
+         <div class="flex flex-row items-center justify-between gap-4">
+           <div class="flex flex-row justify-between items-center gap-2">
+             <div class="flex gap-2">
+               <div class="flex flex-col gap-2">
+                 <div class="font-semibold text-lg" :class="computedStyleClass">
+                   <span>Название калькуляции-{{ calculationData.calculationType === 'fact' ? 'факт' : 'план' }}:</span
+                   ><span><InputText v-model="calculationData.title" type="text" /></span>
+                 </div>
+   
+                 <div v-if="calculationData.dateOfCreation" class="font-semibold text-lg">
+                   <span :class="computedStyleClass">Дата создания: </span>
+                   <span> {{ new Date(calculationData.dateOfCreation).toLocaleDateString() }}</span>
+                 </div>
+   
+                 <div class="font-semibold text-lg">
+                   <span :class="computedStyleClass">Дата последнего редактирования: </span>
+                   <span> {{ new Date(calculationData.lastEditDate).toLocaleDateString() }} - </span>
+                   <span class="font-bold">
+                     {{ new Date(calculationData.lastEditDate).toLocaleTimeString() }}
+                   </span>
+                 </div>
+               </div>
+   
+               <Divider layout="vertical" />
+             </div>
+   
+             <div class="flex gap-2">
+               <div v-if="finalTotalPrice" class="font-semibold text-md flex items-center">
+                 <div class="flex flex-col">
+                   <div
+                     class="flex flex-row gap-2 items-center"
+                     :style="{
+                       border: finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact' ? '1px solid red' : '',
+                       'border-radius': '5px',
+                       padding: '5px'
+                     }"
+                   >
+                     <div :class="computedStyleClass" class="max-w-[200px]">Итоговая сумма калькуляции:</div>
+                     <span
+                       class="font-bold"
+                       :class="{
+                         'text-[red]': finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact',
+                         'text-xl': finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact'
+                       }"
+                     >
+                       {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
+                     </span>
+                   </div>
+   
+                   <Divider layout="horizontal" />
+   
+                   <div v-if="totalSpecificationItems" class="flex flex-row gap-2">
+                     <div :class="computedStyleClass">На 1 ед:</div>
+                     <span class="font-bold">
+                       {{ formatNumber(truncateDecimal(finalTotalPrice / totalSpecificationItems, 1)) }}
+                     </span>
+                   </div>
+   
+                   <Divider layout="horizontal" />
+   
+                   <div class="flex gap-2 items-center">
+                     <Checkbox v-model="isAmountWithoutMetal" :value="isAmountWithoutMetal" :binary="true" />
+                     <label :class="computedStyleClass" class="font-semibold items-center text-md">Сумма без металла</label>
+                   </div>
+                 </div>
+               </div>
+   
+               <Divider layout="vertical" />
+             </div>
+   
+             <div v-if="calculationData.calculationType === 'fact'" class="flex gap-2">
+               <div v-if="finalTotalPrice" class="font-semibold text-md flex items-center">
+                 <div class="flex flex-col">
+                   <div class="flex flex-row gap-2 items-center">
+                     <div class="text-[--primary-color] max-w-[200px]">Сумма калькуляции-плана:</div>
+                     <span class="font-bold">
+                       {{ formatNumber(truncateDecimal(calculationPlanTotal, 1)) }}
+                     </span>
+                   </div>
+   
+                   <Divider layout="horizontal" />
+   
+                   <div v-if="totalSpecificationItems" class="flex flex-row gap-2">
+                     <div class="text-[--primary-color]">На 1 ед:</div>
+                     <span class="font-bold">
+                       {{ formatNumber(truncateDecimal(calculationPlanTotal / totalSpecificationItems, 1)) }}
+                     </span>
+                   </div>
+                 </div>
+               </div>
+   
+               <Divider layout="vertical" />
+             </div>
+   
+             <div class="font-semibold text-lg">
+               <p :class="computedStyleClass">Общее кол-во:</p>
+               <p>
+                 {{ truncateDecimal(totalSpecificationItems, 5) }}
+                 <span v-if="calculationData.specificationData?.table.length">
+                   {{ calculationData.specificationData.table[0].unitOfMeasurement }}
+                 </span>
+               </p>
+             </div>
+           </div>
+   
+           <div class="flex flex-col gap-4">
+             <Button label="Сохранить калькуляцию" :loading="loading" size="large" severity="success" class="text-xs" @click="saveCalculation" />
+           </div>
+         </div>
+      </Panel>
     </div>
 
     <div class="flex flex-col">
