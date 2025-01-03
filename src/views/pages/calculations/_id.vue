@@ -24,6 +24,7 @@ const newITRStaffData = ref({ name: '', salaryPerMonth: null });
 
 const calculationPlanTotal = ref(null);
 const expandAccordionTotalCosts = ref([]);
+const expandAccordionSalary = ref([]);
 const selectedStaff = ref(null);
 const selectedITRStaff = ref(null);
 const newStaffDialog = ref(false);
@@ -1311,316 +1312,336 @@ watch(increaseInSalary, (newValue, oldValue) => {
         </div>
       </div>
 
-      <div class="grid grid-cols-1fr-40 gap-4 mb-[2rem]">
-        <div class="shop">
-          <div class="card h-full">
-            <div class="flex flex-row items-center justify-between gap-2">
-              <div class="font-semibold text-xl" :class="computedStyleClass">Цех</div>
-
-              <div>
-                <Button
-                  label="Добавить сотрудника"
-                  size="small"
-                  icon="pi pi-plus"
-                  severity="success"
-                  class="mr-2 text-xs max-w-[100px]"
-                  @click="showDialog('newStaffDialog')"
-                />
-                <Button
-                  label="Удалить сотрудника"
-                  size="small"
-                  icon="pi pi-trash"
-                  severity="danger"
-                  class="mr-2 text-xs max-w-[100px]"
-                  @click="confirmDeleteWorker()"
-                  :disabled="!selectedStaff || !selectedStaff.length"
-                />
-              </div>
-            </div>
-
-            <div class="flex justify-between">
-              <div class="flex flex-row gap-2 max-w-[250px] mb-4">
-                <label for="numberOfHoursPerShift">Количество часов в смене</label>
-                <InputNumber v-model="calculationData.numberOfHoursPerShift" inputId="numberOfHoursPerShift" fluid />
-              </div>
-
-              <div class="flex flex-row gap-2 items-center">
-                <label for="increaseInSalary">Увеличения ЗП</label>
-
-                <InputNumber v-model="increaseInSalary" :step="5" showButtons buttonLayout="horizontal" style="width: 140px">
-                  <template #incrementbuttonicon>
-                    <span class="pi pi-plus" />
-                  </template>
-                  <template #decrementbuttonicon>
-                    <span class="pi pi-minus" />
-                  </template>
-                </InputNumber>
-              </div>
-            </div>
-
-            <DataTable
-              :value="calculationData.workersData.table"
-              v-model:selection="selectedStaff"
-              editMode="cell"
-              @cell-edit-complete="onCellEditComplete"
-              showGridlines
-            >
-              <template #empty> Нет данных для отображения </template>
-
-              <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
-
-              <Column field="name" header="Имя сотрудника">
-                <template #body="{ data }">
-                  {{ data.name }}
-                </template>
-
-                <template #editor="{ data }">
-                  <Select id="staff" v-model="data.name" :options="dropdownItemsWorkerStaff" class="w-full"></Select>
-                </template>
-              </Column>
-
-              <Column field="numberOfHoursWorked" header="Трудозатраты">
-                <template #body="{ data }">
-                  {{ data.numberOfHoursWorked }}
-                </template>
-
-                <template #editor="{ data }">
-                  <InputText v-model="data.numberOfHoursWorked" type="number" />
-                </template>
-              </Column>
-
-              <Column field="salaryPerDay" header="В день">
-                <template #body="{ data }">
-                  {{ formatNumber(truncateDecimal(data.salaryPerDay, 0)) }}
-                </template>
-
-                <template #editor="{ data }">
-                  <InputText v-model="data.salaryPerDay" type="number" />
-                </template>
-              </Column>
-
-              <Column field="salaryPerHour" header="В час">
-                <template #body="{ data }">
-                  {{ formatNumber(truncateDecimal(data.salaryPerDay / calculationData.numberOfHoursPerShift, 2)) }}
-                </template>
-              </Column>
-
-              <Column field="total" header="Итого">
-                <template #body="{ data }">
-                  {{
-                    formatNumber(truncateDecimal((data.salaryPerDay / calculationData.numberOfHoursPerShift) * data.numberOfHoursWorked, 0))
-                  }}
-                </template>
-              </Column>
-
-              <Column :exportable="false" style="min-width: 12rem">
-                <template #body="slotProps">
-                  <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copyWorkerData(slotProps.data)" />
-                  <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteWorker(slotProps.data)" />
-                </template>
-              </Column>
-
-              <template #footer>
-                <div class="flex justify-end gap-4 w-full">
-                  <div class="flex items-center">
-                    Итого: &nbsp;<span class="font-bold text-lg"> {{ formatNumber(salariesOfWorkersTotal) }}</span>
-                  </div>
-                </div>
-              </template>
-            </DataTable>
-
-            <div>
-              <label for="workersData" :class="computedStyleClass">Заметки:</label>
-              <Textarea v-model="calculationData.workersData.notes" />
-            </div>
-
-            <Dialog v-model:visible="newStaffDialog" :style="{ width: '450px' }" header="Выберите сотрудника" :modal="true">
-              <div class="flex flex-col gap-6">
-                <div>
-                  <label for="name" class="block font-bold mb-3">Имя</label>
-                  <SearchSelect
-                    :dropdownItemsWorkerStaff="dropdownItemsWorkerStaff"
-                    :value="newStaffData.name || ''"
-                    actionName="Добавить нового сотрудника"
-                    @change="(data) => changeSelectedItem(data, 'workers')"
-                    @clickToAction="showNewWorkerModal"
-                  />
-                </div>
-
-                <div>
-                  <label for="numberOfHoursWorked" class="block font-bold mb-3">Трудозатраты</label>
-                  <InputNumber v-model="newStaffData.numberOfHoursWorked" inputId="minmax" fluid />
-                </div>
-
-                <div>
-                  <label for="salaryPerDay" class="block font-bold mb-3">В день</label>
-                  <InputNumber v-model="newStaffData.salaryPerDay" inputId="minmax" fluid />
-                </div>
-              </div>
-
-              <template #footer>
-                <Button label="Отменить" icon="pi pi-times" text @click="newStaffDialog = false" />
-                <!-- :disabled="!newStaffData.name.trim() || newStaffData.numberOfHoursWorked === null || newStaffData.salaryPerDay === null" -->
-                <Button label="Сохранить" icon="pi pi-check" @click="saveNewStaff" />
-              </template>
-            </Dialog>
-          </div>
+      <div class="card">
+        <div class="flex flex-row justify-between gap-2 mb-4">
+          <div class="font-semibold text-xl" :class="computedStyleClass">Зарплата</div>
         </div>
 
-        <TaxCharges
-          :computedTaxData="computedWorkerTaxData"
-          :taxData="calculationData.workersTaxData"
-          :totalAmount="salariesOfWorkersTotal"
-          :taxTotal="taxTotal"
-          :formatNumber="formatNumber"
-          :coeficientOfNds="calculationData.coeficientOfNds"
-          @changeCoeficient="(data) => (calculationData.coeficientOfNds = data.value)"
-        />
-      </div>
+        <Accordion multiple :value="expandAccordionSalary">
+          <AccordionPanel value="0">
+            <AccordionHeader>
+              <div class="flex gap-6 items-center justify-between w-full">
+                <div class="flex gap-6 items-center gap-2 w-full font-semibold text-lg">
+                  Цех
+                </div>
+                
+                <div v-if="salariesOfWorkersTotal" class="flex justify-end items-center font-bold w-full mr-4 font-semibold text-lg">
+                  <span :class="computedStyleClass">Итого ЗП:</span> &nbsp;<span class="text-lg">{{ formatNumber(salariesOfWorkersTotal) }}</span>
+                </div>
 
-      <div class="grid grid-cols-1fr-40 gap-4 mb-[2rem]">
-        <div class="ITR">
-          <div class="card h-full">
-            <div class="flex flex-row items-center justify-between gap-2 mb-4">
-              <div class="font-semibold text-xl" :class="computedStyleClass">ИТР</div>
-
-              <div class="">
-                <Button
-                  label="Добавить сотрудника"
-                  size="small"
-                  icon="pi pi-plus"
-                  severity="success"
-                  class="mr-2 text-xs max-w-[100px]"
-                  @click="showDialog('newITRStaffDialog')"
-                />
-                <Button
-                  label="Удалить сотрудника"
-                  size="small"
-                  icon="pi pi-trash"
-                  severity="danger"
-                  class="mr-2 text-xs max-w-[100px]"
-                  @click="confirmDeleteItrWorker()"
-                  :disabled="!selectedITRStaff || !selectedITRStaff.length"
-                />
+                <div v-if="taxTotal" class="flex justify-end items-center font-bold w-full mr-4 font-semibold text-lg">
+                  <span :class="computedStyleClass">Итого налоговые начисления:</span> &nbsp;<span class="text-lg">{{ formatNumber(taxTotal) }}</span>
+                </div>
               </div>
-            </div>
-
-            <div class="flex gap-2 mb-4 items-center">
-              <div class="flex flex-row gap-2 items-center">
-                <label for="numberOfDaysPerShift">Количество дней в мес.</label>
-                <InputNumber v-model="calculationData.numberOfDaysPerShift" inputId="numberOfDaysPerShift" class="max-w-[50px]" fluid />
-              </div>
-
-              <div class="flex flex-row gap-2 items-center">
-                <label for="itrWorkedDays">Количество дней (трудозатраты)</label>
-                <InputNumber v-model="calculationData.itrWorkedDays" inputId="itrWorkedDays" class="max-w-[50px]" fluid />
-              </div>
-            </div>
-
-            <DataTable
-              :value="calculationData.itrData.table"
-              v-model:selection="selectedITRStaff"
-              editMode="cell"
-              @cell-edit-complete="onCellEditComplete"
-              showGridlines
-            >
-              <template #empty> Нет данных для отображения </template>
-
-              <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
-
-              <Column field="name" header="Имя сотрудника" style="width: 25%">
-                <template #body="{ data }">
-                  {{ data.name }}
-                </template>
-
-                <template #editor="{ data }">
-                  <Select id="staff" v-model="data.name" :options="dropdownItemsWorkerStaff" class="w-full"></Select>
-                </template>
-              </Column>
-
-              <Column field="salaryPerMonth" header="ЗП в месяц" style="width: 25%">
-                <template #body="{ data }">
-                  {{ formatNumber(data.salaryPerMonth) }}
-                </template>
-
-                <template #editor="{ data }">
-                  <InputNumber v-model="data.salaryPerMonth" inputId="minmax" fluid />
-                </template>
-              </Column>
-
-              <Column field="salaryPerDay" header="ЗП по факту" style="width: 25%">
-                <template #body="{ data }">
-                  {{
-                    formatNumber(
-                      truncateDecimal((data.salaryPerMonth / calculationData.numberOfDaysPerShift) * calculationData.itrWorkedDays, 0)
-                    )
-                  }}
-                </template>
-              </Column>
-
-              <Column :exportable="false" style="min-width: 12rem">
-                <template #body="slotProps">
-                  <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copyItrWorker(slotProps.data)" />
-                  <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteItrWorker(slotProps.data)" />
-                </template>
-              </Column>
-
-              <template #footer>
-                <div class="flex justify-end gap-4 w-full">
-                  <div class="flex items-center">
-                    Итого ЗП за полный месяц работы: &nbsp;<span class="font-bold text-lg">
-                      {{ formatNumber(salariesOfITRTotalPerMonth) }}</span
+            </AccordionHeader>
+  
+            <AccordionContent>
+              <div class="grid grid-cols-1fr-40 gap-4 mb-[2rem]">
+                <div class="shop">
+                  <div class="card h-full">
+                    <div class="flex justify-between">
+                      <div class="flex flex-row gap-2 max-w-[250px] mb-4">
+                        <label for="numberOfHoursPerShift">Количество часов в смене</label>
+                        <InputNumber v-model="calculationData.numberOfHoursPerShift" inputId="numberOfHoursPerShift" fluid />
+                      </div>
+    
+                      <div class="flex flex-row gap-2 items-center">
+                        <label for="increaseInSalary">Увеличения ЗП</label>
+    
+                        <InputNumber v-model="increaseInSalary" :step="5" showButtons buttonLayout="horizontal" style="width: 140px">
+                          <template #incrementbuttonicon>
+                            <span class="pi pi-plus" />
+                          </template>
+                          <template #decrementbuttonicon>
+                            <span class="pi pi-minus" />
+                          </template>
+                        </InputNumber>
+                      </div>
+                    </div>
+    
+                    <DataTable
+                      :value="calculationData.workersData.table"
+                      v-model:selection="selectedStaff"
+                      editMode="cell"
+                      @cell-edit-complete="onCellEditComplete"
+                      showGridlines
                     >
-                  </div>
+                      <template #empty> Нет данных для отображения </template>
+    
+                      <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
+    
+                      <Column field="name" header="Имя сотрудника">
+                        <template #body="{ data }">
+                          {{ data.name }}
+                        </template>
+    
+                        <template #editor="{ data }">
+                          <Select id="staff" v-model="data.name" :options="dropdownItemsWorkerStaff" class="w-full"></Select>
+                        </template>
+                      </Column>
+    
+                      <Column field="numberOfHoursWorked" header="Трудозатраты">
+                        <template #body="{ data }">
+                          {{ data.numberOfHoursWorked }}
+                        </template>
+    
+                        <template #editor="{ data }">
+                          <InputText v-model="data.numberOfHoursWorked" type="number" />
+                        </template>
+                      </Column>
+    
+                      <Column field="salaryPerDay" header="В день">
+                        <template #body="{ data }">
+                          {{ formatNumber(truncateDecimal(data.salaryPerDay, 0)) }}
+                        </template>
+    
+                        <template #editor="{ data }">
+                          <InputText v-model="data.salaryPerDay" type="number" />
+                        </template>
+                      </Column>
+    
+                      <Column field="salaryPerHour" header="В час">
+                        <template #body="{ data }">
+                          {{ formatNumber(truncateDecimal(data.salaryPerDay / calculationData.numberOfHoursPerShift, 2)) }}
+                        </template>
+                      </Column>
+    
+                      <Column field="total" header="Итого">
+                        <template #body="{ data }">
+                          {{
+                            formatNumber(truncateDecimal((data.salaryPerDay / calculationData.numberOfHoursPerShift) * data.numberOfHoursWorked, 0))
+                          }}
+                        </template>
+                      </Column>
+    
+                      <Column :exportable="false" style="min-width: 12rem">
+                        <template #body="slotProps">
+                          <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copyWorkerData(slotProps.data)" />
+                          <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteWorker(slotProps.data)" />
+                        </template>
+                      </Column>
+    
+                      <template #footer>
+                        <div
+                          class="flex justify-center items-center hover:cursor-pointer"
+                          :class="computedStyleClass"
+                          @click="showDialog('newStaffDialog')"
+                        >
+                          добавить сотрудника +
+                        </div>
 
-                  <div class="flex items-center">
-                    Итого ЗП по факту: &nbsp;<span class="font-bold text-lg"> {{ formatNumber(salariesOfITRTotal) }}</span>
+                        <div class="flex justify-end gap-4 w-full">
+                          <div class="flex items-center">
+                            Итого: &nbsp;<span class="font-bold text-lg"> {{ formatNumber(salariesOfWorkersTotal) }}</span>
+                          </div>
+                        </div>
+                      </template>
+                    </DataTable>
+    
+                    <div>
+                      <label for="workersData" :class="computedStyleClass">Заметки:</label>
+                      <Textarea v-model="calculationData.workersData.notes" />
+                    </div>
+    
+                    <Dialog v-model:visible="newStaffDialog" :style="{ width: '450px' }" header="Выберите сотрудника" :modal="true">
+                      <div class="flex flex-col gap-6">
+                        <div>
+                          <label for="name" class="block font-bold mb-3">Имя</label>
+                          <SearchSelect
+                            :dropdownItemsWorkerStaff="dropdownItemsWorkerStaff"
+                            :value="newStaffData.name || ''"
+                            actionName="Добавить нового сотрудника"
+                            @change="(data) => changeSelectedItem(data, 'workers')"
+                            @clickToAction="showNewWorkerModal"
+                          />
+                        </div>
+    
+                        <div>
+                          <label for="numberOfHoursWorked" class="block font-bold mb-3">Трудозатраты</label>
+                          <InputNumber v-model="newStaffData.numberOfHoursWorked" inputId="minmax" fluid />
+                        </div>
+    
+                        <div>
+                          <label for="salaryPerDay" class="block font-bold mb-3">В день</label>
+                          <InputNumber v-model="newStaffData.salaryPerDay" inputId="minmax" fluid />
+                        </div>
+                      </div>
+    
+                      <template #footer>
+                        <Button label="Отменить" icon="pi pi-times" text @click="newStaffDialog = false" />
+                        <!-- :disabled="!newStaffData.name.trim() || newStaffData.numberOfHoursWorked === null || newStaffData.salaryPerDay === null" -->
+                        <Button label="Сохранить" icon="pi pi-check" @click="saveNewStaff" />
+                      </template>
+                    </Dialog>
                   </div>
                 </div>
-              </template>
-            </DataTable>
+    
+                <TaxCharges
+                  :computedTaxData="computedWorkerTaxData"
+                  :taxData="calculationData.workersTaxData"
+                  :totalAmount="salariesOfWorkersTotal"
+                  :taxTotal="taxTotal"
+                  :formatNumber="formatNumber"
+                  :coeficientOfNds="calculationData.coeficientOfNds"
+                  @changeCoeficient="(data) => (calculationData.coeficientOfNds = data.value)"
+                />
+              </div>
+            </AccordionContent>
+          </AccordionPanel>
 
-            <Dialog v-model:visible="newITRStaffDialog" :style="{ width: '450px' }" header="Выберите сотрудника" :modal="true">
-              <div class="flex flex-col gap-6">
-                <div>
-                  <label for="name" class="block font-bold mb-3">Имя</label>
-                  <SearchSelect
-                    :dropdownItemsWorkerStaff="dropdownItemsWorkerStaff"
-                    :value="newITRStaffData.name || ''"
-                    actionName="Добавить нового сотрудника"
-                    @change="(data) => changeSelectedItem(data, 'itr')"
-                    @clickToAction="showNewWorkerModal"
-                  />
+          <AccordionPanel value="1">
+            <AccordionHeader>
+              <div class="flex gap-6 items-center justify-between w-full">
+                <div class="flex gap-6 items-center gap-2 w-full font-semibold text-lg">
+                  ИТР
+                </div>
+                
+                <div v-if="salariesOfITRTotal" class="flex justify-end items-center font-bold w-full mr-4 font-semibold text-lg">
+                  <span :class="computedStyleClass">Итого ЗП:</span> &nbsp;<span class="text-lg">{{ formatNumber(salariesOfITRTotal) }}</span>
                 </div>
 
-                <div>
-                  <label for="salaryPerMonth" class="block font-bold mb-3">ЗП в месяц</label>
-                  <InputNumber v-model="newITRStaffData.salaryPerMonth" inputId="minmax" fluid />
+                <div v-if="taxITRTotal" class="flex justify-end items-center font-bold w-full mr-4 font-semibold text-lg">
+                  <span :class="computedStyleClass">Итого налоговые начисления:</span> &nbsp;<span class="text-lg">{{ formatNumber(taxITRTotal) }}</span>
                 </div>
               </div>
+            </AccordionHeader>
+  
+            <AccordionContent>
+              <div class="grid grid-cols-1fr-40 gap-4 mb-[2rem]">
+                <div class="ITR">
+                  <div class="card h-full">
+                    <div class="flex gap-2 mb-4 items-center">
+                      <div class="flex flex-row gap-2 items-center">
+                        <label for="numberOfDaysPerShift">Количество дней в мес.</label>
+                        <InputNumber v-model="calculationData.numberOfDaysPerShift" inputId="numberOfDaysPerShift" class="max-w-[50px]" fluid />
+                      </div>
 
-              <template #footer>
-                <Button label="Отменить" icon="pi pi-times" text @click="newStaffDialog = false" />
-                <!-- :disabled="!newITRStaffData.name.trim() || newITRStaffData.salaryPerMonth === null" -->
-                <Button label="Сохранить" icon="pi pi-check" @click="saveNewItrStaff" />
-              </template>
-            </Dialog>
-          </div>
-        </div>
+                      <div class="flex flex-row gap-2 items-center">
+                        <label for="itrWorkedDays">Количество дней (трудозатраты)</label>
+                        <InputNumber v-model="calculationData.itrWorkedDays" inputId="itrWorkedDays" class="max-w-[50px]" fluid />
+                      </div>
+                    </div>
+    
+                    <DataTable
+                      :value="calculationData.itrData.table"
+                      v-model:selection="selectedITRStaff"
+                      editMode="cell"
+                      @cell-edit-complete="onCellEditComplete"
+                      showGridlines
+                    >
+                      <template #empty> Нет данных для отображения </template>
 
-        <TaxCharges
-          :computedTaxData="computedItrTaxData"
-          :taxData="calculationData.itrTaxData"
-          :totalAmount="salariesOfITRTotal"
-          :taxTotal="taxITRTotal"
-          :formatNumber="formatNumber"
-          :coeficientOfNds="calculationData.coeficientOfNds"
-          @changeCoeficient="(data) => (calculationData.coeficientOfNds = data.value)"
-        />
+                      <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
+
+                      <Column field="name" header="Имя сотрудника" style="width: 25%">
+                        <template #body="{ data }">
+                          {{ data.name }}
+                        </template>
+
+                        <template #editor="{ data }">
+                          <Select id="staff" v-model="data.name" :options="dropdownItemsWorkerStaff" class="w-full"></Select>
+                        </template>
+                      </Column>
+
+                      <Column field="salaryPerMonth" header="ЗП в месяц" style="width: 25%">
+                        <template #body="{ data }">
+                          {{ formatNumber(data.salaryPerMonth) }}
+                        </template>
+
+                        <template #editor="{ data }">
+                          <InputNumber v-model="data.salaryPerMonth" inputId="minmax" fluid />
+                        </template>
+                      </Column>
+
+                      <Column field="salaryPerDay" header="ЗП по факту" style="width: 25%">
+                        <template #body="{ data }">
+                          {{
+                            formatNumber(
+                              truncateDecimal((data.salaryPerMonth / calculationData.numberOfDaysPerShift) * calculationData.itrWorkedDays, 0)
+                            )
+                          }}
+                        </template>
+                      </Column>
+
+                      <Column :exportable="false" style="min-width: 12rem">
+                        <template #body="slotProps">
+                          <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copyItrWorker(slotProps.data)" />
+                          <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteItrWorker(slotProps.data)" />
+                        </template>
+                      </Column>
+
+                      <template #footer>
+                        <div
+                          class="flex justify-center items-center hover:cursor-pointer"
+                          :class="computedStyleClass"
+                          @click="showDialog('newITRStaffDialog')"
+                        >
+                          добавить сотрудника +
+                        </div>
+
+                        <div class="flex justify-end gap-4 w-full">
+                          <div class="flex items-center">
+                            Итого ЗП за полный месяц работы: &nbsp;<span class="font-bold text-lg">
+                              {{ formatNumber(salariesOfITRTotalPerMonth) }}</span
+                            >
+                          </div>
+
+                          <div class="flex items-center">
+                            Итого ЗП по факту: &nbsp;<span class="font-bold text-lg"> {{ formatNumber(salariesOfITRTotal) }}</span>
+                          </div>
+                        </div>
+                      </template>
+                    </DataTable>
+    
+                    <div>
+                      <label for="workersData" :class="computedStyleClass">Заметки:</label>
+                      <Textarea v-model="calculationData.workersData.notes" />
+                    </div>
+    
+                    <Dialog v-model:visible="newITRStaffDialog" :style="{ width: '450px' }" header="Выберите сотрудника" :modal="true">
+                      <div class="flex flex-col gap-6">
+                        <div>
+                          <label for="name" class="block font-bold mb-3">Имя</label>
+                          <SearchSelect
+                            :dropdownItemsWorkerStaff="dropdownItemsWorkerStaff"
+                            :value="newITRStaffData.name || ''"
+                            actionName="Добавить нового сотрудника"
+                            @change="(data) => changeSelectedItem(data, 'itr')"
+                            @clickToAction="showNewWorkerModal"
+                          />
+                        </div>
+
+                        <div>
+                          <label for="salaryPerMonth" class="block font-bold mb-3">ЗП в месяц</label>
+                          <InputNumber v-model="newITRStaffData.salaryPerMonth" inputId="minmax" fluid />
+                        </div>
+                      </div>
+
+                      <template #footer>
+                        <Button label="Отменить" icon="pi pi-times" text @click="newStaffDialog = false" />
+                        <Button label="Сохранить" icon="pi pi-check" @click="saveNewItrStaff" />
+                      </template>
+                    </Dialog>
+                  </div>
+                </div>
+    
+                <TaxCharges
+                  :computedTaxData="computedItrTaxData"
+                  :taxData="calculationData.itrTaxData"
+                  :totalAmount="salariesOfITRTotal"
+                  :taxTotal="taxITRTotal"
+                  :formatNumber="formatNumber"
+                  :coeficientOfNds="calculationData.coeficientOfNds"
+                  @changeCoeficient="(data) => (calculationData.coeficientOfNds = data.value)"
+                />
+              </div>
+            </AccordionContent>
+          </AccordionPanel>
+        </Accordion>
       </div>
 
       <div class="card total-costs">
-        <div class="flex flex-row justify-between gap-2">
+        <div class="flex flex-row justify-between gap-2  mb-4">
           <div class="font-semibold text-xl" :class="computedStyleClass">Общие затраты</div>
         </div>
 
