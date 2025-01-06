@@ -7,12 +7,16 @@ const mode = import.meta.env.MODE;
 
 const model = ref([
   {
-    label: 'Аналитика',
+    label: 'Статистика',
     items: [{ label: 'Отчётная статистика', icon: 'pi pi-fw pi-home', to: '/' }]
   },
   {
     label: 'Калькуляции',
     items: [{ label: 'Калькуляции', icon: 'pi-receipt', to: '/calculations' }]
+  },
+  {
+    label: 'Анализ',
+    items: [{ label: 'Анализ', icon: 'pi-receipt', to: '/analysis' }]
   },
   {
     label: 'UI Components',
