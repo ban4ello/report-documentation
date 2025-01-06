@@ -926,6 +926,15 @@ const saveCalculation = async () => {
   let today = new Date();
   today.setHours(today.getHours() + 3); // TODO: refactor (set local time)
 
+  const getTotalValue = (data, fieldName) => {
+    return data.reduce((acc, item) => {
+      if (item.key === fieldName) {
+        acc = item.perItem;
+      }
+      return acc;
+    }, 0)
+  };
+
   try {
     await ApiService.updateCalculation({
       ...calculationData.value,
@@ -933,7 +942,10 @@ const saveCalculation = async () => {
       hardwareData: JSON.stringify(calculationData.value.hardwareData),
       metalData: JSON.stringify(calculationData.value.metalData),
       lastEditDate: today,
-      total: finalTotalPrice.value
+      total: finalTotalPrice.value,
+      totalMetalPerItem: getTotalValue(finalPriceData.value, 'metalTotal'),
+      totalProcessingPerItem: getTotalValue(finalPriceData.value, 'processing'),
+      totalProfitabilityPerItem: getTotalValue(finalPriceData.value, 'profitability'),
     });
   } catch (error) {
     console.log(error);
@@ -1597,11 +1609,6 @@ watch(increaseInSalary, (newValue, oldValue) => {
                         </div>
                       </template>
                     </DataTable>
-    
-                    <div>
-                      <label for="workersData" :class="computedStyleClass">Заметки:</label>
-                      <Textarea v-model="calculationData.workersData.notes" />
-                    </div>
     
                     <Dialog v-model:visible="newITRStaffDialog" :style="{ width: '450px' }" header="Выберите сотрудника" :modal="true">
                       <div class="flex flex-col gap-6">
