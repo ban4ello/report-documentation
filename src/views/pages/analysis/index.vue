@@ -10,7 +10,10 @@ const router = useRouter();
 const expandedRows = ref([]);
 const loading = ref(false);
 const calculationsData = ref([]);
+const filteredCalculationsData = ref([]);
+const workersSalary = ref([]);
 const filters = ref();
+const selectedMonth = ref(MONTH[new Date().getMonth()] + '/' + new Date().getFullYear());
 
 const initFilters = () => {
   filters.value = {
@@ -18,9 +21,44 @@ const initFilters = () => {
   };
 };
 
-initFilters();
+const updateTableData = (camelizeData) => {
+  filteredCalculationsData.value = camelizeData.filter(item => item.customFilterField === selectedMonth.value);
+  let allSalaryAccruals = [];
+  let workers = [];
+
+  allSalaryAccruals = filteredCalculationsData.value.reduce((acc, item, index, array) => {
+    item.workersData.table.forEach((worker, workerIndex) => {
+      acc.push({
+        order: item.title,
+        workerName: item.workersData.table[workerIndex].name,
+        salary: (worker.salaryPerDay / item.numberOfHoursPerShift) * worker.numberOfHoursWorked,
+        id: worker.id,
+      });
+    });
+
+    return acc;
+  }, []);
+
+  workers = allSalaryAccruals.reduce((acc, item, index, array) => {
+    if (acc[item.workerName]) {
+      acc[item.workerName].push(item)
+    } else {
+      acc[item.workerName] = [item]
+    }
+
+    return acc;
+  }, {});
+
+  workersSalary.value = Object.keys(workers).map(item => ({ table: workers[item].reduce((acc, item) => {
+    acc[item.order] = item;
+    return acc;
+  }, {}), name: item }));
+};
 
 onBeforeMount(async () => {
+  initFilters();
+  loading.value = true;
+
   try {
     const factCalculatonsRes = await ApiService.getCalculations({ filter: { calculation_type: 'fact' } });
     const calculationsRes = await Promise.allSettled(factCalculatonsRes.data.map(item => ApiService.getCalculationById(item.id)));
@@ -58,10 +96,19 @@ onBeforeMount(async () => {
     // console.log('calculationsData', camelizeData);
 
     calculationsData.value = camelizeData;
+    updateTableData(camelizeData);
   } catch (error) {
     console.log(error);
+  } finally {
+    loading.value = false;
   }
 });
+
+const setMonth = (newDate) => {
+  selectedMonth.value = MONTH[new Date(newDate).getMonth()] + '/' + new Date(newDate).getFullYear();
+
+  updateTableData(calculationsData.value);
+};
 
 const changeFilterModel = (newDate, filterModel) => {
   filterModel.value = MONTH[new Date(newDate).getMonth()] + '/' + new Date(newDate).getFullYear();
@@ -212,13 +259,88 @@ const changeFilterModel = (newDate, filterModel) => {
           </template>
 
           <template #body="{ data }">
-            {{ formatNumber(truncateDecimal(data.total, 1)) }}
+            <span class="font-bold">
+              {{ formatNumber(truncateDecimal(data.total, 1)) }}
+            </span>
           </template>
         </Column>
       </DataTable>
     </div>
 
-    <ConfirmDialog></ConfirmDialog>
+    <div class="card">
+      <div class="flex gap-4 justify-between">
+        <div class="font-semibold text-[--primary-color] text-xl mb-4">ЗП Цех</div>
+      </div>
+
+      <div class="flex gap-4 items-center mb-4">
+        <span>Выберите дату:</span>
+
+        <DatePicker
+          :modelValue="selectedMonth"
+          dateFormat="mm.yy"
+          placeholder="mm/yyyy"
+          view="month"
+          style="width: 200px;"
+          @update:modelValue="setMonth"
+        />
+      </div>
+
+      <DataTable
+        v-model:expandedRows="expandedRows"
+        :value="workersSalary"
+        :rows="10"
+        :rowHover="true"
+        dataKey="id"
+        resizableColumns
+        showGridlines
+        scrollable
+      >
+        <template #empty> Нет данных для отображения </template>
+        <template #loading> Загружается список... Пожалуйста подождите. </template>
+
+        <Column frozen>
+          <template #header>
+            <div v-tooltip.top="{ value: 'Имя сотрудника', showDelay: 1000, hideDelay: 300 }" class="font-bold">
+              <div>
+                Имя сотрудника
+              </div>
+            </div>
+          </template>
+
+          <template #body="{ data }">
+            {{ data.name }}
+          </template>
+        </Column>
+
+        <Column v-for="(col, index) of filteredCalculationsData.length" :key="col.field" :field="`col${index}`" :header="col.header">
+          <template #header>
+            <div v-tooltip.top="{ value: filteredCalculationsData[index]?.title, showDelay: 1000, hideDelay: 300 }" class="font-bold">
+              {{ filteredCalculationsData[index]?.title }}
+            </div>
+          </template>
+
+          <template #body="{ data }">
+            {{ formatNumber(truncateDecimal(data.table[filteredCalculationsData[index]?.title]?.salary, 2)) || '-' }}
+          </template>
+        </Column>
+
+        <Column frozen alignFrozen="right">
+          <template #header>
+            <div v-tooltip.top="{ value: 'Итого', showDelay: 1000, hideDelay: 300 }" class="font-bold">
+              <div>
+                Итого
+              </div>
+            </div>
+          </template>
+
+          <template #body="{ data }">
+            <span class="font-bold">
+              {{ formatNumber(truncateDecimal(Object.keys(data.table).reduce((acc, key) => (acc += data.table[key].salary), 0), 2)) || '-' }}
+            </span>
+          </template>
+        </Column>
+      </DataTable>
+    </div>
   </Fluid>
 </template>
 
