@@ -52,7 +52,7 @@ const updateWorkersSalaryTable = (calculationData) => {
   let allSalaryAccruals = [];
   let workers = [];
 
-  allSalaryAccruals = filteredCalculationsData.value.reduce((acc, item, index, array) => {
+  allSalaryAccruals = filteredCalculationsData.value.reduce((acc, item) => {
     item.workersData.table.forEach((worker, workerIndex) => {
       acc.push({
         order: item.title,
@@ -65,7 +65,7 @@ const updateWorkersSalaryTable = (calculationData) => {
     return acc;
   }, []);
 
-  workers = allSalaryAccruals.reduce((acc, item, index, array) => {
+  workers = allSalaryAccruals.reduce((acc, item) => {
     if (acc[item.workerName]) {
       acc[item.workerName].push(item)
     } else {
@@ -75,10 +75,29 @@ const updateWorkersSalaryTable = (calculationData) => {
     return acc;
   }, {});
 
-  workersSalary.value = Object.keys(workers).map(item => ({ table: workers[item].reduce((acc, item) => {
-    acc[item.order] = item;
-    return acc;
-  }, {}), name: item }));
+  workersSalary.value = Object.keys(workers).map(item => {
+    return {
+      table: workers[item].reduce((acc, item) => {
+          acc[item.order] = item;
+          return acc;
+        }, {}),
+      name: item,
+    };
+  });
+
+  // added new synthetic row 'Total' for workersSalary
+  workersSalary.value.push({
+    table: allSalaryAccruals.reduce((acc, item) => {
+      if (acc[item.order]) {
+        acc[item.order] = {...item, salary: acc[item.order].salary + item.salary};
+      } else {
+        acc[item.order] = item;
+      }
+
+      return acc;
+    }, {}),
+    name: 'Итого',
+  });
 };
 
 onBeforeMount(async () => {
@@ -156,6 +175,12 @@ const setWorkersFilter = (newDate) => {
 
   updateWorkersSalaryTable(rawCalculationData.value);
 };
+
+const rowStyle = (data) => {
+  if (data.name === 'Итого') {
+    return { fontWeight: 'bold', fontStyle: 'italic' };
+  }
+};
 </script>
 
 <template>
@@ -188,7 +213,6 @@ const setWorkersFilter = (newDate) => {
       </div>
 
       <DataTable
-        v-model:expandedRows="expandedRows"
         :value="calculationsData"
         :rows="10"
         :rowHover="true"
@@ -248,7 +272,7 @@ const setWorkersFilter = (newDate) => {
           </template>
 
           <template #body="{ data }">
-            {{ data.specificationData.table.reduce((acc, item) => acc += (item.quantity * Number(item.valuePerUnit)), 0) }}
+            {{ formatNumber(truncateDecimal(data.specificationData.table.reduce((acc, item) => acc += (item.quantity * Number(item.valuePerUnit)), 0), 3)) }}
           </template>
         </Column>
 
@@ -340,7 +364,6 @@ const setWorkersFilter = (newDate) => {
       </div>
 
       <DataTable
-        v-model:expandedRows="expandedRows"
         :value="workersSalary"
         :rows="10"
         :rowHover="true"
@@ -348,6 +371,7 @@ const setWorkersFilter = (newDate) => {
         resizableColumns
         showGridlines
         scrollable
+        :rowStyle="rowStyle"
       >
         <template #empty> Нет данных для отображения </template>
         <template #loading> Загружается список... Пожалуйста подождите. </template>
