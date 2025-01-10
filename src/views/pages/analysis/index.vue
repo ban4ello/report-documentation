@@ -1,8 +1,7 @@
 <script setup>
 import ApiService from '@/service/ApiService';
-import { onBeforeMount, ref } from 'vue';
+import { onBeforeMount, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
-import { FilterMatchMode, FilterOperator } from '@primevue/core/api';
 import { MONTH } from '@/utils/constants.js';
 import { camelize, formatNumber, truncateDecimal } from '@/utils/helper.js';
 
@@ -12,21 +11,48 @@ const loading = ref(false);
 const calculationsData = ref([]);
 const filteredCalculationsData = ref([]);
 const workersSalary = ref([]);
-const filters = ref();
-const selectedMonth = ref(MONTH[new Date().getMonth()] + '/' + new Date().getFullYear());
+const rawCalculationData = ref([]);
+const isShowAllYear = ref(false);
+const isShowAllYearAnalysis = ref(false);
+const analysisTableFilter = ref({
+  selectedYear: new Date().getFullYear(),
+  selectedMonth: MONTH[new Date().getMonth()] + '/' + new Date().getFullYear(),
+});
+const workersSalaryFilter = ref({
+  selectedYear: new Date().getFullYear(),
+  selectedMonth: MONTH[new Date().getMonth()] + '/' + new Date().getFullYear(),
+});
 
-const initFilters = () => {
-  filters.value = {
-    customFilterField: { operator: FilterOperator.AND, constraints: [{ value: null, matchMode: FilterMatchMode.EQUALS }] },
-  };
+watch(isShowAllYear, () => {
+  updateWorkersSalaryTable(rawCalculationData.value);
+});
+
+watch(isShowAllYearAnalysis, () => {
+  updateAnalysisTable(rawCalculationData.value);
+});
+
+const updateAnalysisTable = (data) => {
+  calculationsData.value = data.filter(item => {
+    if (isShowAllYearAnalysis.value) {
+      return new Date(item.dateOfCreation).getFullYear() === analysisTableFilter.value.selectedYear;
+    }
+
+    return item.customFilterField === analysisTableFilter.value.selectedMonth;
+  });
 };
 
-const updateTableData = (camelizeData) => {
-  filteredCalculationsData.value = camelizeData.filter(item => item.customFilterField === selectedMonth.value);
+const updateWorkersSalaryTable = (calculationData) => {
+  filteredCalculationsData.value = calculationData.filter(item => {
+    if (isShowAllYear.value) {
+      return new Date(item.dateOfCreation).getFullYear() === workersSalaryFilter.value.selectedYear;
+    }
+
+    return item.customFilterField === workersSalaryFilter.value.selectedMonth;
+  });
   let allSalaryAccruals = [];
   let workers = [];
 
-  allSalaryAccruals = filteredCalculationsData.value.reduce((acc, item, index, array) => {
+  allSalaryAccruals = filteredCalculationsData.value.reduce((acc, item) => {
     item.workersData.table.forEach((worker, workerIndex) => {
       acc.push({
         order: item.title,
@@ -39,7 +65,7 @@ const updateTableData = (camelizeData) => {
     return acc;
   }, []);
 
-  workers = allSalaryAccruals.reduce((acc, item, index, array) => {
+  workers = allSalaryAccruals.reduce((acc, item) => {
     if (acc[item.workerName]) {
       acc[item.workerName].push(item)
     } else {
@@ -49,14 +75,32 @@ const updateTableData = (camelizeData) => {
     return acc;
   }, {});
 
-  workersSalary.value = Object.keys(workers).map(item => ({ table: workers[item].reduce((acc, item) => {
-    acc[item.order] = item;
-    return acc;
-  }, {}), name: item }));
+  workersSalary.value = Object.keys(workers).map(item => {
+    return {
+      table: workers[item].reduce((acc, item) => {
+          acc[item.order] = item;
+          return acc;
+        }, {}),
+      name: item,
+    };
+  });
+
+  // added new synthetic row 'Total' for workersSalary
+  workersSalary.value.push({
+    table: allSalaryAccruals.reduce((acc, item) => {
+      if (acc[item.order]) {
+        acc[item.order] = {...item, salary: acc[item.order].salary + item.salary};
+      } else {
+        acc[item.order] = item;
+      }
+
+      return acc;
+    }, {}),
+    name: 'Итого',
+  });
 };
 
 onBeforeMount(async () => {
-  initFilters();
   loading.value = true;
 
   try {
@@ -77,16 +121,25 @@ onBeforeMount(async () => {
         //   const date = new Date();
         //   date.setMonth(11);
         //   date.setFullYear(2024);
-        //   acc.customFilterField = MONTH[date.getMonth()] + '/' + date.getFullYear();
+        //   acc.customFilterField = MONTH[date.getMonth()] + '/' + date.getFullYear('2024');
+        //   acc.dateOfCreation = new Date().setFullYear('2024');
         // }
 
         // if (index === 1) {
         //   const date = new Date();
-        //   date.setMonth(4);
-        //   date.setFullYear(2023);
-        //   acc.customFilterField = MONTH[date.getMonth()] + '/' + date.getFullYear();
+        //   date.setMonth(10);
+        //   date.setFullYear(2024);
+        //   acc.customFilterField = MONTH[date.getMonth()] + '/' + date.getFullYear('2024');
+        //   acc.dateOfCreation = new Date().setFullYear('2024');
         // }
 
+        // if (index === 2) {
+        //   const date = new Date();
+        //   date.setMonth(4);
+        //   date.setFullYear(2023);
+        //   acc.customFilterField = MONTH[date.getMonth()] + '/' + date.getFullYear('2023');
+        //   acc.dateOfCreation = new Date().setFullYear('2023');
+        // }
         // // !!! remove before deploy production !!!
 
         return acc;
@@ -94,9 +147,10 @@ onBeforeMount(async () => {
     });
 
     // console.log('calculationsData', camelizeData);
+    rawCalculationData.value = camelizeData;
 
-    calculationsData.value = camelizeData;
-    updateTableData(camelizeData);
+    updateWorkersSalaryTable(camelizeData);
+    updateAnalysisTable(camelizeData);
   } catch (error) {
     console.log(error);
   } finally {
@@ -104,14 +158,28 @@ onBeforeMount(async () => {
   }
 });
 
-const setMonth = (newDate) => {
-  selectedMonth.value = MONTH[new Date(newDate).getMonth()] + '/' + new Date(newDate).getFullYear();
+const setFilterForAnalysisTable = (newDate) => {
+  analysisTableFilter.value = {
+    selectedYear: new Date(newDate).getFullYear(),
+    selectedMonth: MONTH[new Date(newDate).getMonth()] + '/' + new Date(newDate).getFullYear(),
+  }
 
-  updateTableData(calculationsData.value);
+  updateAnalysisTable(rawCalculationData.value);
 };
 
-const changeFilterModel = (newDate, filterModel) => {
-  filterModel.value = MONTH[new Date(newDate).getMonth()] + '/' + new Date(newDate).getFullYear();
+const setWorkersFilter = (newDate) => {
+  workersSalaryFilter.value = {
+    selectedYear: new Date(newDate).getFullYear(),
+    selectedMonth: MONTH[new Date(newDate).getMonth()] + '/' + new Date(newDate).getFullYear(),
+  }
+
+  updateWorkersSalaryTable(rawCalculationData.value);
+};
+
+const rowStyle = (data) => {
+  if (data.name === 'Итого') {
+    return { fontWeight: 'bold', fontStyle: 'italic' };
+  }
 };
 </script>
 
@@ -124,12 +192,27 @@ const changeFilterModel = (newDate, filterModel) => {
     <div class="card">
       <div class="flex gap-4 justify-between">
         <div class="font-semibold text-[--primary-color] text-xl mb-4">Анализ</div>
+
+        <div class="flex gap-4 items-center mb-4">
+          <span>Выберите дату:</span>
+
+          <DatePicker
+            :modelValue="analysisTableFilter.selectedMonth"
+            dateFormat="mm.yy"
+            placeholder="mm/yyyy"
+            view="month"
+            style="width: 200px;"
+            @update:modelValue="setFilterForAnalysisTable"
+          />
+
+          <div class="flex gap-2 items-center">
+            <Checkbox v-model="isShowAllYearAnalysis" :value="isShowAllYearAnalysis" :binary="true" />
+            <label class="font-semibold items-center text-md">За весь год</label>
+          </div>
+        </div>
       </div>
 
       <DataTable
-        v-model:expandedRows="expandedRows"
-        v-model:filters="filters"
-        filterDisplay="menu"
         :value="calculationsData"
         :rows="10"
         :rowHover="true"
@@ -149,16 +232,6 @@ const changeFilterModel = (newDate, filterModel) => {
 
           <template #body="{ data }">
             {{ data.customFilterField }}
-          </template>
-
-          <template #filter="{ filterModel }">
-            <DatePicker
-              :modelValue="filterModel.value"
-              dateFormat="mm.yy"
-              placeholder="mm/yyyy"
-              view="month"
-              @update:modelValue="(v) => changeFilterModel(v, filterModel)"
-            />
           </template>
         </Column>
 
@@ -199,7 +272,7 @@ const changeFilterModel = (newDate, filterModel) => {
           </template>
 
           <template #body="{ data }">
-            {{ data.specificationData.table.reduce((acc, item) => acc += (item.quantity * Number(item.valuePerUnit)), 0) }}
+            {{ formatNumber(truncateDecimal(data.specificationData.table.reduce((acc, item) => acc += (item.quantity * Number(item.valuePerUnit)), 0), 3)) }}
           </template>
         </Column>
 
@@ -270,23 +343,27 @@ const changeFilterModel = (newDate, filterModel) => {
     <div class="card">
       <div class="flex gap-4 justify-between">
         <div class="font-semibold text-[--primary-color] text-xl mb-4">ЗП Цех</div>
-      </div>
 
-      <div class="flex gap-4 items-center mb-4">
-        <span>Выберите дату:</span>
-
-        <DatePicker
-          :modelValue="selectedMonth"
-          dateFormat="mm.yy"
-          placeholder="mm/yyyy"
-          view="month"
-          style="width: 200px;"
-          @update:modelValue="setMonth"
-        />
+        <div class="flex gap-4 items-center mb-4">
+          <span>Выберите дату:</span>
+  
+          <DatePicker
+            :modelValue="workersSalaryFilter.selectedMonth"
+            dateFormat="mm.yy"
+            placeholder="mm/yyyy"
+            view="month"
+            style="width: 200px;"
+            @update:modelValue="setWorkersFilter"
+          />
+  
+          <div class="flex gap-2 items-center">
+            <Checkbox v-model="isShowAllYear" :value="isShowAllYear" :binary="true" />
+            <label class="font-semibold items-center text-md">За весь год</label>
+          </div>
+        </div>
       </div>
 
       <DataTable
-        v-model:expandedRows="expandedRows"
         :value="workersSalary"
         :rows="10"
         :rowHover="true"
@@ -294,6 +371,7 @@ const changeFilterModel = (newDate, filterModel) => {
         resizableColumns
         showGridlines
         scrollable
+        :rowStyle="rowStyle"
       >
         <template #empty> Нет данных для отображения </template>
         <template #loading> Загружается список... Пожалуйста подождите. </template>
