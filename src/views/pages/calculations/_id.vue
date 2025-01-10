@@ -956,8 +956,8 @@ const saveCalculation = async () => {
 
 const computedStyleClass = computed(() => {
   return {
-    'text-[--secondary-color]': calculationData.value.calculationType === 'fact',
-    'text-[--primary-color]': calculationData.value.calculationType === 'plan'
+    'text-[--secondary-color]': calculationData.value.calculationType === 'plan',
+    'text-[--primary-color]': calculationData.value.calculationType === 'fact'
   };
 });
 
@@ -1120,7 +1120,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
                   </template>
                 </Column>
 
-                <Column field="quantity" header="Количество" style="width: 25%">
+                <Column field="quantity" header="Количество, шт" style="width: 25%">
                   <template #body="{ data }">
                     {{ data.quantity }}
                   </template>
@@ -1535,7 +1535,14 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
                       <div class="flex flex-row gap-2 items-center">
                         <label for="itrWorkedDays">Количество дней (трудозатраты)</label>
-                        <InputNumber v-model="calculationData.itrWorkedDays" inputId="itrWorkedDays" class="max-w-[50px]" fluid />
+                        <InputNumber
+                          v-model="calculationData.itrWorkedDays"
+                          inputId="itrWorkedDays"
+                          class="max-w-[50px]"
+                          fluid
+                          :minFractionDigits="1"
+                          :maxFractionDigits="5"
+                        />
                       </div>
                     </div>
     
