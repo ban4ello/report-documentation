@@ -128,7 +128,7 @@ const router = createRouter({
     },
 
     {
-      path: '/auth/login',
+      path: '/login',
       name: 'login',
       component: () => import('@/views/pages/auth/Login.vue')
     },
@@ -144,5 +144,13 @@ const router = createRouter({
     }
   ]
 });
+
+router.beforeEach((to, from, next) => {
+  const isAuthenticated = localStorage.getItem('isAuthenticated');
+  console.log('router.beforeEach', to, isAuthenticated);
+
+  if (to.name !== 'login' && !isAuthenticated) next({ path: '/login' });
+  else next();
+})
 
 export default router;
