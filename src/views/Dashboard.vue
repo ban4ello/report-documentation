@@ -16,12 +16,6 @@ const items = ref([
 ]);
 
 onMounted(async () => {
-  try {
-    await ApiService.test();
-  } catch (error) {
-    console.log(error);
-  }
-
   ProductService.getProductsSmall().then((data) => (products.value = data));
   chartData.value = setChartData();
   chartOptions.value = setChartOptions();

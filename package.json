@@ -11,15 +11,19 @@
         "lint": "eslint --fix . --ext .vue,.js,.jsx,.cjs,.mjs --fix --ignore-path .gitignore"
     },
     "dependencies": {
+        "@primevue/forms": "^4.2.5",
         "@primevue/themes": "^4.0.0",
+        "@unhead/vue": "^1.11.15",
         "axios": "^1.7.5",
         "chart.js": "3.3.2",
         "primeicons": "^6.0.1",
         "primevue": "^4.0.0",
         "vue": "^3.4.34",
+        "vue-recaptcha": "^3.0.0-alpha.6",
         "vue-router": "^4.4.0",
         "vue3-xlsx": "^1.1.2",
-        "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
+        "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz",
+        "zod": "^3.24.1"
     },
     "devDependencies": {
         "@primevue/auto-import-resolver": "^4.0.1",
