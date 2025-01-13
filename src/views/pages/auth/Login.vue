@@ -1,12 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import ApiService from '@/service/ApiService';
 import { useToast } from 'primevue/usetoast';
-// import { zodResolver } from '@primevue/forms/resolvers/zod';
-// import { z } from 'zod';
-// import { VueRecaptcha } from 'vue-recaptcha';
-import { Checkbox as RecaptchaCheckbox  } from 'vue-recaptcha';
 
 
 const toast = useToast();
@@ -27,20 +23,8 @@ const newUserData = ref({
 const checked = ref(false);
 const loading = ref(false);
 const visible = ref(false);
-const reCAPTCHA = ref()
-
-// const resolver = ref(zodResolver(
-//   z.object({
-//     username: z.string().min(1, { message: 'Поле обязательно!' }),
-//     email: z.string().min(1, { message: 'Поле обязательно!' }).email({ message: 'Некорректный email' }),
-//   })
-// ));
 
 const login = async ({ email, password }) => {
-  // grecaptcha.enterprise.ready(async () => {
-  //   const token = await grecaptcha.enterprise.execute('6LeUF7UqAAAAAChYDk5sWq8sajQRofFXJLMlGG9H', {action: 'LOGIN'});
-  //   console.log(1234, token);
-  // });
   try {
     loading.value = true;
     const response = await ApiService.login({ email, password, });
@@ -80,20 +64,6 @@ const showNotif = ({ title, message, type = 'success' }) => {
   // 'error'
   toast.add({ severity: type, summary: title, detail: message, life: 5000 });
 }
-
-const siteKey = computed(() => {
-  return '6LeUF7UqAAAAAChYDk5sWq8sajQRofFXJLMlGG9H';
-  // return '6LeUF7UqAAAAAKLKb3Rir7bKOdfESnsFOkrmI2rm';
-});
-
-const handleError = () => {
-  // Do some validation
-};
-
-const handleSuccess = (response) => {
-  console.log(6666, response);
-  // Do some validation
-};
 </script>
 
 <template>
@@ -183,9 +153,9 @@ const handleSuccess = (response) => {
               </div>
             </div>
 
-            <RecaptchaCheckbox v-model="reCAPTCHA" class="flex justify-center mb-4" />
+            <!-- <RecaptchaCheckbox v-model="reCAPTCHA" class="flex justify-center mb-4" /> -->
 
-            <Button :disabled="!reCAPTCHA" label="Войти" class="w-full" @click="login(userData)"></Button>
+            <Button label="Войти" class="w-full" @click="login(userData)"></Button>
           </div>
         </div>
       </div>
