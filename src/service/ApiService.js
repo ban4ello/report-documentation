@@ -177,4 +177,8 @@ export default {
   login({ email, password }) {
     return api().post('/login', { email, password });
   },
+
+  logout() {
+    return api().post('/logout');
+  },
 };

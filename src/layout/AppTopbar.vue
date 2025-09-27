@@ -3,16 +3,25 @@ import { useLayout } from '@/layout/composables/layout';
 import AppConfigurator from './AppConfigurator.vue';
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
+import ApiService from '@/service/ApiService';
 
 const user = JSON.parse(localStorage.getItem('user'));
 const router = useRouter();
 const { onMenuToggle, toggleDarkMode, isDarkTheme, appConfig } = useLayout();
 const logout = async () => {
-  localStorage.removeItem('token');
-  localStorage.removeItem('isAuthenticated');
-  localStorage.removeItem('user');
+  try {
+    // Вызываем logout на сервере
+    await ApiService.logout();
+  } catch (error) {
+    console.error('Ошибка при выходе:', error);
+  } finally {
+    // Очищаем локальные данные независимо от результата запроса
+    localStorage.removeItem('token');
+    localStorage.removeItem('isAuthenticated');
+    localStorage.removeItem('user');
 
-  router.push({ path: '/login' })
+    router.push({ path: '/auth/login' });
+  }
 };
 
 const menuItems = ref([
