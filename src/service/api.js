@@ -22,17 +22,40 @@ export default () => {
   Api.interceptors.response.use(
     (response) => response,
     (error) => {
+      console.log('API Error:', error);
+
       if (error.response?.status === 401) {
-        // Токен истек или недействителен
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        localStorage.removeItem('isAuthenticated');
-        // Перенаправляем на страницу логина
-        window.location.href = '/auth/login';
+        const errorCode = error.response?.data?.code;
+
+        // Если это ошибка токена (истек, недействителен, отсутствует), делаем logout
+        if (
+          errorCode === 'TOKEN_EXPIRED' ||
+          errorCode === 'INVALID_TOKEN' ||
+          errorCode === 'NO_TOKEN' ||
+          errorCode === 'INVALID_TOKEN_FORMAT'
+        ) {
+          // Токен истек или недействителен
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+
+          // Перенаправляем на страницу логина
+          window.location.href = '/login';
+        }
+        // Если это INVALID_CREDENTIALS (ошибка входа на странице логина),
+        // не делаем redirect, просто пропускаем ошибку дальше
       }
+
+      if (error.response?.status === 429) {
+        // Rate limit exceeded
+        const retryAfter = error.response?.data?.retryAfter || 900;
+        const minutes = Math.ceil(retryAfter / 60);
+        console.error(`Слишком много попыток. Попробуйте через ${minutes} минут`);
+      }
+
       if (error.message === 'Network Error') {
-        console.log('setError', 'Нет подключения к интернету. Проверьте соединение и перезагрузите страницу.');
+        console.error('Нет подключения к интернету. Проверьте соединение и перезагрузите страницу.');
       }
+
       return Promise.reject(error);
     }
   );

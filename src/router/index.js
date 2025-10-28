@@ -146,10 +146,20 @@ const router = createRouter({
 });
 
 router.beforeEach((to, from, next) => {
-  const isAuthenticated = localStorage.getItem('isAuthenticated');
+  const isAuthenticated = localStorage.getItem('token');
 
   if (to.name !== 'login' && (!isAuthenticated || isAuthenticated === 'false')) next({ path: '/login' });
   else next();
+});
+
+// Обработка глобальных ошибок навигации
+router.onError((error) => {
+  console.error('Router error:', error);
+
+  // Если ошибка авторизации, перенаправляем на логин
+  if (error.message && error.message.includes('401')) {
+    router.push('/login');
+  }
 });
 
 export default router;
