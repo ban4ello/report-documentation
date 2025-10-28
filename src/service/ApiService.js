@@ -24,6 +24,9 @@ export default {
     itrData,
     workersTaxData,
     itrTaxData,
+    totalMetalPerItem,
+    totalProcessingPerItem,
+    totalProfitabilityPerItem,
     total
   }) {
     return api().post('/calculation', {
@@ -49,6 +52,9 @@ export default {
       itrData,
       workersTaxData,
       itrTaxData,
+      totalMetalPerItem,
+      totalProcessingPerItem,
+      totalProfitabilityPerItem,
       total
     });
   },
@@ -74,6 +80,9 @@ export default {
     itrData,
     workersTaxData,
     itrTaxData,
+    totalMetalPerItem,
+    totalProcessingPerItem,
+    totalProfitabilityPerItem,
     total
   }) {
     return api().put(`/calculation/${id}`, {
@@ -96,12 +105,17 @@ export default {
       itrData,
       workersTaxData,
       itrTaxData,
+      totalMetalPerItem,
+      totalProcessingPerItem,
+      totalProfitabilityPerItem,
       total
     });
   },
 
-  getCalculations() {
-    return api().get('/calculations');
+  getCalculations(params) {
+    const searchParams = new URLSearchParams(params && params.filter).toString();
+
+    return api().get(`/calculations?${searchParams}`);
   },
 
   getCalculationById(id) {
@@ -155,8 +169,16 @@ export default {
   getWorkers() {
     return api().get('/workers');
   },
+  
+  signup({ username, password, email, role }) {
+    return api().post('/signup', { username, password, email, role });
+  },
 
-  test() {
-    return api().get('/test');
-  }
+  login({ email, password }) {
+    return api().post('/login', { email, password });
+  },
+
+  logout() {
+    return api().post('/logout');
+  },
 };
