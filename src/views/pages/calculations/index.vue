@@ -2,19 +2,35 @@
 import ApiService from '@/service/ApiService';
 import { MochDataService } from '@/service/MochDataService';
 import { onBeforeMount, ref } from 'vue';
-// import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import { useRouter } from 'vue-router';
 
 const router = useRouter();
-// const toast = useToast();
-const dropdownItemsParentCalculations = ref([]);
 const expandedRows = ref([]);
 const calculationPlanId = ref(null);
 const loading = ref(false);
 
 let calculationsData = ref([]);
 const confirm = useConfirm();
+
+onBeforeMount(() => {
+  MochDataService.getCalculationsData().then((data) => {
+    calculationsData.value = data;
+  });
+
+  ApiService.getParentCalculations().then((res) => {
+    const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase());
+    const camelizeData = res.data.map((item) => {
+      return Object.keys(item).reduce((acc, key) => {
+        acc[camelize(key)] = item[key];
+
+        return acc;
+      }, {});
+    });
+
+    calculationsData.value = camelizeData;
+  });
+});
 
 const confirmDeleteEntity = async (data, typeOfEntity = 'parent-calculation') => {
   confirm.require({
@@ -61,25 +77,6 @@ const confirmDeleteEntity = async (data, typeOfEntity = 'parent-calculation') =>
   });
 };
 
-onBeforeMount(() => {
-  MochDataService.getCalculationsData().then((data) => {
-    dropdownItemsParentCalculations.value = data.map((item) => item.name);
-  });
-
-  ApiService.getParentCalculations().then((res) => {
-    const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase());
-    const camelizeData = res.data.map((item) => {
-      return Object.keys(item).reduce((acc, key) => {
-        acc[camelize(key)] = item[key];
-
-        return acc;
-      }, {});
-    });
-
-    calculationsData.value = camelizeData;
-  });
-});
-
 const expandRow = (row) => {
   ApiService.getParentCalculationChildren(row.data.id).then((res) => {
     const updatedData = JSON.parse(JSON.stringify(calculationsData.value));
@@ -121,7 +118,7 @@ const expandRow = (row) => {
           создать новую калькуляцию-план +
         </div>
       </div>
-      <!-- :paginator="true" -->
+
       <DataTable
         v-model:expandedRows="expandedRows"
         :value="calculationsData"

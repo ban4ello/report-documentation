@@ -487,106 +487,143 @@ export const MochDataService = {
   calculationsData() {
     return [
       {
-        id: '1',
-        name: 'Родительская Калькуляция 1',
-        createdOn: new Date().toLocaleDateString(),
-        childrens: [
+        id: 1,
+        title: 'Название калькуляции-план: 1',
+        date_of_creation: '2025-10-28T07:15:12.561Z',
+        calculations: [
           {
-            id: '1-1',
-            name: 'Калькуляция-ребёнок 1',
-            createdOn: new Date().toLocaleDateString(),
-            type: 'fact'
-          },
-          {
-            id: '1-2',
-            name: 'Калькуляция-ребёнок 2 - план',
-            createdOn: new Date().toLocaleDateString(),
-            type: 'plan'
-          },
-          {
-            id: '1-3',
-            name: 'Калькуляция-ребёнок 3',
-            createdOn: new Date().toLocaleDateString(),
-            type: 'fact'
+            id: 1,
+            title: 'Название калькуляции-план: 1',
+            calculation_type: 'plan',
+            total: '91209.144',
+            date_of_creation: '2025-10-28T07:15:12.700Z'
           }
         ]
       },
       {
-        id: '2',
-        name: 'Родительская Калькуляция 2',
-        createdOn: new Date().toLocaleDateString(),
-        childrens: [
+        id: 2,
+        title: 'Название калькуляции-план: 1 (копия 2025-10-28)',
+        date_of_creation: '2025-10-28T08:14:41.144Z',
+        calculations: [
           {
-            id: '2-1',
-            name: 'Калькуляция-ребёнок 1',
-            createdOn: new Date().toLocaleDateString(),
-            type: 'plant'
+            id: 2,
+            title: 'Название калькуляции-план: 2 upd',
+            calculation_type: 'plan',
+            total: '91209.144',
+            date_of_creation: '2025-10-28T08:14:41.174Z'
           },
           {
-            id: '2-2',
-            name: 'Калькуляция-ребёнок 2',
-            createdOn: new Date().toLocaleDateString(),
-            type: 'fact'
-          },
-          {
-            id: '2-3',
-            name: 'Калькуляция-ребёнок 3',
-            createdOn: new Date().toLocaleDateString(),
-            type: 'fact'
-          }
-        ]
-      },
-      {
-        id: '3',
-        name: 'Родительская Калькуляция 3',
-        createdOn: new Date().toLocaleDateString(),
-        childrens: [
-          {
-            id: '3-1',
-            name: 'Калькуляция-ребёнок 1',
-            createdOn: new Date().toLocaleDateString(),
-            type: 'plant'
-          },
-          {
-            id: '3-2',
-            name: 'Калькуляция-ребёнок 2',
-            createdOn: new Date().toLocaleDateString(),
-            type: 'fact'
-          },
-          {
-            id: '3-3',
-            name: 'Калькуляция-ребёнок 3',
-            createdOn: new Date().toLocaleDateString(),
-            type: 'fact'
-          }
-        ]
-      },
-      {
-        id: '4',
-        name: 'Родительская Калькуляция 4',
-        createdOn: new Date().toLocaleDateString(),
-        childrens: [
-          {
-            id: '4-1',
-            name: 'Калькуляция-ребёнок 1',
-            createdOn: new Date().toLocaleDateString(),
-            type: 'plant'
-          },
-          {
-            id: '4-2',
-            name: 'Калькуляция-ребёнок 2',
-            createdOn: new Date().toLocaleDateString(),
-            type: 'fact'
-          },
-          {
-            id: '4-3',
-            name: 'Калькуляция-ребёнок 3',
-            createdOn: new Date().toLocaleDateString(),
-            type: 'fact'
+            id: 3,
+            title: 'Название калькуляции-факт: 2 upd',
+            calculation_type: 'fact',
+            total: '91209.144',
+            date_of_creation: '2025-10-28T08:17:53.839Z'
           }
         ]
       }
     ];
+    // return [
+    //   {
+    //     id: '1',
+    //     name: 'Родительская Калькуляция 1',
+    //     createdOn: new Date().toLocaleDateString(),
+    //     childrens: [
+    //       {
+    //         id: '1-1',
+    //         name: 'Калькуляция-ребёнок 1',
+    //         createdOn: new Date().toLocaleDateString(),
+    //         type: 'fact'
+    //       },
+    //       {
+    //         id: '1-2',
+    //         name: 'Калькуляция-ребёнок 2 - план',
+    //         createdOn: new Date().toLocaleDateString(),
+    //         type: 'plan'
+    //       },
+    //       {
+    //         id: '1-3',
+    //         name: 'Калькуляция-ребёнок 3',
+    //         createdOn: new Date().toLocaleDateString(),
+    //         type: 'fact'
+    //       }
+    //     ]
+    //   },
+    //   {
+    //     id: '2',
+    //     name: 'Родительская Калькуляция 2',
+    //     createdOn: new Date().toLocaleDateString(),
+    //     childrens: [
+    //       {
+    //         id: '2-1',
+    //         name: 'Калькуляция-ребёнок 1',
+    //         createdOn: new Date().toLocaleDateString(),
+    //         type: 'plant'
+    //       },
+    //       {
+    //         id: '2-2',
+    //         name: 'Калькуляция-ребёнок 2',
+    //         createdOn: new Date().toLocaleDateString(),
+    //         type: 'fact'
+    //       },
+    //       {
+    //         id: '2-3',
+    //         name: 'Калькуляция-ребёнок 3',
+    //         createdOn: new Date().toLocaleDateString(),
+    //         type: 'fact'
+    //       }
+    //     ]
+    //   },
+    //   {
+    //     id: '3',
+    //     name: 'Родительская Калькуляция 3',
+    //     createdOn: new Date().toLocaleDateString(),
+    //     childrens: [
+    //       {
+    //         id: '3-1',
+    //         name: 'Калькуляция-ребёнок 1',
+    //         createdOn: new Date().toLocaleDateString(),
+    //         type: 'plant'
+    //       },
+    //       {
+    //         id: '3-2',
+    //         name: 'Калькуляция-ребёнок 2',
+    //         createdOn: new Date().toLocaleDateString(),
+    //         type: 'fact'
+    //       },
+    //       {
+    //         id: '3-3',
+    //         name: 'Калькуляция-ребёнок 3',
+    //         createdOn: new Date().toLocaleDateString(),
+    //         type: 'fact'
+    //       }
+    //     ]
+    //   },
+    //   {
+    //     id: '4',
+    //     name: 'Родительская Калькуляция 4',
+    //     createdOn: new Date().toLocaleDateString(),
+    //     childrens: [
+    //       {
+    //         id: '4-1',
+    //         name: 'Калькуляция-ребёнок 1',
+    //         createdOn: new Date().toLocaleDateString(),
+    //         type: 'plant'
+    //       },
+    //       {
+    //         id: '4-2',
+    //         name: 'Калькуляция-ребёнок 2',
+    //         createdOn: new Date().toLocaleDateString(),
+    //         type: 'fact'
+    //       },
+    //       {
+    //         id: '4-3',
+    //         name: 'Калькуляция-ребёнок 3',
+    //         createdOn: new Date().toLocaleDateString(),
+    //         type: 'fact'
+    //       }
+    //     ]
+    //   }
+    // ];
   },
 
   getCalculationsData() {
