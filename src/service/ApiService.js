@@ -29,34 +29,34 @@ export default {
     totalProfitabilityPerItem,
     total
   }) {
-    return api().post('/calculation', {
-      itrWorkedDays,
-      coeficientOfNds,
-      costOfElectricityPerDay,
-      galvanizedValue,
-      numberOfDaysPerShift,
-      numberOfHoursPerShift,
-      rentalCostPerDay,
-      profitabilityCoeficient,
-      title,
-      transportValue,
-      dateOfCreation,
-      lastEditDate,
-      parentCalculationId,
-      calculationType,
-      consumablesData,
-      hardwareData,
-      metalData,
-      specificationData,
-      workersData,
-      itrData,
-      workersTaxData,
-      itrTaxData,
-      totalMetalPerItem,
-      totalProcessingPerItem,
-      totalProfitabilityPerItem,
-      total
-    });
+    // return api().post('/calculation', {
+    //   itrWorkedDays,
+    //   coeficientOfNds,
+    //   costOfElectricityPerDay,
+    //   galvanizedValue,
+    //   numberOfDaysPerShift,
+    //   numberOfHoursPerShift,
+    //   rentalCostPerDay,
+    //   profitabilityCoeficient,
+    //   title,
+    //   transportValue,
+    //   dateOfCreation,
+    //   lastEditDate,
+    //   parentCalculationId,
+    //   calculationType,
+    //   consumablesData,
+    //   hardwareData,
+    //   metalData,
+    //   specificationData,
+    //   workersData,
+    //   itrData,
+    //   workersTaxData,
+    //   itrTaxData,
+    //   totalMetalPerItem,
+    //   totalProcessingPerItem,
+    //   totalProfitabilityPerItem,
+    //   total
+    // });
   },
 
   updateCalculation({
@@ -169,7 +169,7 @@ export default {
   getWorkers() {
     return api().get('/workers');
   },
-  
+
   signup({ username, password, email, role }) {
     return api().post('/signup', { username, password, email, role });
   },
@@ -180,5 +180,5 @@ export default {
 
   logout() {
     return api().post('/logout');
-  },
+  }
 };
