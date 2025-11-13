@@ -169,7 +169,7 @@ export default {
   getWorkers() {
     return api().get('/workers');
   },
-  
+
   signup({ username, password, email, role }) {
     return api().post('/signup', { username, password, email, role });
   },
@@ -180,5 +180,5 @@ export default {
 
   logout() {
     return api().post('/logout');
-  },
+  }
 };

@@ -9,6 +9,9 @@ import * as XLS from 'xlsx';
 import { useRouter } from 'vue-router';
 
 // const toast = useToast();
+import { useToast } from 'primevue/usetoast';
+const toast = useToast();
+
 const router = useRouter();
 const fileupload = ref();
 // const dropdownItemsWorkerStaff = ref(['Бабенко', 'Червань Антон', 'Васильев', 'Атаманенко', 'Татарский']);
@@ -1055,9 +1058,10 @@ const createCalculation = async () => {
       totalProcessingPerItem: getTotalValue(finalPriceData.value, 'processing'),
       totalProfitabilityPerItem: getTotalValue(finalPriceData.value, 'profitability')
     });
-
-    router.push({ path: `/calculations/${calculationRes.data.id}` });
+    showSuccess();
+    // router.push({ path: `/calculations/${calculationRes.data.id}` });
   } catch (error) {
+    showError();
     console.log(error);
   } finally {
     loading.value = false;
@@ -1095,6 +1099,14 @@ const computedStyleClass = computed(() => {
 
 const removeFile = (entity) => {
   calculationData.value[entity] = [];
+};
+
+const showSuccess = () => {
+  toast.add({ severity: 'success', summary: 'Успешно', detail: 'Запрос отправден', life: 3000 });
+};
+
+const showError = () => {
+  toast.add({ severity: 'error', summary: 'Ошибка', detail: 'Запрос не отправлен', life: 3000 });
 };
 </script>
 
@@ -2093,6 +2105,7 @@ const removeFile = (entity) => {
         <Button :disabled="!newWorkerData.name.trim()" label="Сохранить" icon="pi pi-check" @click="saveNewWorker(newWorkerData)" />
       </template>
     </Dialog>
+    <Toast />
   </Fluid>
 </template>
 
