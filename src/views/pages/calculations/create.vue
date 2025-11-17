@@ -6,10 +6,11 @@ import ApiService from '@/service/ApiService';
 import SearchSelect from '@/components/custom-ui/SearchSelect.vue';
 import TaxCharges from '@/components/TaxCharges.vue';
 import * as XLS from 'xlsx';
-import { useRouter } from 'vue-router';
+import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router';
 
 // const toast = useToast();
 const router = useRouter();
+const route = useRoute();
 const fileupload = ref();
 // const dropdownItemsWorkerStaff = ref(['Бабенко', 'Червань Антон', 'Васильев', 'Атаманенко', 'Татарский']);
 const dropdownItemsWorkerStaff = ref([]);
@@ -36,6 +37,13 @@ const newStaffDialog = ref(false);
 const newITRStaffDialog = ref(false);
 const createNewWorkerDialog = ref(false);
 const loading = ref(false);
+
+onBeforeRouteLeave((to, from, next) => {
+  if (test.value === 10) {
+    next();
+  }
+  console.log('onBeforeRouteLeave', to, from);
+});
 
 let calculationData = ref({
   itrWorkedDays: 1,
@@ -197,6 +205,7 @@ let calculationData = ref({
 
 let newWorkerData = ref({ name: '', lastname: '', position: '' });
 let increaseInSalary = ref(0);
+let test = ref(5);
 
 const salariesOfWorkersTotal = computed(() =>
   calculationData.value.workersData.table.reduce((acc, item) => {
@@ -1075,6 +1084,15 @@ watch(increaseInSalary, (newValue, oldValue) => {
   });
 });
 
+// watch(
+//   () => route.fullPath,
+//   (newPath, oldPath) => {
+//     // Обработка изменения URL
+//     console.log('URL changed from', oldPath, 'to', newPath);
+//   },
+//   { immediate: false }
+// );
+
 const changeTaxValue = ({ data, newValue, field }, dataName) => {
   // TODO: refactor: почему-то не работает реактивность на обновление значения "К" из "Налоговые начисления"
   calculationData.value[dataName] = calculationData.value[dataName].map((item) => {
@@ -1104,6 +1122,8 @@ const removeFile = (entity) => {
   </div>
 
   <Fluid>
+    <span>{{ test }}</span>
+    <button @click="test++">add</button>
     <div class="calculation-title z-50 sticky top-[60px] shadow-md bg-[#fff] mb-4">
       <Panel toggleable :header="`Калькуляция-${calculationData.calculationType === 'fact' ? 'факт' : 'план'}`">
         <div class="flex flex-row items-center justify-between gap-4">
