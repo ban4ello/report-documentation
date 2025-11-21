@@ -75,9 +75,10 @@ let calculationData = ref({
 onBeforeRouteLeave((to, from, next) => {
   if (test.value < 10) {
     const conf = confirm('желаете покинуть странице?');
-    if (conf === true) {
-      next();
-    }
+    // if (conf === true) {
+    //   next();
+    // }
+    conf === true ? next() : false;
   } else {
     next();
     console.log('onBeforeRouteLeave', to, from);
