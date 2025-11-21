@@ -38,13 +38,6 @@ const newITRStaffDialog = ref(false);
 const createNewWorkerDialog = ref(false);
 const loading = ref(false);
 
-onBeforeRouteLeave((to, from, next) => {
-  if (test.value === 10) {
-    next();
-  }
-  console.log('onBeforeRouteLeave', to, from);
-});
-
 let calculationData = ref({
   itrWorkedDays: 1,
   numberOfDaysPerShift: 21,
@@ -77,6 +70,18 @@ let calculationData = ref({
   workersTaxData: [],
   itrTaxData: [],
   total: null
+});
+
+onBeforeRouteLeave((to, from, next) => {
+  if (test.value < 10) {
+    const conf = confirm('желаете покинуть странице?');
+    if (conf === true) {
+      next();
+    }
+  } else {
+    next();
+    console.log('onBeforeRouteLeave', to, from);
+  }
 });
 
 // // NOTE: need for test
