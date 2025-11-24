@@ -37,6 +37,7 @@ const newStaffDialog = ref(false);
 const newITRStaffDialog = ref(false);
 const createNewWorkerDialog = ref(false);
 const loading = ref(false);
+const date = new Date();
 
 let calculationData = ref({
   itrWorkedDays: 1,
@@ -47,7 +48,7 @@ let calculationData = ref({
   galvanizedValue: 0,
   rentalCostPerDay: 0,
   profitabilityCoeficient: 0,
-  title: '',
+  title: `Калькуляция ${date.toLocaleDateString()}`,
   transportValue: 0,
   lastEditDate: '',
   calculationType: 'plan',
@@ -72,13 +73,21 @@ let calculationData = ref({
   total: null
 });
 
+// eslint-disable-next-line no-unused-vars
+const { workersTaxData, itrTaxData, ...calculationDataClone } = calculationData.value;
+const cloneCalculationDate = JSON.stringify(calculationDataClone);
+
 onBeforeRouteLeave((to, from, next) => {
-  if (test.value < 10) {
-    const conf = confirm('желаете покинуть странице?');
-    // if (conf === true) {
-    //   next();
-    // }
-    conf === true ? next() : false;
+  // eslint-disable-next-line no-unused-vars
+  const { workersTaxData, itrTaxData, ...calculationDataClone2 } = calculationData.value;
+  const cloneCalculationDate2 = JSON.stringify(calculationDataClone2);
+  console.log('2222', cloneCalculationDate2);
+
+  if (cloneCalculationDate !== cloneCalculationDate2) {
+    const conf = confirm('желаете покинуть страницу?');
+    if (conf) {
+      next();
+    }
   } else {
     next();
     console.log('onBeforeRouteLeave', to, from);
