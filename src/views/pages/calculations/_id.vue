@@ -932,7 +932,7 @@ const saveCalculation = async () => {
         acc = item.perItem;
       }
       return acc;
-    }, 0)
+    }, 0);
   };
 
   try {
@@ -945,7 +945,7 @@ const saveCalculation = async () => {
       total: finalTotalPrice.value,
       totalMetalPerItem: getTotalValue(finalPriceData.value, 'metalTotal'),
       totalProcessingPerItem: getTotalValue(finalPriceData.value, 'processing'),
-      totalProfitabilityPerItem: getTotalValue(finalPriceData.value, 'profitability'),
+      totalProfitabilityPerItem: getTotalValue(finalPriceData.value, 'profitability')
     });
   } catch (error) {
     console.log(error);
@@ -971,6 +971,10 @@ watch(increaseInSalary, (newValue, oldValue) => {
     return { ...item, salaryPerDay: newPrice };
   });
 });
+
+const removeFile = (entity) => {
+  calculationData.value[entity] = [];
+};
 </script>
 
 <template>
@@ -980,116 +984,123 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
   <Fluid>
     <div class="calculation-title z-50 sticky top-[60px] shadow-md bg-[#fff] mb-4">
-      <Panel toggleable :header="`Калькуляция-${calculationData.calculationType === 'fact' ? 'факт' : 'план'}`" >
-         <div class="flex flex-row items-center justify-between gap-4">
-           <div class="flex flex-row justify-between items-center gap-2">
-             <div class="flex gap-2">
-               <div class="flex flex-col gap-2">
-                 <div class="font-semibold text-lg" :class="computedStyleClass">
-                   <span>Название калькуляции-{{ calculationData.calculationType === 'fact' ? 'факт' : 'план' }}:</span
-                   ><span><InputText v-model="calculationData.title" type="text" /></span>
-                 </div>
-   
-                 <div v-if="calculationData.dateOfCreation" class="font-semibold text-lg">
-                   <span :class="computedStyleClass">Дата создания: </span>
-                   <span> {{ new Date(calculationData.dateOfCreation).toLocaleDateString() }}</span>
-                 </div>
-   
-                 <div class="font-semibold text-lg">
-                   <span :class="computedStyleClass">Дата последнего редактирования: </span>
-                   <span> {{ new Date(calculationData.lastEditDate).toLocaleDateString() }} - </span>
-                   <span class="font-bold">
-                     {{ new Date(calculationData.lastEditDate).toLocaleTimeString() }}
-                   </span>
-                 </div>
-               </div>
-   
-               <Divider layout="vertical" />
-             </div>
-   
-             <div class="flex gap-2">
-               <div v-if="finalTotalPrice" class="font-semibold text-md flex items-center">
-                 <div class="flex flex-col">
-                   <div
-                     class="flex flex-row gap-2 items-center"
-                     :style="{
-                       border: finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact' ? '1px solid red' : '',
-                       'border-radius': '5px',
-                       padding: '5px'
-                     }"
-                   >
-                     <div :class="computedStyleClass" class="max-w-[200px]">Итоговая сумма калькуляции:</div>
-                     <span
-                       class="font-bold"
-                       :class="{
-                         'text-[red]': finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact',
-                         'text-xl': finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact'
-                       }"
-                     >
-                       {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
-                     </span>
-                   </div>
-   
-                   <Divider layout="horizontal" />
-   
-                   <div v-if="totalSpecificationItems" class="flex flex-row gap-2">
-                     <div :class="computedStyleClass">На 1 ед:</div>
-                     <span class="font-bold">
-                       {{ formatNumber(truncateDecimal(finalTotalPrice / totalSpecificationItems, 1)) }}
-                     </span>
-                   </div>
-   
-                   <Divider layout="horizontal" />
-   
-                   <div class="flex gap-2 items-center">
-                     <Checkbox v-model="isAmountWithoutMetal" :value="isAmountWithoutMetal" :binary="true" />
-                     <label :class="computedStyleClass" class="font-semibold items-center text-md">Сумма без металла</label>
-                   </div>
-                 </div>
-               </div>
-   
-               <Divider layout="vertical" />
-             </div>
-   
-             <div v-if="calculationData.calculationType === 'fact'" class="flex gap-2">
-               <div v-if="finalTotalPrice" class="font-semibold text-md flex items-center">
-                 <div class="flex flex-col">
-                   <div class="flex flex-row gap-2 items-center">
-                     <div class="text-[--primary-color] max-w-[200px]">Сумма калькуляции-плана:</div>
-                     <span class="font-bold">
-                       {{ formatNumber(truncateDecimal(calculationPlanTotal, 1)) }}
-                     </span>
-                   </div>
-   
-                   <Divider layout="horizontal" />
-   
-                   <div v-if="totalSpecificationItems" class="flex flex-row gap-2">
-                     <div class="text-[--primary-color]">На 1 ед:</div>
-                     <span class="font-bold">
-                       {{ formatNumber(truncateDecimal(calculationPlanTotal / totalSpecificationItems, 1)) }}
-                     </span>
-                   </div>
-                 </div>
-               </div>
-   
-               <Divider layout="vertical" />
-             </div>
-   
-             <div class="font-semibold text-lg">
-               <p :class="computedStyleClass">Общее кол-во:</p>
-               <p>
-                 {{ truncateDecimal(totalSpecificationItems, 5) }}
-                 <span v-if="calculationData.specificationData?.table.length">
-                   {{ calculationData.specificationData.table[0].unitOfMeasurement }}
-                 </span>
-               </p>
-             </div>
-           </div>
-   
-           <div class="flex flex-col gap-4">
-             <Button label="Сохранить калькуляцию" :loading="loading" size="large" severity="success" class="text-xs" @click="saveCalculation" />
-           </div>
-         </div>
+      <Panel toggleable :header="`Калькуляция-${calculationData.calculationType === 'fact' ? 'факт' : 'план'}`">
+        <div class="flex flex-row items-center justify-between gap-4">
+          <div class="flex flex-row justify-between items-center gap-2">
+            <div class="flex gap-2">
+              <div class="flex flex-col gap-2">
+                <div class="font-semibold text-lg" :class="computedStyleClass">
+                  <span>Название калькуляции-{{ calculationData.calculationType === 'fact' ? 'факт' : 'план' }}:</span
+                  ><span><InputText v-model="calculationData.title" type="text" /></span>
+                </div>
+
+                <div v-if="calculationData.dateOfCreation" class="font-semibold text-lg">
+                  <span :class="computedStyleClass">Дата создания: </span>
+                  <span> {{ new Date(calculationData.dateOfCreation).toLocaleDateString() }}</span>
+                </div>
+
+                <div class="font-semibold text-lg">
+                  <span :class="computedStyleClass">Дата последнего редактирования: </span>
+                  <span> {{ new Date(calculationData.lastEditDate).toLocaleDateString() }} - </span>
+                  <span class="font-bold">
+                    {{ new Date(calculationData.lastEditDate).toLocaleTimeString() }}
+                  </span>
+                </div>
+              </div>
+
+              <Divider layout="vertical" />
+            </div>
+
+            <div class="flex gap-2">
+              <div v-if="finalTotalPrice" class="font-semibold text-md flex items-center">
+                <div class="flex flex-col">
+                  <div
+                    class="flex flex-row gap-2 items-center"
+                    :style="{
+                      border: finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact' ? '1px solid red' : '',
+                      'border-radius': '5px',
+                      padding: '5px'
+                    }"
+                  >
+                    <div :class="computedStyleClass" class="max-w-[200px]">Итоговая сумма калькуляции:</div>
+                    <span
+                      class="font-bold"
+                      :class="{
+                        'text-[red]': finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact',
+                        'text-xl': finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact'
+                      }"
+                    >
+                      {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
+                    </span>
+                  </div>
+
+                  <Divider layout="horizontal" />
+
+                  <div v-if="totalSpecificationItems" class="flex flex-row gap-2">
+                    <div :class="computedStyleClass">На 1 ед:</div>
+                    <span class="font-bold">
+                      {{ formatNumber(truncateDecimal(finalTotalPrice / totalSpecificationItems, 1)) }}
+                    </span>
+                  </div>
+
+                  <Divider layout="horizontal" />
+
+                  <div class="flex gap-2 items-center">
+                    <Checkbox v-model="isAmountWithoutMetal" :value="isAmountWithoutMetal" :binary="true" />
+                    <label :class="computedStyleClass" class="font-semibold items-center text-md">Сумма без металла</label>
+                  </div>
+                </div>
+              </div>
+
+              <Divider layout="vertical" />
+            </div>
+
+            <div v-if="calculationData.calculationType === 'fact'" class="flex gap-2">
+              <div v-if="finalTotalPrice" class="font-semibold text-md flex items-center">
+                <div class="flex flex-col">
+                  <div class="flex flex-row gap-2 items-center">
+                    <div class="text-[--primary-color] max-w-[200px]">Сумма калькуляции-плана:</div>
+                    <span class="font-bold">
+                      {{ formatNumber(truncateDecimal(calculationPlanTotal, 1)) }}
+                    </span>
+                  </div>
+
+                  <Divider layout="horizontal" />
+
+                  <div v-if="totalSpecificationItems" class="flex flex-row gap-2">
+                    <div class="text-[--primary-color]">На 1 ед:</div>
+                    <span class="font-bold">
+                      {{ formatNumber(truncateDecimal(calculationPlanTotal / totalSpecificationItems, 1)) }}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <Divider layout="vertical" />
+            </div>
+
+            <div class="font-semibold text-lg">
+              <p :class="computedStyleClass">Общее кол-во:</p>
+              <p>
+                {{ truncateDecimal(totalSpecificationItems, 5) }}
+                <span v-if="calculationData.specificationData?.table.length">
+                  {{ calculationData.specificationData.table[0].unitOfMeasurement }}
+                </span>
+              </p>
+            </div>
+          </div>
+
+          <div class="flex flex-col gap-4">
+            <Button
+              label="Сохранить калькуляцию"
+              :loading="loading"
+              size="large"
+              severity="success"
+              class="text-xs"
+              @click="saveCalculation"
+            />
+          </div>
+        </div>
       </Panel>
     </div>
 
@@ -1338,20 +1349,22 @@ watch(increaseInSalary, (newValue, oldValue) => {
           <AccordionPanel value="0">
             <AccordionHeader>
               <div class="flex gap-6 items-center justify-between w-full">
-                <div class="flex gap-6 items-center gap-2 w-full font-semibold text-lg">
-                  Цех
-                </div>
-                
+                <div class="flex gap-6 items-center gap-2 w-full font-semibold text-lg">Цех</div>
+
                 <div v-if="salariesOfWorkersTotal" class="flex justify-end items-center font-bold w-full mr-4 font-semibold text-lg">
-                  <span :class="computedStyleClass">Итого ЗП:</span> &nbsp;<span class="text-lg">{{ formatNumber(salariesOfWorkersTotal) }}</span>
+                  <span :class="computedStyleClass">Итого ЗП:</span> &nbsp;<span class="text-lg">{{
+                    formatNumber(salariesOfWorkersTotal)
+                  }}</span>
                 </div>
 
                 <div v-if="taxTotal" class="flex justify-end items-center font-bold w-full mr-4 font-semibold text-lg">
-                  <span :class="computedStyleClass">Итого налоговые начисления:</span> &nbsp;<span class="text-lg">{{ formatNumber(taxTotal) }}</span>
+                  <span :class="computedStyleClass">Итого налоговые начисления:</span> &nbsp;<span class="text-lg">{{
+                    formatNumber(taxTotal)
+                  }}</span>
                 </div>
               </div>
             </AccordionHeader>
-  
+
             <AccordionContent>
               <div class="grid grid-cols-1fr-40 gap-4 mb-[2rem]">
                 <div class="shop">
@@ -1361,10 +1374,10 @@ watch(increaseInSalary, (newValue, oldValue) => {
                         <label for="numberOfHoursPerShift">Количество часов в смене</label>
                         <InputNumber v-model="calculationData.numberOfHoursPerShift" inputId="numberOfHoursPerShift" fluid />
                       </div>
-    
+
                       <div class="flex flex-row gap-2 items-center">
                         <label for="increaseInSalary">Увеличения ЗП</label>
-    
+
                         <InputNumber v-model="increaseInSalary" :step="5" showButtons buttonLayout="horizontal" style="width: 140px">
                           <template #incrementbuttonicon>
                             <span class="pi pi-plus" />
@@ -1375,7 +1388,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
                         </InputNumber>
                       </div>
                     </div>
-    
+
                     <DataTable
                       :value="calculationData.workersData.table"
                       v-model:selection="selectedStaff"
@@ -1384,60 +1397,69 @@ watch(increaseInSalary, (newValue, oldValue) => {
                       showGridlines
                     >
                       <template #empty> Нет данных для отображения </template>
-    
+
                       <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
-    
+
                       <Column field="name" header="Имя сотрудника">
                         <template #body="{ data }">
                           {{ data.name }}
                         </template>
-    
+
                         <template #editor="{ data }">
                           <Select id="staff" v-model="data.name" :options="dropdownItemsWorkerStaff" class="w-full"></Select>
                         </template>
                       </Column>
-    
+
                       <Column field="numberOfHoursWorked" header="Трудозатраты">
                         <template #body="{ data }">
                           {{ data.numberOfHoursWorked }}
                         </template>
-    
+
                         <template #editor="{ data }">
                           <InputText v-model="data.numberOfHoursWorked" type="number" />
                         </template>
                       </Column>
-    
+
                       <Column field="salaryPerDay" header="В день">
                         <template #body="{ data }">
                           {{ formatNumber(truncateDecimal(data.salaryPerDay, 0)) }}
                         </template>
-    
+
                         <template #editor="{ data }">
                           <InputText v-model="data.salaryPerDay" type="number" />
                         </template>
                       </Column>
-    
+
                       <Column field="salaryPerHour" header="В час">
                         <template #body="{ data }">
                           {{ formatNumber(truncateDecimal(data.salaryPerDay / calculationData.numberOfHoursPerShift, 2)) }}
                         </template>
                       </Column>
-    
+
                       <Column field="total" header="Итого">
                         <template #body="{ data }">
                           {{
-                            formatNumber(truncateDecimal((data.salaryPerDay / calculationData.numberOfHoursPerShift) * data.numberOfHoursWorked, 0))
+                            formatNumber(
+                              truncateDecimal((data.salaryPerDay / calculationData.numberOfHoursPerShift) * data.numberOfHoursWorked, 0)
+                            )
                           }}
                         </template>
                       </Column>
-    
+
                       <Column :exportable="false" style="min-width: 12rem">
                         <template #body="slotProps">
-                          <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copyWorkerData(slotProps.data)" />
+                          <Button
+                            icon="pi pi-copy"
+                            class="mr-2"
+                            outlined
+                            rounded
+                            severity="success"
+                            @click="copyWorkerData(slotProps.data)"
+                          />
                           <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteWorker(slotProps.data)" />
                         </template>
                       </Column>
-    
+
                       <template #footer>
                         <div
                           class="flex justify-center items-center hover:cursor-pointer"
@@ -1454,12 +1476,12 @@ watch(increaseInSalary, (newValue, oldValue) => {
                         </div>
                       </template>
                     </DataTable>
-    
+
                     <div>
                       <label for="workersData" :class="computedStyleClass">Заметки:</label>
                       <Textarea v-model="calculationData.workersData.notes" />
                     </div>
-    
+
                     <Dialog v-model:visible="newStaffDialog" :style="{ width: '450px' }" header="Выберите сотрудника" :modal="true">
                       <div class="flex flex-col gap-6">
                         <div>
@@ -1472,18 +1494,18 @@ watch(increaseInSalary, (newValue, oldValue) => {
                             @clickToAction="showNewWorkerModal"
                           />
                         </div>
-    
+
                         <div>
                           <label for="numberOfHoursWorked" class="block font-bold mb-3">Трудозатраты</label>
                           <InputNumber v-model="newStaffData.numberOfHoursWorked" inputId="minmax" fluid />
                         </div>
-    
+
                         <div>
                           <label for="salaryPerDay" class="block font-bold mb-3">В день</label>
                           <InputNumber v-model="newStaffData.salaryPerDay" inputId="minmax" fluid />
                         </div>
                       </div>
-    
+
                       <template #footer>
                         <Button label="Отменить" icon="pi pi-times" text @click="newStaffDialog = false" />
                         <!-- :disabled="!newStaffData.name.trim() || newStaffData.numberOfHoursWorked === null || newStaffData.salaryPerDay === null" -->
@@ -1492,7 +1514,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
                     </Dialog>
                   </div>
                 </div>
-    
+
                 <TaxCharges
                   :computedTaxData="computedWorkerTaxData"
                   :taxData="calculationData.workersTaxData"
@@ -1509,20 +1531,22 @@ watch(increaseInSalary, (newValue, oldValue) => {
           <AccordionPanel value="1">
             <AccordionHeader>
               <div class="flex gap-6 items-center justify-between w-full">
-                <div class="flex gap-6 items-center gap-2 w-full font-semibold text-lg">
-                  ИТР
-                </div>
-                
+                <div class="flex gap-6 items-center gap-2 w-full font-semibold text-lg">ИТР</div>
+
                 <div v-if="salariesOfITRTotal" class="flex justify-end items-center font-bold w-full mr-4 font-semibold text-lg">
-                  <span :class="computedStyleClass">Итого ЗП:</span> &nbsp;<span class="text-lg">{{ formatNumber(salariesOfITRTotal) }}</span>
+                  <span :class="computedStyleClass">Итого ЗП:</span> &nbsp;<span class="text-lg">{{
+                    formatNumber(salariesOfITRTotal)
+                  }}</span>
                 </div>
 
                 <div v-if="taxITRTotal" class="flex justify-end items-center font-bold w-full mr-4 font-semibold text-lg">
-                  <span :class="computedStyleClass">Итого налоговые начисления:</span> &nbsp;<span class="text-lg">{{ formatNumber(taxITRTotal) }}</span>
+                  <span :class="computedStyleClass">Итого налоговые начисления:</span> &nbsp;<span class="text-lg">{{
+                    formatNumber(taxITRTotal)
+                  }}</span>
                 </div>
               </div>
             </AccordionHeader>
-  
+
             <AccordionContent>
               <div class="grid grid-cols-1fr-40 gap-4 mb-[2rem]">
                 <div class="ITR">
@@ -1530,7 +1554,12 @@ watch(increaseInSalary, (newValue, oldValue) => {
                     <div class="flex gap-2 mb-4 items-center">
                       <div class="flex flex-row gap-2 items-center">
                         <label for="numberOfDaysPerShift">Количество дней в мес.</label>
-                        <InputNumber v-model="calculationData.numberOfDaysPerShift" inputId="numberOfDaysPerShift" class="max-w-[50px]" fluid />
+                        <InputNumber
+                          v-model="calculationData.numberOfDaysPerShift"
+                          inputId="numberOfDaysPerShift"
+                          class="max-w-[50px]"
+                          fluid
+                        />
                       </div>
 
                       <div class="flex flex-row gap-2 items-center">
@@ -1545,7 +1574,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
                         />
                       </div>
                     </div>
-    
+
                     <DataTable
                       :value="calculationData.itrData.table"
                       v-model:selection="selectedITRStaff"
@@ -1581,7 +1610,10 @@ watch(increaseInSalary, (newValue, oldValue) => {
                         <template #body="{ data }">
                           {{
                             formatNumber(
-                              truncateDecimal((data.salaryPerMonth / calculationData.numberOfDaysPerShift) * calculationData.itrWorkedDays, 0)
+                              truncateDecimal(
+                                (data.salaryPerMonth / calculationData.numberOfDaysPerShift) * calculationData.itrWorkedDays,
+                                0
+                              )
                             )
                           }}
                         </template>
@@ -1589,7 +1621,14 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
                       <Column :exportable="false" style="min-width: 12rem">
                         <template #body="slotProps">
-                          <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copyItrWorker(slotProps.data)" />
+                          <Button
+                            icon="pi pi-copy"
+                            class="mr-2"
+                            outlined
+                            rounded
+                            severity="success"
+                            @click="copyItrWorker(slotProps.data)"
+                          />
                           <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteItrWorker(slotProps.data)" />
                         </template>
                       </Column>
@@ -1616,7 +1655,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
                         </div>
                       </template>
                     </DataTable>
-    
+
                     <Dialog v-model:visible="newITRStaffDialog" :style="{ width: '450px' }" header="Выберите сотрудника" :modal="true">
                       <div class="flex flex-col gap-6">
                         <div>
@@ -1643,7 +1682,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
                     </Dialog>
                   </div>
                 </div>
-    
+
                 <TaxCharges
                   :computedTaxData="computedItrTaxData"
                   :taxData="calculationData.itrTaxData"
@@ -1660,7 +1699,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
       </div>
 
       <div class="card total-costs">
-        <div class="flex flex-row justify-between gap-2  mb-4">
+        <div class="flex flex-row justify-between gap-2 mb-4">
           <div class="font-semibold text-xl" :class="computedStyleClass">Общие затраты</div>
         </div>
 
@@ -1669,9 +1708,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
             <AccordionHeader>
               <div class="flex gap-6 items-center justify-between w-full">
                 <div class="flex gap-6 items-center gap-2 w-full">
-                  <span>
-                    Расходники
-                  </span>
+                  <span> Расходники </span>
 
                   <FileUpload
                     ref="consumablesDataFileupload"
@@ -1682,8 +1719,16 @@ watch(increaseInSalary, (newValue, oldValue) => {
                     auto
                     @uploader="(e) => onUpload({ event: e, tableName: 'consumablesDataRes', accordionIndex: 0 })"
                   />
+
+                  <Button
+                    class="max-w-[150px]"
+                    label="Удалить файл"
+                    severity="danger"
+                    v-if="calculationData.consumablesData.length > 0"
+                    @click.stop="removeFile('consumablesData')"
+                  />
                 </div>
-                
+
                 <div v-if="totalConsumables" class="flex justify-end items-center font-bold w-full mr-4">
                   Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalConsumables) }}</span>
                 </div>
@@ -1743,9 +1788,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
             <AccordionHeader>
               <div class="flex gap-6 items-center justify-between w-full">
                 <div class="flex gap-6 items-center gap-2 w-full">
-                  <span>
-                    Метизы
-                  </span>
+                  <span> Метизы </span>
 
                   <FileUpload
                     ref="hardwareDataFileupload"
@@ -1756,8 +1799,16 @@ watch(increaseInSalary, (newValue, oldValue) => {
                     auto
                     @uploader="(e) => onUpload({ event: e, tableName: 'hardwareDataRes', accordionIndex: 1 })"
                   />
+
+                  <Button
+                    class="max-w-[150px]"
+                    label="Удалить файл"
+                    severity="danger"
+                    v-if="calculationData.hardwareData.length > 0"
+                    @click.stop="removeFile('hardwareData')"
+                  />
                 </div>
-                
+
                 <div v-if="totalHardware" class="flex justify-end items-center font-bold w-full mr-4">
                   Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalHardware) }}</span>
                 </div>
@@ -1817,9 +1868,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
             <AccordionHeader>
               <div class="flex gap-6 items-center justify-between w-full">
                 <div class="flex gap-6 items-center gap-2 w-full">
-                  <span>
-                    Металл
-                  </span>
+                  <span> Металл </span>
 
                   <FileUpload
                     ref="metalDataFileupload"
@@ -1830,8 +1879,16 @@ watch(increaseInSalary, (newValue, oldValue) => {
                     auto
                     @uploader="(e) => onUpload({ event: e, tableName: 'metalDataRes', accordionIndex: 2 })"
                   />
+
+                  <Button
+                    class="max-w-[150px]"
+                    label="Удалить файл"
+                    severity="danger"
+                    v-if="calculationData.metalData.length > 0"
+                    @click.stop="removeFile('metalData')"
+                  />
                 </div>
-                
+
                 <div v-if="totalMetal" class="flex justify-end items-center font-bold w-full mr-4">
                   Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalMetal) }}</span>
                 </div>
