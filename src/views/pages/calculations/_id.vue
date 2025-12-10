@@ -6,6 +6,7 @@ import SearchSelect from '@/components/custom-ui/SearchSelect.vue';
 import TaxCharges from '@/components/TaxCharges.vue';
 import * as XLS from 'xlsx';
 import { useRouter } from 'vue-router';
+import Breadcrumbs from '@/components/Breadcrumbs.vue';
 
 // const toast = useToast();
 const router = useRouter();
@@ -63,6 +64,8 @@ let calculationData = ref({
   hardwareData: [],
   metalData: []
 });
+
+const breadCrumbsItems = ref([]);
 
 let newWorkerData = ref({ name: '', lastname: '', position: '' });
 let increaseInSalary = ref(0);
@@ -537,6 +540,10 @@ onBeforeMount(async () => {
     calculationData.value = { ...calculationData.value, ...data };
 
     const parentCalculationRes = await ApiService.getParentCalculationChildren(calculationData.value.parentCalculationId);
+    //  breadCrumbsItem.value = parentCalculationRes.map(item => {
+    //  return {label: item.title,
+    //  to: "calculations/${item.id}"}
+    //  })
     calculationPlanTotal.value = Number(parentCalculationRes.data.filter((item) => item.calculation_type === 'plan')[0].total);
   } catch (error) {
     console.log(error);
@@ -983,6 +990,7 @@ const removeFile = (entity) => {
   </div>
 
   <Fluid>
+    <Breadcrumbs :items="breadCrumbsItems" />
     <div class="calculation-title z-50 sticky top-[60px] shadow-md bg-[#fff] mb-4">
       <Panel toggleable :header="`Калькуляция-${calculationData.calculationType === 'fact' ? 'факт' : 'план'}`">
         <div class="flex flex-row items-center justify-between gap-4">

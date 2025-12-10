@@ -223,7 +223,6 @@ onBeforeRouteLeave((to, from, next) => {
 
 let newWorkerData = ref({ name: '', lastname: '', position: '' });
 let increaseInSalary = ref(0);
-let test = ref(5);
 
 const salariesOfWorkersTotal = computed(() =>
   calculationData.value.workersData.table.reduce((acc, item) => {
@@ -1149,8 +1148,6 @@ const showError = () => {
   </div>
 
   <Fluid>
-    <span>{{ test }}</span>
-    <button @click="test++">add</button>
     <div class="calculation-title z-50 sticky top-[60px] shadow-md bg-[#fff] mb-4">
       <Panel toggleable :header="`Калькуляция-${calculationData.calculationType === 'fact' ? 'факт' : 'план'}`">
         <div class="flex flex-row items-center justify-between gap-4">
