@@ -540,11 +540,21 @@ onBeforeMount(async () => {
     calculationData.value = { ...calculationData.value, ...data };
 
     const parentCalculationRes = await ApiService.getParentCalculationChildren(calculationData.value.parentCalculationId);
-    //  breadCrumbsItem.value = parentCalculationRes.map(item => {
-    //  return {label: item.title,
-    //  to: "calculations/${item.id}"}
-    //  })
+    breadCrumbsItems.value = parentCalculationRes.data.map((item) => {
+      console.log(22222, item);
+
+      return {
+        label: item.title,
+        route: {
+          path: `/calculations/${item.id}`,
+          query: {
+            parentId: item.parent_calculation_id
+          }
+        }
+      };
+    });
     calculationPlanTotal.value = Number(parentCalculationRes.data.filter((item) => item.calculation_type === 'plan')[0].total);
+    console.log(1111111, parentCalculationRes);
   } catch (error) {
     console.log(error);
   }
