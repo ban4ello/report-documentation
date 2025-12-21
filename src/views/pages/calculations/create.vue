@@ -1,82 +1,84 @@
 <script setup>
 import { onBeforeMount, ref, computed, watch } from 'vue';
 import { MochDataService } from '@/service/MochDataService';
-import ApiService from '@/service/ApiService';
 import SearchSelect from '@/components/custom-ui/SearchSelect.vue';
 import TaxCharges from '@/components/TaxCharges.vue';
-import * as XLS from 'xlsx';
 import { useRouter, onBeforeRouteLeave } from 'vue-router';
-
 import { useToast } from 'primevue/usetoast';
-const toast = useToast();
 
+// Composables
+import { useCalculation } from '@/composables/useCalculation';
+import { useWorkers } from '@/composables/useWorkers';
+import { useCalculations } from '@/composables/useCalculations';
+import { useFileUpload } from '@/composables/useFileUpload';
+
+// Components
+import SpecificationTable from '@/components/calculations/SpecificationTable.vue';
+import PriceSummary from '@/components/calculations/PriceSummary.vue';
+import TotalCostsSection from '@/components/calculations/TotalCostsSection.vue';
+
+const toast = useToast();
 const router = useRouter();
-const dropdownItemsWorkerStaff = ref([]);
-const dropdownItemsWorkersRole = ref([
-  { label: 'Рабочий', key: 'worker' },
-  { label: 'ИТР', key: 'ITR' }
-]);
+
+// Composables initialization
+const {
+  calculationData,
+  loading,
+  currentCalculationType,
+  calculationPlanTotal,
+  initializeFromQuery,
+  createCalculation: createCalculationApi
+} = useCalculation();
+
+const { dropdownItemsWorkerStaff, dropdownItemsWorkersRole, newWorkerData, addNewWorkerToDB, loadWorkers } = useWorkers();
+
 const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м']);
 
-const parentId = ref(null);
-const currentCalculationType = ref(null);
-const calculationPlanId = ref(null);
 const isAmountWithoutMetal = ref(false);
 const expandAccordionTotalCosts = ref([]);
 const expandAccordionSalary = ref([]);
 const newStaffData = ref({ name: '', numberOfHoursWorked: null, salaryPerDay: null });
 const newITRStaffData = ref({ name: '', salaryPerMonth: null });
 
-const calculationPlanTotal = ref(null);
 const selectedStaff = ref(null);
 const selectedITRStaff = ref(null);
 const newStaffDialog = ref(false);
 const newITRStaffDialog = ref(false);
 const createNewWorkerDialog = ref(false);
-const loading = ref(false);
-const date = new Date();
+const increaseInSalary = ref(0);
 
-let calculationData = ref({
-  itrWorkedDays: 1,
-  numberOfDaysPerShift: 21,
-  numberOfHoursPerShift: 8,
-  coeficientOfNds: 1.2,
-  costOfElectricityPerDay: 0,
-  galvanizedValue: 0,
-  rentalCostPerDay: 0,
-  profitabilityCoeficient: 0,
-  title: `Калькуляция ${date.toLocaleDateString()}`,
-  transportValue: 0,
-  lastEditDate: '',
-  calculationType: 'plan',
+// Calculations composable
+const {
+  salariesOfWorkersTotal,
+  salariesOfITRTotal,
+  salariesOfITRTotalPerMonth,
+  totalSpecificationItems,
+  totalConsumables,
+  totalHardware,
+  totalMetal,
+  computedWorkerTaxData,
+  computedItrTaxData,
+  taxTotal,
+  taxITRTotal,
+  finalTotalPrice,
+  finalTotalPriceWithoutMetal,
+  priceData,
+  finalPriceData,
+  formatNumber,
+  truncateDecimal
+} = useCalculations(calculationData);
 
-  specificationData: {
-    table: [],
-    notes: ''
-  },
-  workersData: {
-    table: [],
-    notes: ''
-  },
-  itrData: {
-    table: [],
-    notes: ''
-  },
-  consumablesData: [],
-  hardwareData: [],
-  metalData: [],
-  workersTaxData: [],
-  itrTaxData: [],
-  total: null
-});
+// File upload composable
+const { onUpload, removeFile } = useFileUpload(calculationData, expandAccordionTotalCosts);
 
+// Setup route leave guard
 // eslint-disable-next-line no-unused-vars
 const { workersTaxData, itrTaxData, ...calculationDataClone } = calculationData.value;
 const cloneCalculationDate = JSON.stringify(calculationDataClone);
 
 onBeforeRouteLeave((to, from, next) => {
   // eslint-disable-next-line no-unused-vars
-  const { workersTaxData, itrTaxData, ...calculationDataClone2 } = calculationData.value;
+  const { workersTaxData: wt, itrTaxData: it, ...calculationDataClone2 } = calculationData.value;
   const cloneCalculationDate2 = JSON.stringify(calculationDataClone2);
 
   if (cloneCalculationDate !== cloneCalculationDate2) {
@@ -213,452 +215,9 @@ onBeforeRouteLeave((to, from, next) => {
 //   total: null
 // });
 
-let newWorkerData = ref({ name: '', lastname: '', position: '' });
-let increaseInSalary = ref(0);
-
-const salariesOfWorkersTotal = computed(() =>
-  calculationData.value.workersData.table.reduce((acc, item) => {
-    return acc + parseFloat(Number((item.salaryPerDay / calculationData.value.numberOfHoursPerShift) * item.numberOfHoursWorked).toFixed());
-  }, 0)
-);
-
-const salariesOfITRTotal = computed(() =>
-  calculationData.value.itrData.table.reduce((acc, item) => {
-    return (
-      acc +
-      Number(parseFloat((item.salaryPerMonth / calculationData.value.numberOfDaysPerShift) * calculationData.value.itrWorkedDays).toFixed())
-    );
-  }, 0)
-);
-
-const salariesOfITRTotalPerMonth = computed(() =>
-  calculationData.value.itrData.table.reduce((acc, item) => {
-    return acc + Number(parseFloat(item.salaryPerMonth));
-  }, 0)
-);
-
-const totalSpecificationItems = computed(
-  () =>
-    calculationData.value.specificationData.table.reduce((acc, item) => {
-      return acc + Number(item.quantity * item.valuePerUnit);
-    }, 0) || 0
-);
-
-const taxTotal = computed(() => {
-  const numberOfDecimal = 2;
-
-  return Number(
-    parseFloat(
-      (computedWorkerTaxData.value.T +
-        computedWorkerTaxData.value.TN +
-        computedWorkerTaxData.value.K +
-        computedWorkerTaxData.value.KMIL +
-        computedWorkerTaxData.value.KESV) *
-        calculationData.value.coeficientOfNds
-    ).toFixed(numberOfDecimal)
-  );
-});
-
-const taxITRTotal = computed(() => {
-  const numberOfDecimal = 2;
-
-  return Number(
-    parseFloat(
-      (computedItrTaxData.value.T +
-        computedItrTaxData.value.TN +
-        computedItrTaxData.value.K +
-        computedItrTaxData.value.KMIL +
-        computedItrTaxData.value.KESV) *
-        calculationData.value.coeficientOfNds
-    ).toFixed(numberOfDecimal)
-  );
-});
-
-const totalConsumables = computed(() => getTotalPrice(calculationData.value.consumablesData));
-const totalHardware = computed(() => getTotalPrice(calculationData.value.hardwareData));
-const totalMetal = computed(() => getTotalPrice(calculationData.value.metalData));
-
-const priceData = computed(() => {
-  return [
-    {
-      id: 1,
-      name: 'Металл',
-      key: 'metal',
-      statistics: getPercentOfTotal(totalMetal.value),
-      total: totalMetal.value || 0,
-      perItem: totalSpecificationItems.value ? truncateDecimal(totalMetal.value / totalSpecificationItems.value, 2) : 0
-    },
-    {
-      id: 2,
-      name: 'Метизы',
-      key: 'hardware',
-      statistics: getPercentOfTotal(totalHardware.value),
-      total: totalHardware.value || 0,
-      perItem: totalSpecificationItems.value ? truncateDecimal(totalHardware.value / totalSpecificationItems.value, 2) : 0
-    },
-    {
-      id: 3,
-      name: 'Расходники',
-      key: 'consumables',
-      statistics: getPercentOfTotal(totalConsumables.value),
-      total: totalConsumables.value || 0,
-      perItem: totalSpecificationItems.value ? truncateDecimal(totalConsumables.value / totalSpecificationItems.value, 2) : 0
-    },
-    {
-      id: 4,
-      name: 'Цех',
-      key: 'workshop',
-      statistics: getPercentOfTotal(taxTotal.value),
-      total: taxTotal.value || 0,
-      perItem: taxTotal.value / totalSpecificationItems.value
-    },
-    {
-      id: 5,
-      name: 'Зарплата ИТР',
-      key: 'wagesOfEngineers',
-      statistics: getPercentOfTotal(taxITRTotal.value),
-      total: taxITRTotal.value || 0,
-      perItem: taxITRTotal.value / totalSpecificationItems.value
-    },
-    {
-      id: 6,
-      name: 'Оцинковка',
-      key: 'galvanizing',
-      statistics: getPercentOfTotal(calculationData.value.galvanizedValue),
-      total: calculationData.value.galvanizedValue || 0,
-      perItem: totalSpecificationItems.value ? calculationData.value.galvanizedValue / totalSpecificationItems.value : 0
-    },
-    {
-      id: 7,
-      name: 'Транспорт',
-      key: 'transport',
-      statistics: getPercentOfTotal(calculationData.value.transportValue),
-      total: calculationData.value.transportValue || 0,
-      perItem: totalSpecificationItems.value ? calculationData.value.transportValue / totalSpecificationItems.value : 0
-    },
-    {
-      id: 8,
-      name: 'Аренда',
-      key: 'rent',
-      statistics: getPercentOfTotal(calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays),
-      total: calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays || 0,
-      perItem: totalSpecificationItems.value
-        ? (calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays) / totalSpecificationItems.value
-        : 0
-    },
-    {
-      id: 9,
-      name: 'Эл. эн.',
-      key: 'electricity',
-      statistics: getPercentOfTotal(calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) || 0,
-      total: calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays || 0,
-      perItem: totalSpecificationItems.value
-        ? (calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) / totalSpecificationItems.value
-        : 0
-    },
-    {
-      id: 10,
-      name: 'Рентабельность',
-      key: 'profitability',
-      statistics: getPercentOfTotal(
-        (totalMetal.value +
-          totalHardware.value +
-          totalConsumables.value +
-          taxTotal.value +
-          taxITRTotal.value +
-          calculationData.value.galvanizedValue +
-          calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
-          calculationData.value.profitabilityCoeficient
-      ),
-      total:
-        (totalMetal.value +
-          totalHardware.value +
-          totalConsumables.value +
-          taxTotal.value +
-          taxITRTotal.value +
-          calculationData.value.galvanizedValue +
-          calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
-        calculationData.value.profitabilityCoeficient,
-      perItem: totalSpecificationItems.value
-        ? ((totalMetal.value +
-            totalHardware.value +
-            totalConsumables.value +
-            taxTotal.value +
-            taxITRTotal.value +
-            calculationData.value.galvanizedValue +
-            calculationData.value.transportValue +
-            calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-            calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
-            calculationData.value.profitabilityCoeficient) /
-          totalSpecificationItems.value
-        : 0
-    },
-    {
-      id: 11,
-      name: 'Итого',
-      key: 'total',
-      statistics: 0,
-      total:
-        (totalMetal.value +
-          totalHardware.value +
-          totalConsumables.value +
-          taxTotal.value +
-          taxITRTotal.value +
-          calculationData.value.galvanizedValue +
-          calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
-          calculationData.value.profitabilityCoeficient +
-        (totalMetal.value +
-          totalHardware.value +
-          totalConsumables.value +
-          taxTotal.value +
-          taxITRTotal.value +
-          calculationData.value.galvanizedValue +
-          calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays),
-      perItem: totalSpecificationItems.value
-        ? ((totalMetal.value +
-            totalHardware.value +
-            totalConsumables.value +
-            taxTotal.value +
-            taxITRTotal.value +
-            calculationData.value.galvanizedValue +
-            calculationData.value.transportValue +
-            calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-            calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
-            calculationData.value.profitabilityCoeficient +
-            (totalMetal.value +
-              totalHardware.value +
-              totalConsumables.value +
-              taxTotal.value +
-              taxITRTotal.value +
-              calculationData.value.galvanizedValue +
-              calculationData.value.transportValue +
-              calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-              calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays)) /
-          totalSpecificationItems.value
-        : 0
-    }
-  ];
-});
-
-const finalPriceData = computed(() => {
-  return [
-    {
-      id: 1,
-      name: 'Металл',
-      key: 'metalTotal',
-      statistics: getPercentOfTotal(totalMetal.value + totalHardware.value),
-      total: totalMetal.value + totalHardware.value,
-      perItem: totalSpecificationItems.value ? truncateDecimal((totalMetal.value + totalHardware.value) / totalSpecificationItems.value) : 0
-    },
-    {
-      id: 2,
-      name: 'Переработка',
-      key: 'processing',
-      statistics: getPercentOfTotal(
-        totalConsumables.value +
-          taxTotal.value +
-          taxITRTotal.value +
-          calculationData.value.galvanizedValue +
-          calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays
-      ),
-      total:
-        totalConsumables.value +
-        taxTotal.value +
-        taxITRTotal.value +
-        calculationData.value.galvanizedValue +
-        calculationData.value.transportValue +
-        calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-        calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays,
-      perItem: totalSpecificationItems.value
-        ? truncateDecimal(
-            (totalConsumables.value +
-              taxTotal.value +
-              taxITRTotal.value +
-              calculationData.value.galvanizedValue +
-              calculationData.value.transportValue +
-              calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-              calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) /
-              totalSpecificationItems.value,
-            2
-          )
-        : 0
-    },
-    {
-      id: 3,
-      name: 'Рентабельность',
-      key: 'profitability',
-      statistics: getPercentOfTotal(
-        (totalMetal.value +
-          totalHardware.value +
-          totalConsumables.value +
-          taxTotal.value +
-          taxITRTotal.value +
-          calculationData.value.galvanizedValue +
-          calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
-          calculationData.value.profitabilityCoeficient
-      ),
-      total:
-        (totalMetal.value +
-          totalHardware.value +
-          totalConsumables.value +
-          taxTotal.value +
-          taxITRTotal.value +
-          calculationData.value.galvanizedValue +
-          calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
-        calculationData.value.profitabilityCoeficient,
-      perItem: totalSpecificationItems.value
-        ? ((totalMetal.value +
-            totalHardware.value +
-            totalConsumables.value +
-            taxTotal.value +
-            taxITRTotal.value +
-            calculationData.value.galvanizedValue +
-            calculationData.value.transportValue +
-            calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-            calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
-            calculationData.value.profitabilityCoeficient) /
-          totalSpecificationItems.value
-        : 0
-    },
-    {
-      id: 4,
-      name: 'Итого',
-      key: 'total',
-      statistics: 0,
-      total:
-        (totalMetal.value +
-          totalHardware.value +
-          totalConsumables.value +
-          taxTotal.value +
-          taxITRTotal.value +
-          calculationData.value.galvanizedValue +
-          calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
-          calculationData.value.profitabilityCoeficient +
-        (totalMetal.value +
-          totalHardware.value +
-          totalConsumables.value +
-          taxTotal.value +
-          taxITRTotal.value +
-          calculationData.value.galvanizedValue +
-          calculationData.value.transportValue +
-          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays),
-      perItem: totalSpecificationItems.value
-        ? ((totalMetal.value +
-            totalHardware.value +
-            totalConsumables.value +
-            taxTotal.value +
-            taxITRTotal.value +
-            calculationData.value.galvanizedValue +
-            calculationData.value.transportValue +
-            calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-            calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
-            calculationData.value.profitabilityCoeficient +
-            (totalMetal.value +
-              totalHardware.value +
-              totalConsumables.value +
-              taxTotal.value +
-              taxITRTotal.value +
-              calculationData.value.galvanizedValue +
-              calculationData.value.transportValue +
-              calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-              calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays)) /
-          totalSpecificationItems.value
-        : 0
-    }
-  ];
-});
-
-const computedWorkerTaxData = computed(() => {
-  const numberOfDecimal = 2;
-
-  return calculationData.value.workersTaxData.reduce(
-    (acc, item) => {
-      switch (item.key) {
-        case 'T':
-          acc.T = Number(parseFloat(item.coefficient * salariesOfWorkersTotal.value).toFixed(numberOfDecimal));
-          break;
-        case 'TN':
-          acc.TN = Number(parseFloat((acc.T / item.coefficientA) * item.coefficientB).toFixed(numberOfDecimal));
-          break;
-        case 'K':
-          acc.K = Number(parseFloat(salariesOfWorkersTotal.value - acc.T).toFixed(numberOfDecimal));
-          break;
-        case 'KMIL':
-          acc.KMIL = Number(parseFloat(acc.K * item.coefficient).toFixed(numberOfDecimal));
-          break;
-        case 'KESV':
-          acc.KESV = Number(parseFloat((acc.K + acc.KMIL) * item.coefficient).toFixed(numberOfDecimal));
-          break;
-
-        default:
-          break;
-      }
-
-      return acc;
-    },
-    { TN: 0, K: 0, KMIL: 0, KESV: 0 }
-  );
-});
-
-const computedItrTaxData = computed(() => {
-  const numberOfDecimal = 2;
-
-  return calculationData.value.itrTaxData.reduce(
-    (acc, item) => {
-      switch (item.key) {
-        case 'T':
-          acc.T = Number(parseFloat(item.coefficient * salariesOfITRTotal.value).toFixed(numberOfDecimal));
-          break;
-        case 'TN':
-          acc.TN = Number(parseFloat((acc.T / item.coefficientA) * item.coefficientB).toFixed(numberOfDecimal));
-          break;
-        case 'K':
-          acc.K = Number(parseFloat(salariesOfITRTotal.value - acc.T).toFixed(numberOfDecimal));
-          break;
-        case 'KMIL':
-          acc.KMIL = Number(parseFloat(acc.K * item.coefficient).toFixed(numberOfDecimal));
-          break;
-        case 'KESV':
-          acc.KESV = Number(parseFloat((acc.K + acc.KMIL) * item.coefficient).toFixed(numberOfDecimal));
-          break;
-
-        default:
-          break;
-      }
-
-      return acc;
-    },
-    { TN: 0, K: 0, KMIL: 0, KESV: 0 }
-  );
-});
-
-const getPercentOfTotal = (totalNumber) => {
-  return (totalNumber / finalTotalPrice.value) * 100 || 0;
-};
-
 onBeforeMount(async () => {
-  const query = router.currentRoute.value.query;
-
-  parentId.value = query.parentId;
-  currentCalculationType.value = query.type;
-  calculationPlanId.value = query.calculationPlanId;
+  await initializeFromQuery();
+  await loadWorkers();
 
   MochDataService.getWorkersTaxData().then((data) => {
     calculationData.value.workersTaxData = data;
@@ -667,163 +226,11 @@ onBeforeMount(async () => {
   MochDataService.getItrTaxData().then((data) => {
     calculationData.value.itrTaxData = data;
   });
-
-  // !!! NOTE: need for testing
-  // MochDataService.getConsumables().then((data) => {
-  //   calculationData.value.consumablesData = data;
-  // });
-  // MochDataService.getHardware().then((data) => {
-  //   calculationData.value.hardwareData = data;
-  // });
-  // MochDataService.getMetal().then((data) => {
-  //   calculationData.value.metalData = data;
-  // });
-
-  try {
-    if (currentCalculationType.value === 'fact') {
-      const calculationPlanRes = await ApiService.getCalculationById(calculationPlanId.value);
-      const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase()); // TODO: refactor
-      const camelizeData = Object.keys(calculationPlanRes.data).reduce((acc, key) => {
-        acc[camelize(key)] = calculationPlanRes.data[key];
-
-        if (key === 'calculationType') {
-          acc['calculationType'] = 'fact';
-        }
-
-        return acc;
-      }, {});
-
-      calculationPlanTotal.value = Number(camelizeData.total);
-      calculationData.value = { ...calculationData.value, ...camelizeData };
-    }
-  } catch (error) {
-    console.log(error);
-  }
 });
 
-const finalTotalPrice = computed(() => {
-  let totalPrice = null;
-
-  if (isAmountWithoutMetal.value) {
-    totalPrice =
-      (totalHardware.value +
-        totalConsumables.value +
-        taxTotal.value +
-        taxITRTotal.value +
-        calculationData.value.galvanizedValue +
-        calculationData.value.transportValue +
-        calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-        calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
-        calculationData.value.profitabilityCoeficient +
-      (totalHardware.value +
-        totalConsumables.value +
-        taxTotal.value +
-        taxITRTotal.value +
-        calculationData.value.galvanizedValue +
-        calculationData.value.transportValue +
-        calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-        calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays);
-  } else {
-    totalPrice =
-      (totalMetal.value +
-        totalHardware.value +
-        totalConsumables.value +
-        taxTotal.value +
-        taxITRTotal.value +
-        calculationData.value.galvanizedValue +
-        calculationData.value.transportValue +
-        calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-        calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) *
-        calculationData.value.profitabilityCoeficient +
-      (totalMetal.value +
-        totalHardware.value +
-        totalConsumables.value +
-        taxTotal.value +
-        taxITRTotal.value +
-        calculationData.value.galvanizedValue +
-        calculationData.value.transportValue +
-        calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
-        calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays);
-  }
-
-  return totalPrice;
+const displayTotalPrice = computed(() => {
+  return isAmountWithoutMetal.value ? finalTotalPriceWithoutMetal.value : finalTotalPrice.value;
 });
-
-function getTotalPrice(array) {
-  return array.reduce((acc, item) => {
-    if (item.price) {
-      acc = acc + item.price;
-    }
-
-    return acc;
-  }, 0);
-}
-
-const onUpload = async ({ event, tableName, accordionIndex }) => {
-  const newFile = event.files[0];
-  const arrayBuferFile = await newFile.arrayBuffer();
-  const wb = XLS.read(arrayBuferFile);
-  const sheet = wb.Sheets[wb.SheetNames[0]];
-
-  let consumablesDataRes = [];
-  let hardwareDataRes = [];
-  let metalDataRes = [];
-
-  const setTableData = (array, formatedRow) => {
-    if (formatedRow['Наименование']) {
-      array.push({
-        quantity: formatedRow['К-во'],
-        name: formatedRow['Наименование'],
-        price: formatedRow['Стоимость'],
-        unitOfMeasurement: formatedRow['ед.изм.'],
-        taxPrice: formatedRow['цена НДС'],
-        order: formatedRow['№ п/п']
-      });
-    }
-  };
-
-  XLS.utils.sheet_to_json(sheet).forEach((row) => {
-    const formatedRow = {};
-
-    Object.keys(row).forEach((key) => {
-      formatedRow[key.trim()] = row[key];
-    });
-
-    switch (tableName) {
-      case 'consumablesDataRes':
-        setTableData(consumablesDataRes, formatedRow);
-        break;
-
-      case 'hardwareDataRes':
-        setTableData(hardwareDataRes, formatedRow);
-        break;
-      case 'metalDataRes':
-        setTableData(metalDataRes, formatedRow);
-        break;
-
-      default:
-        break;
-    }
-  });
-
-  switch (tableName) {
-    case 'consumablesDataRes':
-      calculationData.value.consumablesData = consumablesDataRes;
-      break;
-
-    case 'hardwareDataRes':
-      calculationData.value.hardwareData = hardwareDataRes;
-      break;
-    case 'metalDataRes':
-      calculationData.value.metalData = metalDataRes;
-      break;
-
-    default:
-      break;
-  }
-
-  expandAccordionTotalCosts.value = [accordionIndex];
-};
 
 const onCellEditComplete = (event) => {
   let { data, newValue, field } = event;
@@ -844,10 +251,7 @@ const onCellEditComplete = (event) => {
 };
 
 const showDialog = async (key, flag = true) => {
-  let workersRes = {};
-  workersRes = await getWorkers();
-
-  dropdownItemsWorkerStaff.value = workersRes.data.map((item) => item.name);
+  await loadWorkers();
 
   switch (key) {
     case 'newStaffDialog':
@@ -862,30 +266,6 @@ const showDialog = async (key, flag = true) => {
 
     default:
       break;
-  }
-};
-
-const addNewWorkerToDB = async ({ name, lastname, position }) => {
-  loading.value = true;
-
-  try {
-    await ApiService.createWorker({ name, lastname, position: position.key });
-  } catch (error) {
-    console.log(error);
-  } finally {
-    loading.value = false;
-  }
-};
-
-const getWorkers = async () => {
-  loading.value = true;
-
-  try {
-    return await ApiService.getWorkers();
-  } catch (error) {
-    console.log(error);
-  } finally {
-    loading.value = false;
   }
 };
 
@@ -931,6 +311,17 @@ const saveNewStaff = () => {
     numberOfHoursWorked: null,
     salaryPerDay: null
   };
+};
+
+const copyWorkerData = (data) => {
+  calculationData.value.workersData.table.push({
+    id: (Math.random() * 1000).toFixed(),
+    name: data.name,
+    numberOfHoursWorked: data.numberOfHoursWorked,
+    salaryPerDay: data.salaryPerDay,
+    salaryPerHour: null,
+    total: null
+  });
 };
 
 const confirmDeleteWorker = (item) => {
@@ -1005,69 +396,33 @@ const showNewWorkerModal = () => {
 };
 
 const saveNewWorker = async (worker) => {
-  dropdownItemsWorkerStaff.value.push(worker.name);
-  await addNewWorkerToDB(worker);
+  try {
+    await addNewWorkerToDB(worker);
+    await loadWorkers();
 
-  if (newStaffDialog.value) {
-    newStaffData.value.name = newWorkerData.value.name;
+    if (newStaffDialog.value) {
+      newStaffData.value.name = newWorkerData.value.name;
+    }
+
+    if (newITRStaffDialog.value) {
+      newITRStaffData.value.name = newWorkerData.value.name;
+    }
+
+    newWorkerData.value = { name: '', lastname: '', position: '' };
+    showDialog('createNewWorkerDialog', false);
+  } catch (error) {
+    console.log(error);
   }
-
-  if (newITRStaffDialog.value) {
-    newITRStaffData.value.name = newWorkerData.value.name;
-  }
-
-  newWorkerData.value = { name: '', lastname: '', position: '' };
-  showDialog('createNewWorkerDialog', false);
-};
-
-const formatNumber = (numberData) => {
-  if (numberData && numberData.value) {
-    return new Intl.NumberFormat('ru-RU').format(numberData.value);
-  } else if (numberData) {
-    return new Intl.NumberFormat('ru-RU').format(numberData);
-  } else {
-    return 0;
-  }
-};
-
-const truncateDecimal = (num, decimalPlaces) => {
-  const factor = Math.pow(10, decimalPlaces);
-  return Math.trunc(num * factor) / factor;
 };
 
 const createCalculation = async () => {
-  loading.value = true;
+  const result = await createCalculationApi(displayTotalPrice.value, finalPriceData.value);
 
-  const getTotalValue = (data, fieldName) => {
-    return data.reduce((acc, item) => {
-      if (item.key === fieldName) {
-        acc = item.perItem;
-      }
-      return acc;
-    }, 0);
-  };
-
-  try {
-    const calculationRes = await ApiService.createCalculation({
-      ...calculationData.value,
-      calculationType: router.currentRoute.value.query.type || 'plan',
-      lastEditDate: new Date(),
-      consumablesData: JSON.stringify(calculationData.value.consumablesData),
-      hardwareData: JSON.stringify(calculationData.value.hardwareData),
-      metalData: JSON.stringify(calculationData.value.metalData),
-      parentCalculationId: Number(parentId.value),
-      total: finalTotalPrice.value,
-      totalMetalPerItem: getTotalValue(finalPriceData.value, 'metalTotal'),
-      totalProcessingPerItem: getTotalValue(finalPriceData.value, 'processing'),
-      totalProfitabilityPerItem: getTotalValue(finalPriceData.value, 'profitability')
-    });
+  if (result.success) {
     showSuccess();
-    router.push({ path: `/calculations/${calculationRes.data.id}` });
-  } catch (error) {
+    router.push({ path: `/calculations/${result.data.id}` });
+  } else {
     showError();
-    console.log(error);
-  } finally {
-    loading.value = false;
   }
 };
 
@@ -1088,10 +443,6 @@ const computedStyleClass = computed(() => {
     'text-[--primary-color]': currentCalculationType.value === 'fact'
   };
 });
-
-const removeFile = (entity) => {
-  calculationData.value[entity] = [];
-};
 
 const showSuccess = () => {
   toast.add({ severity: 'success', summary: 'Успешно', detail: 'Запрос отправден', life: 3000 });
@@ -1129,12 +480,12 @@ const showError = () => {
             </div>
 
             <div class="flex gap-2">
-              <div v-if="finalTotalPrice" class="font-semibold text-md flex items-center">
+              <div v-if="displayTotalPrice" class="font-semibold text-md flex items-center">
                 <div class="flex flex-col">
                   <div
                     class="flex flex-row gap-2 items-center"
                     :style="{
-                      border: finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact' ? '1px solid red' : '',
+                      border: displayTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact' ? '1px solid red' : '',
                       'border-radius': '5px',
                       padding: '5px'
                     }"
@@ -1143,11 +494,11 @@ const showError = () => {
                     <span
                       class="font-bold"
                       :class="{
-                        'text-[red]': finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact',
-                        'text-xl': finalTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact'
+                        'text-[red]': displayTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact',
+                        'text-xl': displayTotalPrice > calculationPlanTotal && calculationData.calculationType === 'fact'
                       }"
                     >
-                      {{ formatNumber(truncateDecimal(finalTotalPrice, 1)) }}
+                      {{ formatNumber(truncateDecimal(displayTotalPrice, 1)) }}
                     </span>
                   </div>
 
@@ -1156,7 +507,7 @@ const showError = () => {
                   <div v-if="totalSpecificationItems" class="flex flex-row gap-2">
                     <div :class="computedStyleClass">На 1 ед:</div>
                     <span class="font-bold">
-                      {{ formatNumber(truncateDecimal(finalTotalPrice / totalSpecificationItems, 1)) }}
+                      {{ formatNumber(truncateDecimal(displayTotalPrice / totalSpecificationItems, 1)) }}
                     </span>
                   </div>
 
@@ -1173,7 +524,7 @@ const showError = () => {
             </div>
 
             <div v-if="calculationData.calculationType === 'fact'" class="flex gap-2">
-              <div v-if="finalTotalPrice" class="font-semibold text-md flex items-center">
+              <div v-if="displayTotalPrice" class="font-semibold text-md flex items-center">
                 <div class="flex flex-col">
                   <div class="flex flex-row gap-2 items-center">
                     <div class="text-[--primary-color] max-w-[200px]">Сумма калькуляции-плана:</div>
@@ -1222,210 +573,22 @@ const showError = () => {
     </div>
 
     <div class="flex flex-col">
-      <div class="specification card h-full flex flex-col gap-4">
-        <Accordion :value="['0']" multiple>
-          <AccordionPanel value="0">
-            <AccordionHeader>
-              <div class="font-semibold text-xl" :class="computedStyleClass">Спецификация</div>
-            </AccordionHeader>
+      <SpecificationTable
+        :specification-data="calculationData.specificationData"
+        :dropdown-items-unit-of-measurement="dropdownItemsUnitOfMeasurement"
+        :computed-style-class="computedStyleClass"
+        @add="addNewSpecification"
+        @delete="confirmDeleteSpecification"
+        @copy="copySpecification"
+        @cell-edit-complete="onCellEditComplete"
+      />
 
-            <AccordionContent>
-              <DataTable
-                :value="calculationData.specificationData.table"
-                editMode="cell"
-                @cell-edit-complete="onCellEditComplete"
-                showGridlines
-              >
-                <template #empty> Нет данных для отображения </template>
-
-                <Column field="name" header="Наименование изделия" style="width: 25%">
-                  <template #body="{ data }">
-                    {{ data.name }}
-                  </template>
-
-                  <template #editor="{ data }">
-                    <InputText v-model="data.name" type="text" />
-                  </template>
-                </Column>
-
-                <Column field="quantity" header="Количество, шт" style="width: 25%">
-                  <template #body="{ data }">
-                    {{ data.quantity }}
-                  </template>
-
-                  <template #editor="{ data }">
-                    <InputText v-model="data.quantity" type="number" />
-                  </template>
-                </Column>
-
-                <Column field="unitOfMeasurement" header="Единица измерения" style="width: 25%">
-                  <template #body="{ data }">
-                    {{ data.unitOfMeasurement }}
-                  </template>
-
-                  <template #editor="{ data }">
-                    <Select
-                      id="unitOfMeasurement"
-                      v-model="data.unitOfMeasurement"
-                      :options="dropdownItemsUnitOfMeasurement"
-                      class="w-full"
-                    ></Select>
-                  </template>
-                </Column>
-
-                <Column field="valuePerUnit" header="Значение за одну единицу" style="width: 25%">
-                  <template #body="{ data }">
-                    {{ data.valuePerUnit }}
-                  </template>
-
-                  <template #editor="{ data }">
-                    <InputText v-model="data.valuePerUnit" type="number" />
-                  </template>
-                </Column>
-
-                <Column field="totalWeight" header="Общий вес" style="width: 25%">
-                  <template #body="{ data }">
-                    {{ truncateDecimal(data.quantity * data.valuePerUnit, 5) }}
-                  </template>
-                </Column>
-
-                <Column :exportable="false" style="min-width: 12rem">
-                  <template #body="slotProps">
-                    <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copySpecification(slotProps.data)" />
-                    <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteSpecification(slotProps.data)" />
-                  </template>
-                </Column>
-
-                <template #footer>
-                  <div
-                    class="flex justify-center items-center hover:cursor-pointer"
-                    :class="computedStyleClass"
-                    @click="addNewSpecification"
-                  >
-                    добавить строку +
-                  </div>
-
-                  <div class="flex justify-end gap-4 w-full">
-                    <div class="flex items-center">
-                      Итого: &nbsp;<span class="font-bold text-lg"> {{ formatNumber(truncateDecimal(totalSpecificationItems, 4)) }}</span>
-                    </div>
-                  </div>
-                </template>
-              </DataTable>
-            </AccordionContent>
-          </AccordionPanel>
-        </Accordion>
-
-        <div>
-          <label for="specificationData" :class="computedStyleClass">Заметки:</label>
-          <Textarea v-model="calculationData.specificationData.notes" />
-        </div>
-      </div>
-
-      <div class="grid grid-cols-1fr-40 gap-4 mb-[2rem]">
-        <div class="card subtotal mb-0">
-          <div class="flex flex-row justify-between gap-2">
-            <div class="font-semibold text-xl" :class="computedStyleClass">Подытог</div>
-          </div>
-
-          <DataTable :value="priceData" editMode="cell" @cell-edit-complete="onCellEditComplete" showGridlines>
-            <template #empty> Нет данных для отображения </template>
-
-            <Column field="name">
-              <template #body="{ data }">
-                <div>
-                  {{ data.name }}
-                </div>
-              </template>
-            </Column>
-
-            <Column field="total" header="Общая">
-              <template #body="{ data }">
-                <div :class="{ 'text-[red]': data.key === 'total' }">
-                  {{ formatNumber(data.total) }}
-                </div>
-              </template>
-
-              <template #editor="{ data }">
-                <InputText v-if="data.key === 'galvanizing'" v-model="data.total" type="number" />
-                <InputText v-if="data.key === 'transport'" v-model="data.total" type="number" />
-              </template>
-            </Column>
-
-            <Column field="perItem" header="На 1 единицу">
-              <template #body="{ data }">
-                {{ formatNumber(data.perItem) }}
-              </template>
-            </Column>
-
-            <Column header="Статистика" class="progress_cell">
-              <template #body="{ data }">
-                <div v-if="data.key !== 'total'">
-                  <ProgressBar
-                    v-tooltip="`${parseFloat(data.statistics).toFixed()}%`"
-                    :showValue="false"
-                    :value="Number(parseFloat(data.statistics).toFixed())"
-                    style="border-radius: 0; background-color: transparent; height: 40px"
-                  ></ProgressBar>
-                </div>
-              </template>
-            </Column>
-          </DataTable>
-        </div>
-
-        <div class="card final-statement">
-          <div class="flex flex-row justify-between gap-2">
-            <div class="font-semibold text-xl" :class="computedStyleClass">Итоговая ведомость</div>
-          </div>
-
-          <DataTable
-            :value="finalPriceData"
-            editMode="cell"
-            @cell-edit-complete="onCellEditComplete"
-            showGridlines
-            :style="{ border: '2px solid green', 'margin-bottom': '2rem' }"
-          >
-            <template #empty> Нет данных для отображения </template>
-
-            <Column field="name">
-              <template #body="{ data }">
-                <div :class="{ 'font-bold': data.key === 'total', 'text-lg': data.key === 'total' }">
-                  {{ data.name }}
-                </div>
-              </template>
-            </Column>
-
-            <Column field="total" header="Общая">
-              <template #body="{ data }">
-                <div :class="{ 'font-bold': data.key === 'total', 'text-lg': data.key === 'total' }">
-                  {{ formatNumber(truncateDecimal(Number(data.total), 1)) }}
-                </div>
-              </template>
-            </Column>
-
-            <Column field="perItem" header="На 1 единицу">
-              <template #body="{ data }">
-                <div :class="{ 'font-bold': data.key === 'total', 'text-lg': data.key === 'total' }">
-                  {{ formatNumber(truncateDecimal(Number(data.perItem), 1)) }}
-                </div>
-              </template>
-            </Column>
-
-            <Column header="Статистика" class="progress_cell">
-              <template #body="{ data }">
-                <div v-if="data.key !== 'total'">
-                  <ProgressBar
-                    v-tooltip="`${parseFloat(data.statistics).toFixed()}%`"
-                    :showValue="false"
-                    :value="Number(parseFloat(data.statistics).toFixed())"
-                    style="border-radius: 0; background-color: transparent; height: 40px"
-                  ></ProgressBar>
-                </div>
-              </template>
-            </Column>
-          </DataTable>
-        </div>
-      </div>
+      <PriceSummary
+        :price-data="priceData"
+        :final-price-data="finalPriceData"
+        :computed-style-class="computedStyleClass"
+        @cell-edit-complete="onCellEditComplete"
+      />
 
       <div class="card h-full flex flex-col gap-4">
         <div class="flex flex-row items-center justify-between gap-2">
@@ -1821,251 +984,18 @@ const showError = () => {
         </Accordion>
       </div>
 
-      <div class="card total-costs">
-        <div class="flex flex-row justify-between gap-2">
-          <div class="font-semibold text-xl" :class="computedStyleClass">Общие затраты</div>
-        </div>
-
-        <Accordion multiple :value="expandAccordionTotalCosts">
-          <AccordionPanel value="0">
-            <AccordionHeader>
-              <div class="flex gap-6 items-center justify-between w-full">
-                <div class="flex gap-6 items-center gap-2 w-full">
-                  <span> Расходники </span>
-
-                  <FileUpload
-                    ref="consumablesDataFileupload"
-                    mode="basic"
-                    accept=".xlsx"
-                    chooseLabel="Выберите файл"
-                    customUpload
-                    auto
-                    @uploader="(e) => onUpload({ event: e, tableName: 'consumablesDataRes', accordionIndex: 0 })"
-                  />
-
-                  <Button
-                    class="max-w-[150px]"
-                    label="Удалить файл"
-                    severity="danger"
-                    v-if="calculationData.consumablesData.length > 0"
-                    @click.stop="removeFile('consumablesData')"
-                  />
-                </div>
-
-                <div v-if="totalConsumables" class="flex justify-end items-center font-bold w-full mr-4">
-                  Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalConsumables) }}</span>
-                </div>
-              </div>
-            </AccordionHeader>
-
-            <AccordionContent>
-              <DataTable :value="calculationData.consumablesData" dataKey="order" :rowHover="true" showGridlines>
-                <template #empty> Нет данных для отображения </template>
-
-                <Column field="order" header="№ п/п" style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.order }}
-                  </template>
-                </Column>
-
-                <Column field="name" header="Наименование" style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.name }}
-                  </template>
-                </Column>
-
-                <Column field="unitOfMeasurement" header="ед.изм." style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.unitOfMeasurement }}
-                  </template>
-                </Column>
-
-                <Column field="quantity" header="К-во" style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.quantity }}
-                  </template>
-                </Column>
-
-                <Column field="taxPrice" header="цена НДС" style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.taxPrice }}
-                  </template>
-                </Column>
-
-                <Column field="price" header="Стоимость" style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.price }}
-                  </template>
-                </Column>
-
-                <template #footer>
-                  <div class="flex justify-end items-center font-bold w-full">
-                    Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalConsumables) }}</span>
-                  </div>
-                </template>
-              </DataTable>
-            </AccordionContent>
-          </AccordionPanel>
-
-          <AccordionPanel value="1">
-            <AccordionHeader>
-              <div class="flex gap-6 items-center justify-between w-full">
-                <div class="flex gap-6 items-center gap-2 w-full">
-                  <span> Метизы </span>
-
-                  <FileUpload
-                    ref="hardwareDataFileupload"
-                    mode="basic"
-                    accept=".xlsx"
-                    chooseLabel="Выберите файл"
-                    customUpload
-                    auto
-                    @uploader="(e) => onUpload({ event: e, tableName: 'hardwareDataRes', accordionIndex: 1 })"
-                  />
-                  <Button
-                    class="max-w-[150px]"
-                    label="Удалить файл"
-                    severity="danger"
-                    v-if="calculationData.hardwareData.length > 0"
-                    @click.stop="removeFile('hardwareData')"
-                  />
-                </div>
-
-                <div v-if="totalHardware" class="flex justify-end items-center font-bold w-full mr-4">
-                  Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalHardware) }}</span>
-                </div>
-              </div>
-            </AccordionHeader>
-
-            <AccordionContent>
-              <DataTable :value="calculationData.hardwareData" dataKey="order" :rowHover="true" showGridlines>
-                <template #empty> Нет данных для отображения </template>
-
-                <Column field="order" header="№ п/п" style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.order }}
-                  </template>
-                </Column>
-
-                <Column field="name" header="Наименование" style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.name }}
-                  </template>
-                </Column>
-
-                <Column field="unitOfMeasurement" header="ед.изм." style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.unitOfMeasurement }}
-                  </template>
-                </Column>
-
-                <Column field="quantity" header="К-во" style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.quantity }}
-                  </template>
-                </Column>
-
-                <Column field="taxPrice" header="цена НДС" style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.taxPrice }}
-                  </template>
-                </Column>
-
-                <Column field="price" header="Стоимость" style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.price }}
-                  </template>
-                </Column>
-
-                <template #footer>
-                  <div class="flex justify-end items-center font-bold w-full">
-                    Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalHardware) }}</span>
-                  </div>
-                </template>
-              </DataTable>
-            </AccordionContent>
-          </AccordionPanel>
-
-          <AccordionPanel value="2">
-            <AccordionHeader>
-              <div class="flex gap-6 items-center justify-between w-full">
-                <div class="flex gap-6 items-center gap-2 w-full">
-                  <span> Металл </span>
-
-                  <FileUpload
-                    ref="metalDataFileupload"
-                    mode="basic"
-                    accept=".xlsx"
-                    chooseLabel="Выберите файл"
-                    customUpload
-                    auto
-                    @uploader="(e) => onUpload({ event: e, tableName: 'metalDataRes', accordionIndex: 2 })"
-                  />
-                  <Button
-                    class="max-w-[150px]"
-                    label="Удалить файл"
-                    severity="danger"
-                    v-if="calculationData.metalData.length > 0"
-                    @click.stop="removeFile('metalData')"
-                  />
-                </div>
-
-                <div v-if="totalMetal" class="flex justify-end items-center font-bold w-full mr-4">
-                  Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalMetal) }}</span>
-                </div>
-              </div>
-            </AccordionHeader>
-
-            <AccordionContent>
-              <DataTable :value="calculationData.metalData" dataKey="order" :rowHover="true" showGridlines>
-                <template #empty> Нет данных для отображения </template>
-
-                <Column field="order" header="№ п/п" style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.order }}
-                  </template>
-                </Column>
-
-                <Column field="name" header="Наименование" style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.name }}
-                  </template>
-                </Column>
-
-                <Column field="unitOfMeasurement" header="ед.изм." style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.unitOfMeasurement }}
-                  </template>
-                </Column>
-
-                <Column field="quantity" header="К-во" style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.quantity }}
-                  </template>
-                </Column>
-
-                <Column field="taxPrice" header="цена НДС" style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.taxPrice }}
-                  </template>
-                </Column>
-
-                <Column field="price" header="Стоимость" style="min-width: 12rem">
-                  <template #body="{ data }">
-                    {{ data.price }}
-                  </template>
-                </Column>
-
-                <template #footer>
-                  <div class="flex justify-end items-center font-bold w-full">
-                    Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalMetal) }}</span>
-                  </div>
-                </template>
-              </DataTable>
-            </AccordionContent>
-          </AccordionPanel>
-        </Accordion>
-      </div>
+      <TotalCostsSection
+        :consumables-data="calculationData.consumablesData"
+        :hardware-data="calculationData.hardwareData"
+        :metal-data="calculationData.metalData"
+        :total-consumables="totalConsumables"
+        :total-hardware="totalHardware"
+        :total-metal="totalMetal"
+        :expand-accordion-total-costs="expandAccordionTotalCosts"
+        :computed-style-class="computedStyleClass"
+        @upload="onUpload"
+        @remove-file="removeFile"
+      />
     </div>
 
     <Dialog v-model:visible="createNewWorkerDialog" header="Новый сотрудник" :style="{ width: '450px' }" modal>
