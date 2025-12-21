@@ -11,11 +11,6 @@ const props = defineProps({
   }
 });
 
-// const home = ref({ icon: 'pi pi-home', to: '/' });
-// const items = ref([
-//   { label: 'Категория', to: '/category' },
-//   { label: 'Товар', to: '/category/product' }
-// ]);
 const redirect = (route) => {
   console.log(44444, route.query);
 
@@ -29,9 +24,6 @@ const redirect = (route) => {
       <div v-if="item.route" @click="redirect(item.route)" class="cursor-pointer">
         <span class="text-primary font-semibold">{{ item.label }}</span>
       </div>
-      <!-- <router-link v-if="item.route" :to="item.route">
-        <span class="text-primary font-semibold">{{ item.label }}</span>
-      </router-link> -->
     </template>
   </Breadcrumb>
 </template>

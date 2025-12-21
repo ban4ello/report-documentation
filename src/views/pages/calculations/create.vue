@@ -84,7 +84,6 @@ onBeforeRouteLeave((to, from, next) => {
   // eslint-disable-next-line no-unused-vars
   const { workersTaxData, itrTaxData, ...calculationDataClone2 } = calculationData.value;
   const cloneCalculationDate2 = JSON.stringify(calculationDataClone2);
-  console.log('2222', cloneCalculationDate2);
 
   if (cloneCalculationDate !== cloneCalculationDate2) {
     const conf = confirm('желаете покинуть страницу?');
