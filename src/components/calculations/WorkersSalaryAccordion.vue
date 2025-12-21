@@ -122,6 +122,7 @@ const handleChangeSelectedItem = (data) => {
             <div class="flex justify-between">
               <div class="flex flex-row gap-2 max-w-[250px] mb-4">
                 <label for="numberOfHoursPerShift">Количество часов в смене</label>
+                <!-- eslint-disable-next-line vue/no-mutating-props -->
                 <InputNumber v-model="calculationData.numberOfHoursPerShift" inputId="numberOfHoursPerShift" fluid />
               </div>
 
@@ -229,6 +230,7 @@ const handleChangeSelectedItem = (data) => {
 
             <div>
               <label for="workersData" :class="computedStyleClass">Заметки:</label>
+              <!-- eslint-disable-next-line vue/no-mutating-props -->
               <Textarea v-model="calculationData.workersData.notes" />
             </div>
 

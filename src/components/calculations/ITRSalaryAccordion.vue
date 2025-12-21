@@ -113,27 +113,29 @@ const handleChangeSelectedItem = (data) => {
         <div class="ITR">
           <div class="card h-full">
             <div class="flex gap-2 mb-4 items-center">
-              <div class="flex flex-row gap-2 items-center">
-                <label for="numberOfDaysPerShift">Количество дней в мес.</label>
-                <InputNumber
-                  v-model="calculationData.numberOfDaysPerShift"
-                  inputId="numberOfDaysPerShift"
-                  class="max-w-[50px]"
-                  fluid
-                />
-              </div>
+                      <div class="flex flex-row gap-2 items-center">
+                        <label for="numberOfDaysPerShift">Количество дней в мес.</label>
+                        <!-- eslint-disable-next-line vue/no-mutating-props -->
+                        <InputNumber
+                          v-model="calculationData.numberOfDaysPerShift"
+                          inputId="numberOfDaysPerShift"
+                          class="max-w-[50px]"
+                          fluid
+                        />
+                      </div>
 
-              <div class="flex flex-row gap-2 items-center">
-                <label for="itrWorkedDays">Количество дней (трудозатраты)</label>
-                <InputNumber
-                  v-model="calculationData.itrWorkedDays"
-                  inputId="itrWorkedDays"
-                  class="max-w-[50px]"
-                  fluid
-                  :minFractionDigits="1"
-                  :maxFractionDigits="5"
-                />
-              </div>
+                      <div class="flex flex-row gap-2 items-center">
+                        <label for="itrWorkedDays">Количество дней (трудозатраты)</label>
+                        <!-- eslint-disable-next-line vue/no-mutating-props -->
+                        <InputNumber
+                          v-model="calculationData.itrWorkedDays"
+                          inputId="itrWorkedDays"
+                          class="max-w-[50px]"
+                          fluid
+                          :minFractionDigits="1"
+                          :maxFractionDigits="5"
+                        />
+                      </div>
             </div>
 
             <DataTable

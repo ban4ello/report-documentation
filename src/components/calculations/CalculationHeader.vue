@@ -1,7 +1,7 @@
 <script setup>
 import { computed } from 'vue';
 
-defineProps({
+const props = defineProps({
   calculationData: {
     type: Object,
     required: true
@@ -40,7 +40,12 @@ defineProps({
   }
 });
 
-defineEmits(['update:isAmountWithoutMetal', 'create-calculation']);
+const emit = defineEmits(['update:isAmountWithoutMetal', 'create-calculation']);
+
+const localIsAmountWithoutMetal = computed({
+  get: () => props.isAmountWithoutMetal,
+  set: (value) => emit('update:isAmountWithoutMetal', value)
+});
 </script>
 
 <template>
@@ -52,7 +57,10 @@ defineEmits(['update:isAmountWithoutMetal', 'create-calculation']);
             <div class="flex flex-col gap-2">
               <div class="font-semibold text-lg" :class="computedStyleClass">
                 <span>Название калькуляции-{{ calculationData.calculationType === 'fact' ? 'факт' : 'план' }}:</span
-                ><span><InputText v-model="calculationData.title" type="text" /></span>
+                ><span>
+                  <!-- eslint-disable-next-line vue/no-mutating-props -->
+                  <InputText v-model="calculationData.title" type="text" />
+                </span>
               </div>
 
               <div v-if="calculationData.dateOfCreation" class="font-semibold text-lg">
@@ -99,7 +107,7 @@ defineEmits(['update:isAmountWithoutMetal', 'create-calculation']);
                 <Divider layout="horizontal" />
 
                 <div class="flex gap-2 items-center">
-                  <Checkbox v-model="isAmountWithoutMetal" :value="isAmountWithoutMetal" :binary="true" />
+                  <Checkbox v-model="localIsAmountWithoutMetal" :binary="true" />
                   <label :class="computedStyleClass" class="font-semibold items-center text-md">Сумма без металла</label>
                 </div>
               </div>
@@ -112,7 +120,7 @@ defineEmits(['update:isAmountWithoutMetal', 'create-calculation']);
             <div v-if="displayTotalPrice" class="font-semibold text-md flex items-center">
               <div class="flex flex-col">
                 <div class="flex flex-row gap-2 items-center">
-                  <div class="text-[--primary-color] max-w-[200px]">Сумма калькуляции-плана:</div>
+                  <div class="max-w-[200px]" style="color: var(--primary-color)">Сумма калькуляции-плана:</div>
                   <span class="font-bold">
                     {{ formatNumber(truncateDecimal(calculationPlanTotal, 1)) }}
                   </span>
@@ -121,7 +129,7 @@ defineEmits(['update:isAmountWithoutMetal', 'create-calculation']);
                 <Divider layout="horizontal" />
 
                 <div v-if="totalSpecificationItems" class="flex flex-row gap-2">
-                  <div class="text-[--primary-color]">На 1 ед:</div>
+                  <div style="color: var(--primary-color)">На 1 ед:</div>
                   <span class="font-bold">
                     {{ formatNumber(truncateDecimal(calculationPlanTotal / totalSpecificationItems, 1)) }}
                   </span>
