@@ -2,22 +2,16 @@
 import { onBeforeMount, ref, computed, watch } from 'vue';
 import { MochDataService } from '@/service/MochDataService';
 import ApiService from '@/service/ApiService';
-// import { useToast } from 'primevue/usetoast';
 import SearchSelect from '@/components/custom-ui/SearchSelect.vue';
 import TaxCharges from '@/components/TaxCharges.vue';
 import * as XLS from 'xlsx';
-import { useRouter, useRoute, onBeforeRouteLeave } from 'vue-router';
+import { useRouter, onBeforeRouteLeave } from 'vue-router';
 
-// const toast = useToast();
 import { useToast } from 'primevue/usetoast';
 const toast = useToast();
 
 const router = useRouter();
-const route = useRoute();
-const fileupload = ref();
-// const dropdownItemsWorkerStaff = ref(['Бабенко', 'Червань Антон', 'Васильев', 'Атаманенко', 'Татарский']);
 const dropdownItemsWorkerStaff = ref([]);
-const dropdownItemsITR = ref(['Кристина', 'Олька', 'Танюха', 'Тёмка', 'Николаев', 'Никита', 'Шеф']);
 const dropdownItemsWorkersRole = ref([
   { label: 'Рабочий', key: 'worker' },
   { label: 'ИТР', key: 'ITR' }
@@ -84,7 +78,6 @@ onBeforeRouteLeave((to, from, next) => {
   // eslint-disable-next-line no-unused-vars
   const { workersTaxData, itrTaxData, ...calculationDataClone2 } = calculationData.value;
   const cloneCalculationDate2 = JSON.stringify(calculationDataClone2);
-  console.log('2222', cloneCalculationDate2);
 
   if (cloneCalculationDate !== cloneCalculationDate2) {
     const conf = confirm('желаете покинуть страницу?');
@@ -93,7 +86,6 @@ onBeforeRouteLeave((to, from, next) => {
     }
   } else {
     next();
-    console.log('onBeforeRouteLeave', to, from);
   }
 });
 
@@ -223,7 +215,6 @@ onBeforeRouteLeave((to, from, next) => {
 
 let newWorkerData = ref({ name: '', lastname: '', position: '' });
 let increaseInSalary = ref(0);
-let test = ref(5);
 
 const salariesOfWorkersTotal = computed(() =>
   calculationData.value.workersData.table.reduce((acc, item) => {
@@ -765,7 +756,6 @@ function getTotalPrice(array) {
     }
 
     return acc;
-    // return acc + parseFloat(item.price.replaceAll(' ', '').replaceAll(',', '.'));
   }, 0);
 }
 
@@ -925,17 +915,6 @@ const confirmDeleteSpecification = (data) => {
   calculationData.value.specificationData.table = calculationData.value.specificationData.table.filter((item) => item.id !== data.id);
 };
 
-const copyStaffWorker = (data) => {
-  calculationData.value.workersData.table.push({
-    id: (Math.random() * 1000).toFixed(),
-    name: data.name,
-    numberOfHoursWorked: data.numberOfHoursWorked,
-    salaryPerDay: data.salaryPerDay,
-    salaryPerHour: null,
-    total: null
-  });
-};
-
 const saveNewStaff = () => {
   calculationData.value.workersData.table.push({
     id: (Math.random() * 1000).toFixed(),
@@ -1083,7 +1062,7 @@ const createCalculation = async () => {
       totalProfitabilityPerItem: getTotalValue(finalPriceData.value, 'profitability')
     });
     showSuccess();
-    // router.push({ path: `/calculations/${calculationRes.data.id}` });
+    router.push({ path: `/calculations/${calculationRes.data.id}` });
   } catch (error) {
     showError();
     console.log(error);
@@ -1102,26 +1081,6 @@ watch(increaseInSalary, (newValue, oldValue) => {
     return { ...item, salaryPerDay: newPrice };
   });
 });
-
-// watch(
-//   () => route.fullPath,
-//   (newPath, oldPath) => {
-//     // Обработка изменения URL
-//     console.log('URL changed from', oldPath, 'to', newPath);
-//   },
-//   { immediate: false }
-// );
-
-const changeTaxValue = ({ data, newValue, field }, dataName) => {
-  // TODO: refactor: почему-то не работает реактивность на обновление значения "К" из "Налоговые начисления"
-  calculationData.value[dataName] = calculationData.value[dataName].map((item) => {
-    if (item.key === data.key) {
-      item[field] = newValue;
-    }
-
-    return item;
-  });
-};
 
 const computedStyleClass = computed(() => {
   return {
@@ -1149,8 +1108,6 @@ const showError = () => {
   </div>
 
   <Fluid>
-    <span>{{ test }}</span>
-    <button @click="test++">add</button>
     <div class="calculation-title z-50 sticky top-[60px] shadow-md bg-[#fff] mb-4">
       <Panel toggleable :header="`Калькуляция-${calculationData.calculationType === 'fact' ? 'факт' : 'план'}`">
         <div class="flex flex-row items-center justify-between gap-4">
@@ -1787,7 +1744,7 @@ const showError = () => {
                             outlined
                             rounded
                             severity="success"
-                            @click="copyItrWorker(slotProps.data)"
+                            @click="copyITRWorker(slotProps.data)"
                           />
                           <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteItrWorker(slotProps.data)" />
                         </template>
