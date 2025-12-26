@@ -3,6 +3,7 @@ import { onBeforeMount, ref, computed, watch } from 'vue';
 import ApiService from '@/service/ApiService';
 import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
+
 import { MochDataService } from '@/service/MochDataService';
 
 // Composables
@@ -76,6 +77,8 @@ const displayTotalPrice = computed(() => {
   return isAmountWithoutMetal.value ? finalTotalPriceWithoutMetal.value : finalTotalPrice.value;
 });
 
+const breadCrumbsItems = ref([]);
+
 const computedStyleClass = computed(() => {
   const calculationType = currentCalculationType.value || calculationData.value.calculationType;
   return {
@@ -124,6 +127,19 @@ onBeforeMount(async () => {
 
       if (calculationData.value.parentCalculationId) {
         const parentCalculationRes = await ApiService.getParentCalculationChildren(calculationData.value.parentCalculationId);
+
+        breadCrumbsItems.value = parentCalculationRes.data.map((item) => {
+          return {
+            label: item.title,
+            route: {
+              path: `/calculations/${item.id}`,
+              query: {
+                parentId: item.parent_calculation_id
+              }
+            }
+          };
+        });
+
         calculationPlanTotal.value = Number(parentCalculationRes.data.filter((item) => item.calculation_type === 'plan')[0].total);
       }
     } catch (error) {
@@ -367,6 +383,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
 
   <Fluid>
     <CalculationHeader
+      :breadCrumbsItems="breadCrumbsItems"
       :calculation-data="calculationData"
       :display-total-price="displayTotalPrice"
       :calculation-plan-total="calculationPlanTotal"
