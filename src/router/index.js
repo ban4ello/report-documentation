@@ -19,14 +19,14 @@ const router = createRouter({
           component: () => import('@/views/pages/calculations/index.vue')
         },
         {
-          path: '/calculations/:id',
-          name: 'calculation-item',
+          path: '/calculations/create',
+          name: 'calculation-create',
           component: () => import('@/views/pages/calculations/_id.vue')
         },
         {
-          path: '/calculations/create',
-          name: 'calculation-create',
-          component: () => import('@/views/pages/calculations/create.vue')
+          path: '/calculations/:id',
+          name: 'calculation-item',
+          component: () => import('@/views/pages/calculations/_id.vue')
         },
         {
           path: '/analysis',
@@ -151,6 +151,6 @@ router.beforeEach((to, from, next) => {
 
   if (to.name !== 'login' && (!isAuthenticated || isAuthenticated === 'false')) next({ path: '/login' });
   else next();
-})
+});
 
 export default router;

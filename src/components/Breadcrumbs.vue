@@ -12,8 +12,6 @@ const props = defineProps({
 });
 
 const redirect = (route) => {
-  console.log(44444, route.query);
-
   router.push({ path: route.path, query: route.query });
 };
 </script>
