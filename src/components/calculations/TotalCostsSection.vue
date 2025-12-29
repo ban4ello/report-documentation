@@ -69,6 +69,10 @@ const emit = defineEmits(['upload', 'remove-file']);
                 v-if="consumablesData.length > 0"
                 @click.stop="$emit('remove-file', 'consumablesData')"
               />
+
+              <span @click.stop="$emit('paste-from-buffer', 'consumablesData')" class="text-sm cursor-pointer underline color-blue-500">
+                Вставить из буфера
+              </span>
             </div>
 
             <div v-if="totalConsumables" class="flex justify-end items-center font-bold w-full mr-4">
@@ -148,6 +152,10 @@ const emit = defineEmits(['upload', 'remove-file']);
                 v-if="hardwareData.length > 0"
                 @click.stop="$emit('remove-file', 'hardwareData')"
               />
+
+              <span @click.stop="$emit('paste-from-buffer', 'hardwareData')" class="text-sm cursor-pointer underline color-blue-500">
+                Вставить из буфера
+              </span>
             </div>
 
             <div v-if="totalHardware" class="flex justify-end items-center font-bold w-full mr-4">
@@ -227,6 +235,10 @@ const emit = defineEmits(['upload', 'remove-file']);
                 v-if="metalData.length > 0"
                 @click.stop="$emit('remove-file', 'metalData')"
               />
+
+              <span @click.stop="$emit('paste-from-buffer', 'metalData')" class="text-sm cursor-pointer underline color-blue-500">
+                Вставить из буфера
+              </span>
             </div>
 
             <div v-if="totalMetal" class="flex justify-end items-center font-bold w-full mr-4">
@@ -287,3 +299,8 @@ const emit = defineEmits(['upload', 'remove-file']);
   </div>
 </template>
 
+<style scoped lang="scss">
+.color-blue-500 {
+  color: #3b82f6;
+}
+</style>

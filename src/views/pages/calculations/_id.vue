@@ -70,7 +70,7 @@ const {
 } = useCalculations(calculationData);
 
 // File upload composable
-const { onUpload, removeFile } = useFileUpload(calculationData, expandAccordionTotalCosts);
+const { onUpload, removeFile, pasteFromBuffer } = useFileUpload(calculationData, expandAccordionTotalCosts);
 
 const displayTotalPrice = computed(() => {
   return isAmountWithoutMetal.value ? finalTotalPriceWithoutMetal.value : finalTotalPrice.value;
@@ -458,6 +458,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
         :computed-style-class="computedStyleClass"
         @upload="onUpload"
         @remove-file="removeFile"
+        @paste-from-buffer="pasteFromBuffer"
       />
     </div>
 
