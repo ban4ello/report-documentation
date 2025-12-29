@@ -4,7 +4,9 @@ import { formatNumber, truncateDecimal } from '@/utils/helper';
 export function useCalculations(calculationData) {
   const salariesOfWorkersTotal = computed(() =>
     calculationData.value.workersData.table.reduce((acc, item) => {
-      return acc + parseFloat(Number((item.salaryPerDay / calculationData.value.numberOfHoursPerShift) * item.numberOfHoursWorked).toFixed());
+      return (
+        acc + parseFloat(Number((item.salaryPerDay / calculationData.value.numberOfHoursPerShift) * item.numberOfHoursWorked).toFixed())
+      );
     }, 0)
   );
 
@@ -12,7 +14,9 @@ export function useCalculations(calculationData) {
     calculationData.value.itrData.table.reduce((acc, item) => {
       return (
         acc +
-        Number(parseFloat((item.salaryPerMonth / calculationData.value.numberOfDaysPerShift) * calculationData.value.itrWorkedDays).toFixed())
+        Number(
+          parseFloat((item.salaryPerMonth / calculationData.value.numberOfDaysPerShift) * calculationData.value.itrWorkedDays).toFixed()
+        )
       );
     }, 0)
   );
@@ -30,10 +34,34 @@ export function useCalculations(calculationData) {
       }, 0) || 0
   );
 
+  /**
+   * Преобразует строку с числом в формате "3 072,00" в число
+   * @param {string|number} value - Значение для преобразования
+   * @returns {number} Преобразованное число
+   */
+  const parsePrice = (value) => {
+    if (!value) return 0;
+
+    // Если уже число, возвращаем как есть
+    if (typeof value === 'number') {
+      return value;
+    }
+
+    // Если строка, обрабатываем формат "3 072,00"
+    if (typeof value === 'string') {
+      // Убираем все пробелы и заменяем запятую на точку
+      const cleanedValue = value.replace(/\s/g, '').replace(',', '.');
+      const parsed = parseFloat(cleanedValue);
+      return isNaN(parsed) ? 0 : parsed;
+    }
+
+    return 0;
+  };
+
   const getTotalPrice = (array) => {
     return array.reduce((acc, item) => {
       if (item.price) {
-        acc = acc + item.price;
+        acc = acc + parsePrice(item.price);
       }
       return acc;
     }, 0);
@@ -244,10 +272,7 @@ export function useCalculations(calculationData) {
         id: 8,
         name: 'Аренда',
         key: 'rent',
-        statistics: getPercentOfTotal(
-          calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays,
-          finalTotalPrice.value
-        ),
+        statistics: getPercentOfTotal(calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays, finalTotalPrice.value),
         total: calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays || 0,
         perItem: totalSpecificationItems.value
           ? (calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays) / totalSpecificationItems.value
@@ -257,10 +282,9 @@ export function useCalculations(calculationData) {
         id: 9,
         name: 'Эл. эн.',
         key: 'electricity',
-        statistics: getPercentOfTotal(
-          calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays,
-          finalTotalPrice.value
-        ) || 0,
+        statistics:
+          getPercentOfTotal(calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays, finalTotalPrice.value) ||
+          0,
         total: calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays || 0,
         perItem: totalSpecificationItems.value
           ? (calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) / totalSpecificationItems.value
@@ -307,7 +331,9 @@ export function useCalculations(calculationData) {
         key: 'metalTotal',
         statistics: getPercentOfTotal(totalMetal.value + totalHardware.value, finalTotalPrice.value),
         total: totalMetal.value + totalHardware.value,
-        perItem: totalSpecificationItems.value ? truncateDecimal((totalMetal.value + totalHardware.value) / totalSpecificationItems.value) : 0
+        perItem: totalSpecificationItems.value
+          ? truncateDecimal((totalMetal.value + totalHardware.value) / totalSpecificationItems.value)
+          : 0
       },
       {
         id: 2,
@@ -384,4 +410,3 @@ export function useCalculations(calculationData) {
     truncateDecimal
   };
 }
-
