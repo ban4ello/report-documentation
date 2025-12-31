@@ -10,8 +10,8 @@ const router = createRouter({
       children: [
         {
           path: '/',
-          name: 'dashboard',
-          component: () => import('@/views/Dashboard.vue')
+          name: 'analysis',
+          component: () => import('@/views/pages/analysis/index.vue')
         },
         {
           path: '/calculations',
@@ -27,11 +27,6 @@ const router = createRouter({
           path: '/calculations/:id',
           name: 'calculation-item',
           component: () => import('@/views/pages/calculations/_id.vue')
-        },
-        {
-          path: '/analysis',
-          name: 'analysis',
-          component: () => import('@/views/pages/analysis/index.vue')
         },
         {
           path: '/uikit/formlayout',
