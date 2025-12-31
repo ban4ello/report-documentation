@@ -3,20 +3,26 @@ import { onBeforeMount } from 'vue';
 import { useAnalysis } from '@/composables/useAnalysis';
 import AnalysisTable from '@/components/analysis/AnalysisTable.vue';
 import WorkersSalaryTable from '@/components/analysis/WorkersSalaryTable.vue';
+import ITRSalaryTable from '@/components/analysis/ITRSalaryTable.vue';
 import DateFilter from '@/components/analysis/DateFilter.vue';
 
 const {
   loading,
   isShowAllYear,
   isShowAllYearAnalysis,
+  isShowAllYearITR,
   analysisTableFilter,
   workersSalaryFilter,
+  itrSalaryFilter,
   calculationsData,
   filteredCalculationsData,
+  filteredCalculationsDataForITR,
   workersSalary,
+  itrSalary,
   loadCalculations,
   setFilterForAnalysisTable,
-  setWorkersFilter
+  setWorkersFilter,
+  setITRFilter
 } = useAnalysis();
 
 onBeforeMount(async () => {
@@ -52,6 +58,16 @@ onBeforeMount(async () => {
       </div>
 
       <WorkersSalaryTable :workersSalary="workersSalary" :filteredCalculationsData="filteredCalculationsData" />
+    </div>
+
+    <div class="card">
+      <div class="flex gap-4 justify-between">
+        <div class="font-semibold text-[--primary-color] text-xl mb-4">ЗП ИТР</div>
+
+        <DateFilter :modelValue="itrSalaryFilter.selectedMonth" v-model:showAllYear="isShowAllYearITR" @dateChange="setITRFilter" />
+      </div>
+
+      <ITRSalaryTable :itrSalary="itrSalary" :filteredCalculationsData="filteredCalculationsDataForITR" />
     </div>
   </Fluid>
 </template>
