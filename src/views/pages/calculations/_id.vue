@@ -1,5 +1,5 @@
 <script setup>
-import { onBeforeMount, ref, computed, watch } from 'vue';
+import { onBeforeMount, ref, computed, watch, nextTick } from 'vue';
 import ApiService from '@/service/ApiService';
 import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
@@ -16,6 +16,7 @@ import { useFileUpload } from '@/composables/useFileUpload';
 import SpecificationTable from '@/components/calculations/SpecificationTable.vue';
 import PriceSummary from '@/components/calculations/PriceSummary.vue';
 import TotalCostsSection from '@/components/calculations/TotalCostsSection.vue';
+import MediaFilesSection from '@/components/calculations/MediaFilesSection.vue';
 import CalculationHeader from '@/components/calculations/CalculationHeader.vue';
 import VariablesSection from '@/components/calculations/VariablesSection.vue';
 import WorkersSalaryAccordion from '@/components/calculations/WorkersSalaryAccordion.vue';
@@ -48,6 +49,7 @@ const selectedStaff = ref(null);
 const selectedITRStaff = ref(null);
 const createNewWorkerDialog = ref(false);
 const increaseInSalary = ref(0);
+const mediaFilesSectionRef = ref(null);
 
 // Calculations composable
 const {
@@ -112,6 +114,10 @@ onBeforeMount(async () => {
           case 'numberOfDaysPerShift':
           case 'itrWorkedDays':
             acc[camelize(item)] = Number(calculationRes.data[item]);
+            break;
+
+          case 'dateOfCreation':
+            acc[camelize(item)] = calculationRes.data[item] ? new Date(calculationRes.data[item]) : new Date();
             break;
 
           default:
@@ -312,8 +318,30 @@ const saveNewWorker = async (worker) => {
     await loadWorkers();
     newWorkerData.value = { name: '', lastname: '', position: '' };
     createNewWorkerDialog.value = false;
+    toast.add({
+      severity: 'success',
+      summary: 'Успешно',
+      detail: 'Сотрудник создан',
+      life: 3000
+    });
   } catch (error) {
     console.log(error);
+    // Проверка на ошибку дубликата имени с сервера
+    if (error.response?.data?.code === 'DUPLICATE_WORKER_NAME' || error.response?.data?.message?.includes('уже существует')) {
+      toast.add({
+        severity: 'error',
+        summary: 'Ошибка',
+        detail: error.response?.data?.message || 'Сотрудник с таким именем уже существует',
+        life: 3000
+      });
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: 'Ошибка',
+        detail: error.response?.data?.message || 'Не удалось создать сотрудника',
+        life: 3000
+      });
+    }
   }
 };
 
@@ -323,6 +351,22 @@ const saveCalculation = async () => {
     const result = await createCalculationApi(displayTotalPrice.value, finalPriceData.value);
     if (result.success) {
       toast.add({ severity: 'success', summary: 'Успешно', detail: 'Калькуляция создана', life: 3000 });
+      
+      // Загружаем отложенные медиа файлы перед переходом
+      if (mediaFilesSectionRef.value && mediaFilesSectionRef.value.uploadPendingFiles) {
+        // Обновляем calculationId для компонента
+        calculationId.value = result.data.id;
+        // Ждем обновления компонента
+        await nextTick();
+        // Загружаем файлы
+        try {
+          await mediaFilesSectionRef.value.uploadPendingFiles();
+        } catch (error) {
+          console.error('Error uploading pending files:', error);
+          // Продолжаем переход даже если загрузка файлов не удалась
+        }
+      }
+      
       router.push({ path: `/calculations/${result.data.id}` });
     } else {
       toast.add({ severity: 'error', summary: 'Ошибка', detail: 'Не удалось создать калькуляцию', life: 3000 });
@@ -348,6 +392,7 @@ const saveCalculation = async () => {
         consumablesData: JSON.stringify(calculationData.value.consumablesData),
         hardwareData: JSON.stringify(calculationData.value.hardwareData),
         metalData: JSON.stringify(calculationData.value.metalData),
+        dateOfCreation: calculationData.value.dateOfCreation || today,
         lastEditDate: today,
         total: displayTotalPrice.value,
         totalMetalPerItem: getTotalValue(finalPriceData.value, 'metalTotal'),
@@ -477,6 +522,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
         @remove-file="removeFile"
         @paste-from-buffer="pasteFromBuffer"
       />
+
+      <MediaFilesSection ref="mediaFilesSectionRef" :calculation-id="calculationId" :computed-style-class="computedStyleClass" />
     </div>
 
     <CreateWorkerDialog

@@ -23,6 +23,7 @@ export function useCalculation() {
     profitabilityCoeficient: 0,
     title: `Калькуляция ${date.toLocaleDateString()}`,
     transportValue: 0,
+    dateOfCreation: date,
     lastEditDate: '',
     calculationType: 'plan',
     specificationData: {
@@ -90,6 +91,7 @@ export function useCalculation() {
       const calculationRes = await ApiService.createCalculation({
         ...calculationData.value,
         calculationType: router.currentRoute.value.query.type || 'plan',
+        dateOfCreation: calculationData.value.dateOfCreation || new Date(),
         lastEditDate: new Date(),
         consumablesData: JSON.stringify(calculationData.value.consumablesData),
         hardwareData: JSON.stringify(calculationData.value.hardwareData),
@@ -120,4 +122,3 @@ export function useCalculation() {
     createCalculation
   };
 }
-
