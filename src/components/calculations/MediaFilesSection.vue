@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onBeforeUnmount, nextTick } from 'vue';
 import FileUpload from 'primevue/fileupload';
 import ApiService from '@/service/ApiService';
 import { useToast } from 'primevue/usetoast';
@@ -20,6 +20,13 @@ const fileUploadRef = ref(null);
 const mediaFiles = ref([]);
 const loading = ref(false);
 const pendingFiles = ref([]); // Файлы, ожидающие загрузки после создания калькуляции
+const previewOverlay = ref(null);
+const previewFile = ref(null);
+const previewImageUrl = ref(null);
+const previewLoading = ref(false);
+const previewTimeout = ref(null);
+const previewCache = ref(new Map()); // Кэш для предпросмотров
+const fileNameRefs = ref(new Map()); // Refs для элементов имен файлов
 
 const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
 const maxFileSize = 10 * 1024 * 1024; // 10MB
@@ -230,8 +237,147 @@ const getFileIcon = (fileType) => {
   return 'pi-file';
 };
 
+const isImageFile = (fileType) => {
+  return fileType.startsWith('image/');
+};
+
+const setFileNameRef = (el, fileId) => {
+  if (el) {
+    fileNameRefs.value.set(fileId, el);
+  } else {
+    fileNameRefs.value.delete(fileId);
+  }
+};
+
+const showPreview = async (event, file) => {
+  if (!isImageFile(file.fileType)) {
+    return; // Предпросмотр только для изображений
+  }
+
+  // Проверяем, что событие существует
+  if (!event) {
+    return;
+  }
+
+  // Очищаем предыдущий таймаут
+  if (previewTimeout.value) {
+    clearTimeout(previewTimeout.value);
+  }
+
+  // Получаем элемент из refs или из события
+  const targetElement = fileNameRefs.value.get(file.id) || event.currentTarget || event.target;
+
+  // Проверяем, что элемент существует и в DOM
+  if (!targetElement) {
+    return;
+  }
+
+  // Задержка перед показом предпросмотра (500ms)
+  previewTimeout.value = setTimeout(async () => {
+    // Проверяем, что overlay существует
+    if (!previewOverlay.value) {
+      return;
+    }
+
+    // Проверяем, что элемент все еще в DOM
+    if (!targetElement || !document.contains(targetElement)) {
+      return;
+    }
+
+    previewFile.value = file;
+    previewLoading.value = true;
+
+    // Проверяем кэш
+    if (previewCache.value.has(file.id)) {
+      previewImageUrl.value = previewCache.value.get(file.id);
+      await nextTick();
+      try {
+        // Создаем синтетическое событие для toggle
+        const syntheticEvent = {
+          currentTarget: targetElement,
+          target: targetElement
+        };
+        if (targetElement && previewOverlay.value) {
+          previewOverlay.value.toggle(syntheticEvent, targetElement);
+        }
+      } catch (error) {
+        console.error('Error showing preview overlay:', error);
+      }
+      previewLoading.value = false;
+      return;
+    }
+
+    previewImageUrl.value = null;
+
+    try {
+      const response = await ApiService.downloadCalculationMediaFile(file.id);
+      const blob = new Blob([response.data], { type: file.fileType });
+      const url = window.URL.createObjectURL(blob);
+      previewImageUrl.value = url;
+      // Сохраняем в кэш
+      previewCache.value.set(file.id, url);
+      await nextTick();
+      try {
+        // Создаем синтетическое событие для toggle
+        const syntheticEvent = {
+          currentTarget: targetElement,
+          target: targetElement
+        };
+        if (targetElement && previewOverlay.value) {
+          previewOverlay.value.toggle(syntheticEvent, targetElement);
+        }
+      } catch (error) {
+        console.error('Error showing preview overlay:', error);
+      }
+    } catch (error) {
+      console.error('Error loading preview:', error);
+      toast.add({
+        severity: 'error',
+        summary: 'Ошибка',
+        detail: 'Не удалось загрузить предпросмотр',
+        life: 2000
+      });
+    } finally {
+      previewLoading.value = false;
+    }
+  }, 500);
+};
+
+const hidePreview = () => {
+  // Очищаем таймаут при скрытии
+  if (previewTimeout.value) {
+    clearTimeout(previewTimeout.value);
+    previewTimeout.value = null;
+  }
+  // Не удаляем URL из кэша, чтобы можно было быстро показать снова
+  previewFile.value = null;
+};
+
+const cancelPreview = () => {
+  if (previewTimeout.value) {
+    clearTimeout(previewTimeout.value);
+    previewTimeout.value = null;
+  }
+};
+
 onMounted(() => {
   loadMediaFiles();
+});
+
+onBeforeUnmount(() => {
+  // Очищаем таймаут
+  if (previewTimeout.value) {
+    clearTimeout(previewTimeout.value);
+  }
+  // Очищаем кэш и освобождаем URL
+  previewCache.value.forEach((url) => {
+    window.URL.revokeObjectURL(url);
+  });
+  previewCache.value.clear();
+  // Очищаем текущий предпросмотр
+  if (previewImageUrl.value) {
+    window.URL.revokeObjectURL(previewImageUrl.value);
+  }
 });
 
 defineExpose({
@@ -294,7 +440,17 @@ defineExpose({
             <template #body="{ data }">
               <div class="flex items-center gap-2">
                 <i :class="['pi', getFileIcon(data.fileType)]" class="text-blue-500"></i>
-                <span>{{ data.fileName }}</span>
+                <span
+                  v-if="isImageFile(data.fileType)"
+                  :ref="(el) => setFileNameRef(el, data.id)"
+                  class="cursor-pointer hover:text-blue-600 hover:underline transition-colors"
+                  @mouseenter="(e) => showPreview(e, data)"
+                  @mouseleave="cancelPreview"
+                  v-tooltip="'Наведите для предпросмотра'"
+                >
+                  {{ data.fileName }}
+                </span>
+                <span v-else>{{ data.fileName }}</span>
               </div>
             </template>
           </Column>
@@ -327,6 +483,25 @@ defineExpose({
           </Column>
         </DataTable>
       </div>
+
+      <!-- Overlay для предпросмотра изображений -->
+      <OverlayPanel ref="previewOverlay" @hide="hidePreview" :dismissable="true" :showCloseIcon="true" class="preview-overlay">
+        <div v-if="previewLoading" class="flex items-center justify-center p-8 min-w-[300px] min-h-[200px]">
+          <ProgressSpinner />
+        </div>
+        <div v-else-if="previewImageUrl && previewFile" class="preview-container">
+          <img
+            :src="previewImageUrl"
+            :alt="previewFile.fileName"
+            class="preview-image rounded shadow-lg"
+            style="max-width: 80vw; max-height: 80vh"
+          />
+          <div class="mt-3 text-sm text-gray-600 border-t pt-2">
+            <p class="font-semibold">{{ previewFile.fileName }}</p>
+            <p class="text-xs text-gray-500">{{ formatFileSize(previewFile.fileSize) }}</p>
+          </div>
+        </div>
+      </OverlayPanel>
     </div>
   </div>
 </template>
@@ -352,6 +527,26 @@ defineExpose({
         background: #f0f9ff;
       }
     }
+  }
+}
+
+.preview-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  max-width: 90vw;
+}
+
+.preview-image {
+  max-width: 600px;
+  max-height: 600px;
+  object-fit: contain;
+  border: 1px solid #e5e7eb;
+}
+
+:deep(.preview-overlay) {
+  .p-overlaypanel-content {
+    padding: 1.5rem;
   }
 }
 </style>
