@@ -36,7 +36,8 @@ export function useWorkers() {
 
   const loadWorkers = async () => {
     const workersRes = await getWorkers();
-    dropdownItemsWorkerStaff.value = workersRes.data.map((item) => item.name);
+    // Сохраняем полные данные о рабочих для фильтрации по position
+    dropdownItemsWorkerStaff.value = workersRes.data;
     return workersRes;
   };
 
@@ -50,4 +51,3 @@ export function useWorkers() {
     loadWorkers
   };
 }
-

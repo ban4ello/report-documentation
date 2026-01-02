@@ -60,6 +60,7 @@ const emit = defineEmits([
 
 const newStaffDialog = ref(false);
 const newStaffData = ref({ name: '', numberOfHoursWorked: null, salaryPerDay: null });
+const isShowOnlyType = ref(true);
 
 const localSelectedStaff = computed({
   get: () => props.selectedStaff,
@@ -69,6 +70,30 @@ const localSelectedStaff = computed({
 const localIncreaseInSalary = computed({
   get: () => props.increaseInSalary,
   set: (value) => emit('update:increaseInSalary', value)
+});
+
+// Фильтрованный список имен рабочих
+const filteredWorkerNames = computed(() => {
+  if (!Array.isArray(props.dropdownItemsWorkerStaff) || props.dropdownItemsWorkerStaff.length === 0) {
+    return [];
+  }
+
+  // Проверяем, является ли первый элемент строкой (старый формат) или объектом (новый формат)
+  const isObjectFormat = typeof props.dropdownItemsWorkerStaff[0] === 'object' && props.dropdownItemsWorkerStaff[0] !== null;
+
+  if (isObjectFormat) {
+    // Новый формат: массив объектов с полем position
+    if (isShowOnlyType.value) {
+      // Показываем только рабочих (position === 'worker')
+      return props.dropdownItemsWorkerStaff.filter((worker) => worker.position === 'worker').map((worker) => worker.name);
+    } else {
+      // Показываем всех
+      return props.dropdownItemsWorkerStaff.map((worker) => worker.name);
+    }
+  } else {
+    // Старый формат: массив строк (для обратной совместимости)
+    return props.dropdownItemsWorkerStaff;
+  }
 });
 
 const showDialog = () => {
@@ -102,9 +127,7 @@ const handleChangeSelectedItem = (data) => {
         <div class="flex gap-6 items-center gap-2 w-full font-semibold text-lg">Цех</div>
 
         <div v-if="salariesOfWorkersTotal" class="flex justify-end items-center font-bold w-full mr-4 font-semibold text-lg">
-          <span :class="computedStyleClass">Итого ЗП:</span> &nbsp;<span class="text-lg">{{
-            formatNumber(salariesOfWorkersTotal)
-          }}</span>
+          <span :class="computedStyleClass">Итого ЗП:</span> &nbsp;<span class="text-lg">{{ formatNumber(salariesOfWorkersTotal) }}</span>
         </div>
 
         <div v-if="taxTotal" class="flex justify-end items-center font-bold w-full mr-4 font-semibold text-lg">
@@ -157,7 +180,7 @@ const handleChangeSelectedItem = (data) => {
                 </template>
 
                 <template #editor="{ data }">
-                  <Select id="staff" v-model="data.name" :options="dropdownItemsWorkerStaff" class="w-full"></Select>
+                  <Select id="staff" v-model="data.name" :options="filteredWorkerNames" class="w-full"></Select>
                 </template>
               </Column>
 
@@ -190,9 +213,7 @@ const handleChangeSelectedItem = (data) => {
               <Column field="total" header="Итого">
                 <template #body="{ data }">
                   {{
-                    formatNumber(
-                      truncateDecimal((data.salaryPerDay / calculationData.numberOfHoursPerShift) * data.numberOfHoursWorked, 0)
-                    )
+                    formatNumber(truncateDecimal((data.salaryPerDay / calculationData.numberOfHoursPerShift) * data.numberOfHoursWorked, 0))
                   }}
                 </template>
               </Column>
@@ -212,11 +233,7 @@ const handleChangeSelectedItem = (data) => {
               </Column>
 
               <template #footer>
-                <div
-                  class="flex justify-center items-center hover:cursor-pointer"
-                  :class="computedStyleClass"
-                  @click="showDialog"
-                >
+                <div class="flex justify-center items-center hover:cursor-pointer" :class="computedStyleClass" @click="showDialog">
                   добавить сотрудника +
                 </div>
 
@@ -234,14 +251,16 @@ const handleChangeSelectedItem = (data) => {
               <Textarea v-model="calculationData.workersData.notes" />
             </div>
 
-            <Dialog v-model:visible="newStaffDialog" :style="{ width: '450px' }" header="Выберите сотрудника" :modal="true">
+            <Dialog v-model:visible="newStaffDialog" :style="{ width: '550px' }" header="Выберите сотрудника" :modal="true">
               <div class="flex flex-col gap-6">
                 <div>
                   <label for="name" class="block font-bold mb-3">Имя</label>
                   <SearchSelect
-                    :dropdownItemsWorkerStaff="dropdownItemsWorkerStaff"
+                    :dropdownItemsWorkerStaff="filteredWorkerNames"
                     :value="newStaffData.name || ''"
                     actionName="Добавить нового сотрудника"
+                    type="worker"
+                    v-model:isShowOnlyType="isShowOnlyType"
                     @input="(value) => handleChangeSelectedItem({ value })"
                     @clickToAction="$emit('show-new-worker-modal')"
                   />
