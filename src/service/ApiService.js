@@ -194,5 +194,27 @@ export default {
 
   logout() {
     return api().post('/logout');
+  },
+
+  uploadCalculationMediaFiles(calculationId, formData) {
+    return api().post(`/calculation/${calculationId}/media-files`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+
+  getCalculationMediaFiles(calculationId) {
+    return api().get(`/calculation/${calculationId}/media-files`);
+  },
+
+  downloadCalculationMediaFile(fileId) {
+    return api().get(`/calculation-media-file/${fileId}`, {
+      responseType: 'blob'
+    });
+  },
+
+  deleteCalculationMediaFile(fileId) {
+    return api().delete(`/calculation-media-file/${fileId}`);
   }
 };
