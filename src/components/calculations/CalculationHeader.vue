@@ -71,9 +71,20 @@ const localIsAmountWithoutMetal = computed({
                   </span>
                 </div>
 
-                <div v-if="calculationData.dateOfCreation" class="font-semibold text-lg">
-                  <span :class="computedStyleClass">Дата создания: </span>
-                  <span> {{ new Date(calculationData.dateOfCreation).toLocaleDateString() }}</span>
+                <div class="font-semibold text-lg flex flex-col gap-2">
+                  <div class="flex items-center gap-2">
+                    <span :class="computedStyleClass">Дата создания: </span>
+                    <!-- eslint-disable-next-line vue/no-mutating-props -->
+                    <DatePicker
+                      v-model="calculationData.dateOfCreation"
+                      showTime
+                      hourFormat="24"
+                      dateFormat="dd.mm.yy"
+                      :showIcon="true"
+                      placeholder="Выберите дату и время"
+                      class="w-full"
+                    />
+                  </div>
                 </div>
               </div>
 

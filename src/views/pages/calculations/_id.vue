@@ -114,6 +114,10 @@ onBeforeMount(async () => {
             acc[camelize(item)] = Number(calculationRes.data[item]);
             break;
 
+          case 'dateOfCreation':
+            acc[camelize(item)] = calculationRes.data[item] ? new Date(calculationRes.data[item]) : new Date();
+            break;
+
           default:
             acc[camelize(item)] = calculationRes.data[item];
             break;
@@ -370,6 +374,7 @@ const saveCalculation = async () => {
         consumablesData: JSON.stringify(calculationData.value.consumablesData),
         hardwareData: JSON.stringify(calculationData.value.hardwareData),
         metalData: JSON.stringify(calculationData.value.metalData),
+        dateOfCreation: calculationData.value.dateOfCreation || today,
         lastEditDate: today,
         total: displayTotalPrice.value,
         totalMetalPerItem: getTotalValue(finalPriceData.value, 'metalTotal'),
