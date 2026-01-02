@@ -6,6 +6,7 @@ import { useConfirm } from 'primevue/useconfirm';
 const workers = ref([]);
 const loading = ref(false);
 const editDialogVisible = ref(false);
+const isCreateMode = ref(false);
 const selectedWorker = ref(null);
 const editedName = ref('');
 const editedPosition = ref(null);
@@ -38,6 +39,7 @@ const loadWorkers = async () => {
 };
 
 const openEditDialog = (worker) => {
+  isCreateMode.value = false;
   selectedWorker.value = worker;
   editedName.value = worker.name || '';
   // Находим соответствующую опцию по значению position из БД
@@ -46,23 +48,42 @@ const openEditDialog = (worker) => {
   editDialogVisible.value = true;
 };
 
+const openCreateDialog = () => {
+  isCreateMode.value = true;
+  selectedWorker.value = null;
+  editedName.value = '';
+  editedPosition.value = null;
+  editDialogVisible.value = true;
+};
+
 const saveWorker = async () => {
-  if (!selectedWorker.value || !editedName.value.trim()) {
+  if (!editedName.value.trim() || !editedPosition.value) {
     return;
   }
 
   loading.value = true;
   try {
-    await ApiService.updateWorker({
-      id: selectedWorker.value.id,
-      name: editedName.value,
-      position: editedPosition.value?.key || editedPosition.value
-    });
+    if (isCreateMode.value) {
+      // Создание нового сотрудника
+      await ApiService.createWorker({
+        name: editedName.value,
+        lastname: '',
+        position: editedPosition.value?.key || editedPosition.value
+      });
+    } else {
+      // Обновление существующего сотрудника
+      await ApiService.updateWorker({
+        id: selectedWorker.value.id,
+        name: editedName.value,
+        lastname: '',
+        position: editedPosition.value?.key || editedPosition.value
+      });
+    }
 
     editDialogVisible.value = false;
     await loadWorkers();
   } catch (error) {
-    console.error('Ошибка при обновлении сотрудника:', error);
+    console.error(isCreateMode.value ? 'Ошибка при создании сотрудника:' : 'Ошибка при обновлении сотрудника:', error);
   } finally {
     loading.value = false;
   }
@@ -108,7 +129,12 @@ onBeforeMount(() => {
   </div>
   <Fluid>
     <div class="card">
-      <div class="font-semibold text-[--primary-color] text-xl mb-4">Сотрудники</div>
+      <div class="flex gap-4 justify-between">
+        <div class="font-semibold text-[--primary-color] text-xl mb-4">Сотрудники</div>
+        <div class="font-semibold hover:text-[--primary-color] hover:cursor-pointer text-xl mb-4" @click="openCreateDialog">
+          создать нового сотрудника +
+        </div>
+      </div>
       <DataTable :value="workers" :rows="10" :rowHover="true" dataKey="id">
         <template #empty> Нет данных для отображения </template>
 
@@ -136,7 +162,12 @@ onBeforeMount(() => {
       </DataTable>
     </div>
 
-    <Dialog v-model:visible="editDialogVisible" header="Редактировать сотрудника" :style="{ width: '450px' }" :modal="true">
+    <Dialog
+      v-model:visible="editDialogVisible"
+      :header="isCreateMode ? 'Новый сотрудник' : 'Редактировать сотрудника'"
+      :style="{ width: '450px' }"
+      :modal="true"
+    >
       <div class="flex flex-col gap-6">
         <div>
           <label for="name" class="block font-bold mb-3">Имя</label>
@@ -164,10 +195,23 @@ onBeforeMount(() => {
 
       <template #footer>
         <div class="flex justify-between w-full">
-          <Button label="Удалить" icon="pi pi-trash" severity="danger" outlined @click="confirmDeleteWorker(selectedWorker)" />
+          <Button
+            v-if="!isCreateMode"
+            label="Удалить"
+            icon="pi pi-trash"
+            severity="danger"
+            outlined
+            @click="confirmDeleteWorker(selectedWorker)"
+          />
+          <div v-else></div>
           <div class="flex gap-2">
             <Button label="Отменить" icon="pi pi-times" text @click="editDialogVisible = false" />
-            <Button :disabled="!editedName.trim()" label="Сохранить" icon="pi pi-check" @click="saveWorker" />
+            <Button
+              :disabled="!editedName.trim() || !editedPosition"
+              :label="isCreateMode ? 'Создать' : 'Сохранить'"
+              icon="pi pi-check"
+              @click="saveWorker"
+            />
           </div>
         </div>
       </template>
