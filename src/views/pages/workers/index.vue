@@ -2,6 +2,7 @@
 import ApiService from '@/service/ApiService';
 import { onBeforeMount, ref } from 'vue';
 import { useConfirm } from 'primevue/useconfirm';
+import { useToast } from 'primevue/usetoast';
 
 const workers = ref([]);
 const loading = ref(false);
@@ -10,7 +11,9 @@ const isCreateMode = ref(false);
 const selectedWorker = ref(null);
 const editedName = ref('');
 const editedPosition = ref(null);
+const nameError = ref('');
 const confirm = useConfirm();
+const toast = useToast();
 
 const positionOptions = [
   { label: 'Рабочий', key: 'worker' },
@@ -38,10 +41,39 @@ const loadWorkers = async () => {
   }
 };
 
+const checkDuplicateName = (name) => {
+  if (!name || !name.trim()) {
+    return false;
+  }
+  const trimmedName = name.trim().toLowerCase();
+  const existingWorker = workers.value.find((worker) => {
+    const workerName = worker.name?.toLowerCase() || '';
+    return workerName === trimmedName;
+  });
+
+  if (existingWorker) {
+    // При редактировании исключаем текущего сотрудника из проверки
+    if (!isCreateMode.value && selectedWorker.value && existingWorker.id === selectedWorker.value.id) {
+      return false;
+    }
+    return true;
+  }
+  return false;
+};
+
+const validateName = () => {
+  if (checkDuplicateName(editedName.value)) {
+    nameError.value = 'Сотрудник с таким именем уже существует';
+  } else {
+    nameError.value = '';
+  }
+};
+
 const openEditDialog = (worker) => {
   isCreateMode.value = false;
   selectedWorker.value = worker;
   editedName.value = worker.name || '';
+  nameError.value = '';
   // Находим соответствующую опцию по значению position из БД
   const positionOption = positionOptions.find((opt) => opt.key === worker.position) || null;
   editedPosition.value = positionOption;
@@ -53,6 +85,7 @@ const openCreateDialog = () => {
   selectedWorker.value = null;
   editedName.value = '';
   editedPosition.value = null;
+  nameError.value = '';
   editDialogVisible.value = true;
 };
 
@@ -61,6 +94,19 @@ const saveWorker = async () => {
     return;
   }
 
+  // Проверка на дубликаты имен
+  if (checkDuplicateName(editedName.value)) {
+    nameError.value = 'Сотрудник с таким именем уже существует';
+    toast.add({
+      severity: 'error',
+      summary: 'Ошибка',
+      detail: 'Сотрудник с таким именем уже существует',
+      life: 3000
+    });
+    return;
+  }
+
+  nameError.value = '';
   loading.value = true;
   try {
     if (isCreateMode.value) {
@@ -70,6 +116,12 @@ const saveWorker = async () => {
         lastname: '',
         position: editedPosition.value?.key || editedPosition.value
       });
+      toast.add({
+        severity: 'success',
+        summary: 'Успешно',
+        detail: 'Сотрудник создан',
+        life: 3000
+      });
     } else {
       // Обновление существующего сотрудника
       await ApiService.updateWorker({
@@ -78,12 +130,36 @@ const saveWorker = async () => {
         lastname: '',
         position: editedPosition.value?.key || editedPosition.value
       });
+      toast.add({
+        severity: 'success',
+        summary: 'Успешно',
+        detail: 'Сотрудник обновлен',
+        life: 3000
+      });
     }
 
     editDialogVisible.value = false;
     await loadWorkers();
   } catch (error) {
     console.error(isCreateMode.value ? 'Ошибка при создании сотрудника:' : 'Ошибка при обновлении сотрудника:', error);
+
+    // Проверка на ошибку дубликата имени с сервера
+    if (error.response?.data?.code === 'DUPLICATE_WORKER_NAME' || error.response?.data?.message?.includes('уже существует')) {
+      nameError.value = 'Сотрудник с таким именем уже существует';
+      toast.add({
+        severity: 'error',
+        summary: 'Ошибка',
+        detail: error.response?.data?.message || 'Сотрудник с таким именем уже существует',
+        life: 3000
+      });
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: 'Ошибка',
+        detail: error.response?.data?.message || (isCreateMode.value ? 'Не удалось создать сотрудника' : 'Не удалось обновить сотрудника'),
+        life: 3000
+      });
+    }
   } finally {
     loading.value = false;
   }
@@ -171,8 +247,18 @@ onBeforeMount(() => {
       <div class="flex flex-col gap-6">
         <div>
           <label for="name" class="block font-bold mb-3">Имя</label>
-          <InputText id="name" v-model.trim="editedName" type="text" required autofocus :invalid="!editedName.trim()" fluid />
+          <InputText
+            id="name"
+            v-model.trim="editedName"
+            type="text"
+            required
+            autofocus
+            :invalid="!editedName.trim() || !!nameError"
+            fluid
+            @input="validateName"
+          />
           <small v-if="!editedName.trim()" class="text-red-500">Имя обязательно для заполнения.</small>
+          <small v-if="nameError" class="text-red-500">{{ nameError }}</small>
         </div>
 
         <div>
@@ -207,7 +293,7 @@ onBeforeMount(() => {
           <div class="flex gap-2">
             <Button label="Отменить" icon="pi pi-times" text @click="editDialogVisible = false" />
             <Button
-              :disabled="!editedName.trim() || !editedPosition"
+              :disabled="!editedName.trim() || !editedPosition || !!nameError"
               :label="isCreateMode ? 'Создать' : 'Сохранить'"
               icon="pi pi-check"
               @click="saveWorker"
@@ -218,6 +304,7 @@ onBeforeMount(() => {
     </Dialog>
 
     <ConfirmDialog></ConfirmDialog>
+    <Toast />
   </Fluid>
 </template>
 
