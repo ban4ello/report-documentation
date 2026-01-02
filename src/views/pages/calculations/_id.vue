@@ -312,8 +312,30 @@ const saveNewWorker = async (worker) => {
     await loadWorkers();
     newWorkerData.value = { name: '', lastname: '', position: '' };
     createNewWorkerDialog.value = false;
+    toast.add({
+      severity: 'success',
+      summary: 'Успешно',
+      detail: 'Сотрудник создан',
+      life: 3000
+    });
   } catch (error) {
     console.log(error);
+    // Проверка на ошибку дубликата имени с сервера
+    if (error.response?.data?.code === 'DUPLICATE_WORKER_NAME' || error.response?.data?.message?.includes('уже существует')) {
+      toast.add({
+        severity: 'error',
+        summary: 'Ошибка',
+        detail: error.response?.data?.message || 'Сотрудник с таким именем уже существует',
+        life: 3000
+      });
+    } else {
+      toast.add({
+        severity: 'error',
+        summary: 'Ошибка',
+        detail: error.response?.data?.message || 'Не удалось создать сотрудника',
+        life: 3000
+      });
+    }
   }
 };
 
