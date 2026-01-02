@@ -351,7 +351,7 @@ const saveCalculation = async () => {
     const result = await createCalculationApi(displayTotalPrice.value, finalPriceData.value);
     if (result.success) {
       toast.add({ severity: 'success', summary: 'Успешно', detail: 'Калькуляция создана', life: 3000 });
-      
+
       // Загружаем отложенные медиа файлы перед переходом
       if (mediaFilesSectionRef.value && mediaFilesSectionRef.value.uploadPendingFiles) {
         // Обновляем calculationId для компонента
@@ -366,7 +366,7 @@ const saveCalculation = async () => {
           // Продолжаем переход даже если загрузка файлов не удалась
         }
       }
-      
+
       router.push({ path: `/calculations/${result.data.id}` });
     } else {
       toast.add({ severity: 'error', summary: 'Ошибка', detail: 'Не удалось создать калькуляцию', life: 3000 });
