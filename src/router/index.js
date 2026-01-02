@@ -19,6 +19,11 @@ const router = createRouter({
           component: () => import('@/views/pages/calculations/index.vue')
         },
         {
+          path: '/workers',
+          name: 'workers',
+          component: () => import('@/views/pages/workers/index.vue')
+        },
+        {
           path: '/calculations/create',
           name: 'calculation-create',
           component: () => import('@/views/pages/calculations/_id.vue')

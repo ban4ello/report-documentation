@@ -15,6 +15,10 @@ const model = ref([
     items: [{ label: 'Калькуляции', icon: 'pi-receipt', to: '/calculations' }]
   },
   {
+    label: 'Сотрудники',
+    items: [{ label: 'Сотрудники', icon: 'pi-users', to: '/workers' }]
+  },
+  {
     label: 'UI Components',
     permission: 'admin',
     items: [

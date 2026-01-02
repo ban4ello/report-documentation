@@ -170,6 +170,18 @@ export default {
     return api().get('/workers');
   },
 
+  updateWorker({ id, name, lastname, position }) {
+    return api().put(`/worker/${id}`, {
+      name,
+      lastname,
+      position
+    });
+  },
+
+  deleteWorker(id) {
+    return api().delete(`/worker/${id}`);
+  },
+
   signup({ username, password, email, role }) {
     return api().post('/signup', { username, password, email, role });
   },
