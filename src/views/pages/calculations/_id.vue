@@ -4,8 +4,6 @@ import ApiService from '@/service/ApiService';
 import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
 
-import { MochDataService } from '@/service/MochDataService';
-
 // Composables
 import { useCalculation } from '@/composables/useCalculation';
 import { useWorkers } from '@/composables/useWorkers';
@@ -154,14 +152,6 @@ onBeforeMount(async () => {
   }
 
   await loadWorkers();
-
-  MochDataService.getWorkersTaxData().then((data) => {
-    calculationData.value.workersTaxData = data;
-  });
-
-  MochDataService.getItrTaxData().then((data) => {
-    calculationData.value.itrTaxData = data;
-  });
 });
 
 const onCellEditComplete = (event) => {
