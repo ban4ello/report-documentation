@@ -34,6 +34,25 @@ export function useCalculations(calculationData) {
       }, 0) || 0
   );
 
+  // Сумма quantity для элементов с unitOfMeasurement === 'шт'
+  const totalQuantityInPieces = computed(
+    () =>
+      calculationData.value.specificationData.table.reduce((acc, item) => {
+        if (item.unitOfMeasurement === 'шт') {
+          return acc + Number(item.quantity || 0);
+        }
+        return acc;
+      }, 0) || 0
+  );
+
+  // Проверка, есть ли элементы с unitOfMeasurement === 'шт'
+  const hasPiecesUnit = computed(() => calculationData.value.specificationData.table.some((item) => item.unitOfMeasurement === 'шт'));
+
+  // Знаменатель для расчета perItem: если есть 'шт', используем totalQuantityInPieces, иначе totalSpecificationItems
+  const divisorForPerItem = computed(() => {
+    return hasPiecesUnit.value && totalQuantityInPieces.value > 0 ? totalQuantityInPieces.value : totalSpecificationItems.value;
+  });
+
   /**
    * Преобразует строку с числом в формате "3 072,00" в число
    * @param {string|number} value - Значение для преобразования
@@ -234,7 +253,7 @@ export function useCalculations(calculationData) {
         key: 'metal',
         statistics: getPercentOfTotal(totalMetal.value, finalTotalPrice.value),
         total: totalMetal.value || 0,
-        perItem: totalSpecificationItems.value ? truncateDecimal(totalMetal.value / totalSpecificationItems.value, 2) : 0
+        perItem: divisorForPerItem.value ? truncateDecimal(totalMetal.value / divisorForPerItem.value, 2) : 0
       },
       {
         id: 2,
@@ -242,7 +261,7 @@ export function useCalculations(calculationData) {
         key: 'hardware',
         statistics: getPercentOfTotal(totalHardware.value, finalTotalPrice.value),
         total: totalHardware.value || 0,
-        perItem: totalSpecificationItems.value ? truncateDecimal(totalHardware.value / totalSpecificationItems.value, 2) : 0
+        perItem: divisorForPerItem.value ? truncateDecimal(totalHardware.value / divisorForPerItem.value, 2) : 0
       },
       {
         id: 3,
@@ -250,7 +269,7 @@ export function useCalculations(calculationData) {
         key: 'consumables',
         statistics: getPercentOfTotal(totalConsumables.value, finalTotalPrice.value),
         total: totalConsumables.value || 0,
-        perItem: totalSpecificationItems.value ? truncateDecimal(totalConsumables.value / totalSpecificationItems.value, 2) : 0
+        perItem: divisorForPerItem.value ? truncateDecimal(totalConsumables.value / divisorForPerItem.value, 2) : 0
       },
       {
         id: 4,
@@ -258,7 +277,7 @@ export function useCalculations(calculationData) {
         key: 'workshop',
         statistics: getPercentOfTotal(taxTotal.value, finalTotalPrice.value),
         total: taxTotal.value || 0,
-        perItem: taxTotal.value / totalSpecificationItems.value
+        perItem: divisorForPerItem.value ? taxTotal.value / divisorForPerItem.value : 0
       },
       {
         id: 5,
@@ -266,7 +285,7 @@ export function useCalculations(calculationData) {
         key: 'wagesOfEngineers',
         statistics: getPercentOfTotal(taxITRTotal.value, finalTotalPrice.value),
         total: taxITRTotal.value || 0,
-        perItem: taxITRTotal.value / totalSpecificationItems.value
+        perItem: divisorForPerItem.value ? taxITRTotal.value / divisorForPerItem.value : 0
       },
       {
         id: 6,
@@ -274,7 +293,7 @@ export function useCalculations(calculationData) {
         key: 'galvanizing',
         statistics: getPercentOfTotal(calculationData.value.galvanizedValue, finalTotalPrice.value),
         total: calculationData.value.galvanizedValue || 0,
-        perItem: totalSpecificationItems.value ? calculationData.value.galvanizedValue / totalSpecificationItems.value : 0
+        perItem: divisorForPerItem.value ? calculationData.value.galvanizedValue / divisorForPerItem.value : 0
       },
       {
         id: 7,
@@ -282,7 +301,7 @@ export function useCalculations(calculationData) {
         key: 'transport',
         statistics: getPercentOfTotal(calculationData.value.transportValue, finalTotalPrice.value),
         total: calculationData.value.transportValue || 0,
-        perItem: totalSpecificationItems.value ? calculationData.value.transportValue / totalSpecificationItems.value : 0
+        perItem: divisorForPerItem.value ? calculationData.value.transportValue / divisorForPerItem.value : 0
       },
       {
         id: 8,
@@ -290,8 +309,8 @@ export function useCalculations(calculationData) {
         key: 'rent',
         statistics: getPercentOfTotal(calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays, finalTotalPrice.value),
         total: calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays || 0,
-        perItem: totalSpecificationItems.value
-          ? (calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays) / totalSpecificationItems.value
+        perItem: divisorForPerItem.value
+          ? (calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays) / divisorForPerItem.value
           : 0
       },
       {
@@ -302,8 +321,8 @@ export function useCalculations(calculationData) {
           getPercentOfTotal(calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays, finalTotalPrice.value) ||
           0,
         total: calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays || 0,
-        perItem: totalSpecificationItems.value
-          ? (calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) / totalSpecificationItems.value
+        perItem: divisorForPerItem.value
+          ? (calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) / divisorForPerItem.value
           : 0
       },
       {
@@ -312,7 +331,7 @@ export function useCalculations(calculationData) {
         key: 'profitability',
         statistics: getPercentOfTotal(profitability, finalTotalPrice.value),
         total: profitability,
-        perItem: totalSpecificationItems.value ? profitability / totalSpecificationItems.value : 0
+        perItem: divisorForPerItem.value ? profitability / divisorForPerItem.value : 0
       },
       {
         id: 11,
@@ -320,7 +339,7 @@ export function useCalculations(calculationData) {
         key: 'total',
         statistics: 0,
         total: total,
-        perItem: totalSpecificationItems.value ? total / totalSpecificationItems.value : 0
+        perItem: divisorForPerItem.value ? total / divisorForPerItem.value : 0
       }
     ];
   });
@@ -347,8 +366,8 @@ export function useCalculations(calculationData) {
         key: 'metalTotal',
         statistics: getPercentOfTotal(effectiveTotalMetal.value + effectiveTotalHardware.value, finalTotalPrice.value),
         total: effectiveTotalMetal.value + effectiveTotalHardware.value,
-        perItem: totalSpecificationItems.value
-          ? truncateDecimal((effectiveTotalMetal.value + effectiveTotalHardware.value) / totalSpecificationItems.value)
+        perItem: divisorForPerItem.value
+          ? truncateDecimal((effectiveTotalMetal.value + effectiveTotalHardware.value) / divisorForPerItem.value)
           : 0
       },
       {
@@ -373,7 +392,7 @@ export function useCalculations(calculationData) {
           calculationData.value.transportValue +
           calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
           calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays,
-        perItem: totalSpecificationItems.value
+        perItem: divisorForPerItem.value
           ? truncateDecimal(
               (totalConsumables.value +
                 taxTotal.value +
@@ -382,7 +401,7 @@ export function useCalculations(calculationData) {
                 calculationData.value.transportValue +
                 calculationData.value.rentalCostPerDay * calculationData.value.itrWorkedDays +
                 calculationData.value.costOfElectricityPerDay * calculationData.value.itrWorkedDays) /
-                totalSpecificationItems.value,
+                divisorForPerItem.value,
               2
             )
           : 0
@@ -393,7 +412,7 @@ export function useCalculations(calculationData) {
         key: 'profitability',
         statistics: getPercentOfTotal(profitability, finalTotalPrice.value),
         total: profitability,
-        perItem: totalSpecificationItems.value ? profitability / totalSpecificationItems.value : 0
+        perItem: divisorForPerItem.value ? profitability / divisorForPerItem.value : 0
       },
       {
         id: 4,
@@ -401,7 +420,7 @@ export function useCalculations(calculationData) {
         key: 'total',
         statistics: 0,
         total: total,
-        perItem: totalSpecificationItems.value ? total / totalSpecificationItems.value : 0
+        perItem: divisorForPerItem.value ? total / divisorForPerItem.value : 0
       }
     ];
   });
