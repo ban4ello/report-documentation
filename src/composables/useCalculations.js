@@ -71,6 +71,22 @@ export function useCalculations(calculationData) {
   const totalHardware = computed(() => getTotalPrice(calculationData.value.hardwareData));
   const totalMetal = computed(() => getTotalPrice(calculationData.value.metalData));
 
+  // Эффективное значение totalHardware - исключается из расчетов если isMetalEnabled === true
+  const effectiveTotalHardware = computed(() => {
+    if (calculationData.value.isMetalEnabled === true) {
+      return 0;
+    }
+    return totalHardware.value;
+  });
+
+  // Эффективное значение totalMetal - исключается из расчетов если isHardwareEnabled === true
+  const effectiveTotalMetal = computed(() => {
+    if (calculationData.value.isHardwareEnabled === true) {
+      return 0;
+    }
+    return totalMetal.value;
+  });
+
   const computedWorkerTaxData = computed(() => {
     const numberOfDecimal = 2;
 
@@ -169,8 +185,8 @@ export function useCalculations(calculationData) {
 
   const finalTotalPrice = computed(() => {
     const baseTotal =
-      totalMetal.value +
-      totalHardware.value +
+      effectiveTotalMetal.value +
+      effectiveTotalHardware.value +
       totalConsumables.value +
       taxTotal.value +
       taxITRTotal.value +
@@ -184,7 +200,7 @@ export function useCalculations(calculationData) {
 
   const finalTotalPriceWithoutMetal = computed(() => {
     const baseTotal =
-      totalHardware.value +
+      effectiveTotalHardware.value +
       totalConsumables.value +
       taxTotal.value +
       taxITRTotal.value +
@@ -198,8 +214,8 @@ export function useCalculations(calculationData) {
 
   const priceData = computed(() => {
     const baseTotal =
-      totalMetal.value +
-      totalHardware.value +
+      effectiveTotalMetal.value +
+      effectiveTotalHardware.value +
       totalConsumables.value +
       taxTotal.value +
       taxITRTotal.value +
@@ -311,8 +327,8 @@ export function useCalculations(calculationData) {
 
   const finalPriceData = computed(() => {
     const baseTotal =
-      totalMetal.value +
-      totalHardware.value +
+      effectiveTotalMetal.value +
+      effectiveTotalHardware.value +
       totalConsumables.value +
       taxTotal.value +
       taxITRTotal.value +
@@ -329,10 +345,10 @@ export function useCalculations(calculationData) {
         id: 1,
         name: 'Металл',
         key: 'metalTotal',
-        statistics: getPercentOfTotal(totalMetal.value + totalHardware.value, finalTotalPrice.value),
-        total: totalMetal.value + totalHardware.value,
+        statistics: getPercentOfTotal(effectiveTotalMetal.value + effectiveTotalHardware.value, finalTotalPrice.value),
+        total: effectiveTotalMetal.value + effectiveTotalHardware.value,
         perItem: totalSpecificationItems.value
-          ? truncateDecimal((totalMetal.value + totalHardware.value) / totalSpecificationItems.value)
+          ? truncateDecimal((effectiveTotalMetal.value + effectiveTotalHardware.value) / totalSpecificationItems.value)
           : 0
       },
       {

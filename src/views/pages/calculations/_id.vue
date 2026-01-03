@@ -397,7 +397,9 @@ const saveCalculation = async () => {
         total: displayTotalPrice.value,
         totalMetalPerItem: getTotalValue(finalPriceData.value, 'metalTotal'),
         totalProcessingPerItem: getTotalValue(finalPriceData.value, 'processing'),
-        totalProfitabilityPerItem: getTotalValue(finalPriceData.value, 'profitability')
+        totalProfitabilityPerItem: getTotalValue(finalPriceData.value, 'profitability'),
+        isMetalEnabled: calculationData.value.isMetalEnabled || false,
+        isHardwareEnabled: calculationData.value.isHardwareEnabled || false
       });
       toast.add({ severity: 'success', summary: 'Успешно', detail: 'Калькуляция сохранена', life: 3000 });
     } catch (error) {
@@ -518,6 +520,10 @@ watch(increaseInSalary, (newValue, oldValue) => {
         :total-metal="totalMetal"
         :expand-accordion-total-costs="expandAccordionTotalCosts"
         :computed-style-class="computedStyleClass"
+        :is-metal-enabled="calculationData.isMetalEnabled"
+        @update:isMetalEnabled="(data) => (calculationData.isMetalEnabled = data)"
+        :is-hardware-enabled="calculationData.isHardwareEnabled"
+        @update:isHardwareEnabled="(data) => (calculationData.isHardwareEnabled = data)"
         @upload="onUpload"
         @remove-file="removeFile"
         @paste-from-buffer="pasteFromBuffer"

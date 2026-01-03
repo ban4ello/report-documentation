@@ -43,7 +43,9 @@ export function useCalculation() {
     metalData: [],
     workersTaxData: [],
     itrTaxData: [],
-    total: null
+    total: null,
+    isMetalEnabled: false,
+    isHardwareEnabled: false
   };
 
   const calculationData = ref({ ...initialCalculationData });
@@ -100,7 +102,9 @@ export function useCalculation() {
         total: finalTotalPrice,
         totalMetalPerItem: getTotalValue(finalPriceData, 'metalTotal'),
         totalProcessingPerItem: getTotalValue(finalPriceData, 'processing'),
-        totalProfitabilityPerItem: getTotalValue(finalPriceData, 'profitability')
+        totalProfitabilityPerItem: getTotalValue(finalPriceData, 'profitability'),
+        isMetalEnabled: calculationData.value.isMetalEnabled || false,
+        isHardwareEnabled: calculationData.value.isHardwareEnabled || false
       });
       return { success: true, data: calculationRes.data };
     } catch (error) {
