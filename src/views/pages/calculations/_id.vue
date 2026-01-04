@@ -26,7 +26,7 @@ const router = useRouter();
 const calculationId = ref(null);
 const isCreateMode = ref(false);
 
-const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м']);
+const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м', 'услуга']);
 
 // Composables initialization
 const {
@@ -157,19 +157,34 @@ onBeforeMount(async () => {
 const onCellEditComplete = (event) => {
   let { data, newValue, field } = event;
 
-  switch (data.name) {
-    case 'Оцинковка':
-      calculationData.value.galvanizedValue = Number(newValue);
-      break;
-    case 'Транспорт':
-      calculationData.value.transportValue = Number(newValue);
-      break;
-
-    default:
-      break;
+  // Обработка специальных случаев (Оцинковка, Транспорт) из PriceSummary
+  if (data.name === 'Оцинковка') {
+    calculationData.value.galvanizedValue = Number(newValue);
+    data[field] = newValue;
+    return;
   }
 
-  data[field] = newValue;
+  if (data.name === 'Транспорт') {
+    calculationData.value.transportValue = Number(newValue);
+    data[field] = newValue;
+    return;
+  }
+
+  // Для спецификации: явно обновляем элемент в массиве для гарантии реактивности
+  if (data.id && calculationData.value.specificationData?.table) {
+    const index = calculationData.value.specificationData.table.findIndex((item) => item.id === data.id);
+    if (index !== -1) {
+      // Преобразуем числовые поля
+      if (field === 'quantity' || field === 'valuePerUnit') {
+        calculationData.value.specificationData.table[index][field] = Number(newValue) || 0;
+      } else {
+        calculationData.value.specificationData.table[index][field] = newValue;
+      }
+    }
+  } else {
+    // Для других случаев (workers, itr и т.д.) просто обновляем data
+    data[field] = newValue;
+  }
 };
 
 const copySpecification = (data) => {
@@ -430,6 +445,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
       :loading="loading"
       :format-number="formatNumber"
       :truncate-decimal="truncateDecimal"
+      :calculation-id="calculationId"
+      :is-create-mode="isCreateMode"
       @create-calculation="saveCalculation"
     />
 

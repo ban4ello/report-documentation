@@ -5,7 +5,7 @@ export function useWorkers() {
   const dropdownItemsWorkerStaff = ref([]);
   const dropdownItemsWorkersRole = ref([
     { label: 'Рабочий', key: 'worker' },
-    { label: 'ИТР', key: 'ITR' }
+    { label: 'ИТР', key: 'itr' }
   ]);
   const loading = ref(false);
   const newWorkerData = ref({ name: '', lastname: '', position: '' });

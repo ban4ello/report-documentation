@@ -9,6 +9,7 @@ const loading = ref(false);
 const editDialogVisible = ref(false);
 const isCreateMode = ref(false);
 const selectedWorker = ref(null);
+const selectedWorkers = ref([]);
 const editedName = ref('');
 const editedPosition = ref(null);
 const nameError = ref('');
@@ -166,8 +167,20 @@ const saveWorker = async () => {
 };
 
 const confirmDeleteWorker = (worker) => {
+  const workersToDelete = worker ? [worker] : selectedWorkers.value;
+
+  if (!workersToDelete || workersToDelete.length === 0) {
+    return;
+  }
+
+  const workerNames = workersToDelete.map((w) => w.name + (w.lastname ? ' ' + w.lastname : '')).join(', ');
+  const message =
+    workersToDelete.length === 1
+      ? `Вы действительно хотите удалить сотрудника "${workerNames}"?`
+      : `Вы действительно хотите удалить ${workersToDelete.length} сотрудников: "${workerNames}"?`;
+
   confirm.require({
-    message: `Вы действительно хотите удалить сотрудника "${worker.name}${worker.lastname ? ' ' + worker.lastname : ''}"?`,
+    message,
     header: 'Внимание!',
     icon: 'pi pi-info-circle',
     rejectLabel: 'Отменить',
@@ -183,10 +196,26 @@ const confirmDeleteWorker = (worker) => {
     accept: async () => {
       loading.value = true;
       try {
-        await ApiService.deleteWorker(worker.id);
+        // Удаляем всех выбранных сотрудников
+        await Promise.all(workersToDelete.map((w) => ApiService.deleteWorker(w.id)));
+
+        toast.add({
+          severity: 'success',
+          summary: 'Успешно',
+          detail: workersToDelete.length === 1 ? 'Сотрудник удален' : `Удалено сотрудников: ${workersToDelete.length}`,
+          life: 3000
+        });
+
+        selectedWorkers.value = [];
         await loadWorkers();
       } catch (error) {
-        console.error('Ошибка при удалении сотрудника:', error);
+        console.error('Ошибка при удалении сотрудников:', error);
+        toast.add({
+          severity: 'error',
+          summary: 'Ошибка',
+          detail: error.response?.data?.message || 'Не удалось удалить сотрудников',
+          life: 3000
+        });
       } finally {
         loading.value = false;
       }
@@ -205,16 +234,30 @@ onBeforeMount(() => {
   </div>
   <Fluid>
     <div class="card">
-      <div class="flex gap-4 justify-between">
-        <div class="font-semibold text-[--primary-color] text-xl mb-4">Сотрудники</div>
-        <div class="font-semibold hover:text-[--primary-color] hover:cursor-pointer text-xl mb-4" @click="openCreateDialog">
-          создать нового сотрудника +
+      <div class="flex gap-4 justify-between items-center mb-4">
+        <div class="font-semibold text-[--primary-color] text-xl">Сотрудники</div>
+        <div class="flex gap-4 items-center">
+          <div :style="{ visibility: selectedWorkers.length > 0 ? 'visible' : 'hidden' }">
+            <Button
+              label="Удалить выбранные"
+              icon="pi pi-trash"
+              severity="danger"
+              outlined
+              :disabled="selectedWorkers.length === 0"
+              @click="confirmDeleteWorker(null)"
+            />
+          </div>
+          <div class="font-semibold hover:text-[--primary-color] hover:cursor-pointer text-xl" @click="openCreateDialog">
+            создать нового сотрудника +
+          </div>
         </div>
       </div>
-      <DataTable :value="workers" :rows="10" :rowHover="true" dataKey="id">
+      <DataTable :value="workers" v-model:selection="selectedWorkers" :rows="10" :rowHover="true" dataKey="id">
         <template #empty> Нет данных для отображения </template>
 
         <template #loading> Загружается список... Пожалуйста подождите. </template>
+
+        <Column selectionMode="multiple" headerStyle="width: 3rem" :exportable="false"></Column>
 
         <Column field="dateOfCreation" header="Дата создания" style="min-width: 12rem" sortable>
           <template #body="{ data }">
@@ -233,6 +276,12 @@ onBeforeMount(() => {
         <Column field="position" header="Должность" style="min-width: 12rem" sortable>
           <template #body="{ data }">
             {{ data.position === 'worker' ? 'Рабочий' : data.position === 'itr' ? 'ИТР' : data.position }}
+          </template>
+        </Column>
+
+        <Column :exportable="false" style="min-width: 8rem">
+          <template #body="{ data }">
+            <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteWorker(data)" />
           </template>
         </Column>
       </DataTable>
@@ -315,5 +364,27 @@ onBeforeMount(() => {
 
 :deep(.p-datatable-scrollable .p-frozen-column) {
   font-weight: bold;
+}
+</style>
+
+<style lang="scss">
+.p-confirm-dialog {
+  max-width: 450px !important;
+  width: 90vw !important;
+}
+.p-dialog {
+  max-width: 450px !important;
+}
+
+.p-confirmdialog-message {
+  max-width: 100% !important;
+  word-wrap: break-word !important;
+  overflow-wrap: break-word !important;
+  white-space: normal !important;
+}
+
+.p-confirm-dialog .p-dialog-content {
+  max-width: 100% !important;
+  overflow-wrap: break-word !important;
 }
 </style>
