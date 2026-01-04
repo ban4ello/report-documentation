@@ -1,7 +1,7 @@
 <script setup>
 import { formatNumber } from '@/utils/helper';
 
-const props = defineProps({
+defineProps({
   consumablesData: {
     type: Array,
     required: true
@@ -33,10 +33,18 @@ const props = defineProps({
   computedStyleClass: {
     type: Object,
     default: () => ({})
+  },
+  isMetalEnabled: {
+    type: Boolean,
+    default: false
+  },
+  isHardwareEnabled: {
+    type: Boolean,
+    default: false
   }
 });
 
-const emit = defineEmits(['upload', 'remove-file']);
+defineEmits(['upload', 'remove-file', 'update:isMetalEnabled', 'update:isHardwareEnabled']);
 </script>
 
 <template>
@@ -158,8 +166,20 @@ const emit = defineEmits(['upload', 'remove-file']);
               </span>
             </div>
 
-            <div v-if="totalHardware" class="flex justify-end items-center font-bold w-full mr-4">
-              Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalHardware) }}</span>
+            <div v-if="totalHardware" class="flex justify-between gap-2 items-center font-bold w-full mr-4">
+              <div class="flex items-center gap-2" @click.stop>
+                <Checkbox
+                  :modelValue="isHardwareEnabled"
+                  :value="isHardwareEnabled"
+                  :binary="true"
+                  @update:modelValue="$emit('update:isHardwareEnabled', $event)"
+                />
+                <label class="font-semibold items-center text-md">Исключить из подсчета</label>
+              </div>
+
+              <div>
+                Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalHardware) }}</span>
+              </div>
             </div>
           </div>
         </AccordionHeader>
@@ -241,8 +261,20 @@ const emit = defineEmits(['upload', 'remove-file']);
               </span>
             </div>
 
-            <div v-if="totalMetal" class="flex justify-end items-center font-bold w-full mr-4">
-              Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalMetal) }}</span>
+            <div v-if="totalMetal" class="flex justify-between gap-2 items-center font-bold w-full mr-4">
+              <div class="flex items-center gap-2" @click.stop>
+                <Checkbox
+                  :modelValue="isMetalEnabled"
+                  :value="isMetalEnabled"
+                  :binary="true"
+                  @update:modelValue="$emit('update:isMetalEnabled', $event)"
+                />
+                <label class="font-semibold items-center text-md">Исключить из подсчета</label>
+              </div>
+
+              <div>
+                Итого: &nbsp;<span class="text-lg">{{ formatNumber(totalMetal) }}</span>
+              </div>
             </div>
           </div>
         </AccordionHeader>

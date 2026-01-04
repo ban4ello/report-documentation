@@ -1,6 +1,9 @@
 <script setup>
 import { computed } from 'vue';
+import { useRouter } from 'vue-router';
 import Breadcrumbs from '@/components/Breadcrumbs.vue';
+
+const router = useRouter();
 
 const props = defineProps({
   calculationData: {
@@ -43,10 +46,29 @@ const props = defineProps({
     type: Array,
     required: true,
     default: () => []
+  },
+  calculationId: {
+    type: [String, Number],
+    default: null
+  },
+  isCreateMode: {
+    type: Boolean,
+    default: false
   }
 });
 
 const emit = defineEmits(['update:isAmountWithoutMetal', 'create-calculation']);
+
+const createFactCalculation = () => {
+  router.push({
+    path: '/calculations/create',
+    query: {
+      parentId: props.calculationData.parentCalculationId,
+      type: 'fact',
+      calculationPlanId: props.calculationId
+    }
+  });
+};
 
 const localIsAmountWithoutMetal = computed({
   get: () => props.isAmountWithoutMetal,
@@ -178,6 +200,14 @@ const localIsAmountWithoutMetal = computed({
               severity="success"
               class="text-xs"
               @click="$emit('create-calculation')"
+            />
+            <Button
+              v-if="calculationData.calculationType === 'plan' && !isCreateMode"
+              label="Создать калькуляцию факт"
+              size="large"
+              severity="info"
+              class="text-xs"
+              @click="createFactCalculation"
             />
           </div>
         </div>

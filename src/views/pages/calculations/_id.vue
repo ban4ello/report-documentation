@@ -4,8 +4,6 @@ import ApiService from '@/service/ApiService';
 import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
 
-import { MochDataService } from '@/service/MochDataService';
-
 // Composables
 import { useCalculation } from '@/composables/useCalculation';
 import { useWorkers } from '@/composables/useWorkers';
@@ -28,7 +26,7 @@ const router = useRouter();
 const calculationId = ref(null);
 const isCreateMode = ref(false);
 
-const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м']);
+const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м', 'услуга']);
 
 // Composables initialization
 const {
@@ -154,32 +152,39 @@ onBeforeMount(async () => {
   }
 
   await loadWorkers();
-
-  MochDataService.getWorkersTaxData().then((data) => {
-    calculationData.value.workersTaxData = data;
-  });
-
-  MochDataService.getItrTaxData().then((data) => {
-    calculationData.value.itrTaxData = data;
-  });
 });
 
 const onCellEditComplete = (event) => {
   let { data, newValue, field } = event;
 
-  switch (data.name) {
-    case 'Оцинковка':
-      calculationData.value.galvanizedValue = Number(newValue);
-      break;
-    case 'Транспорт':
-      calculationData.value.transportValue = Number(newValue);
-      break;
-
-    default:
-      break;
+  // Обработка специальных случаев (Оцинковка, Транспорт) из PriceSummary
+  if (data.name === 'Оцинковка') {
+    calculationData.value.galvanizedValue = Number(newValue);
+    data[field] = newValue;
+    return;
   }
 
-  data[field] = newValue;
+  if (data.name === 'Транспорт') {
+    calculationData.value.transportValue = Number(newValue);
+    data[field] = newValue;
+    return;
+  }
+
+  // Для спецификации: явно обновляем элемент в массиве для гарантии реактивности
+  if (data.id && calculationData.value.specificationData?.table) {
+    const index = calculationData.value.specificationData.table.findIndex((item) => item.id === data.id);
+    if (index !== -1) {
+      // Преобразуем числовые поля
+      if (field === 'quantity' || field === 'valuePerUnit') {
+        calculationData.value.specificationData.table[index][field] = Number(newValue) || 0;
+      } else {
+        calculationData.value.specificationData.table[index][field] = newValue;
+      }
+    }
+  } else {
+    // Для других случаев (workers, itr и т.д.) просто обновляем data
+    data[field] = newValue;
+  }
 };
 
 const copySpecification = (data) => {
@@ -351,7 +356,7 @@ const saveCalculation = async () => {
     const result = await createCalculationApi(displayTotalPrice.value, finalPriceData.value);
     if (result.success) {
       toast.add({ severity: 'success', summary: 'Успешно', detail: 'Калькуляция создана', life: 3000 });
-      
+
       // Загружаем отложенные медиа файлы перед переходом
       if (mediaFilesSectionRef.value && mediaFilesSectionRef.value.uploadPendingFiles) {
         // Обновляем calculationId для компонента
@@ -366,7 +371,7 @@ const saveCalculation = async () => {
           // Продолжаем переход даже если загрузка файлов не удалась
         }
       }
-      
+
       router.push({ path: `/calculations/${result.data.id}` });
     } else {
       toast.add({ severity: 'error', summary: 'Ошибка', detail: 'Не удалось создать калькуляцию', life: 3000 });
@@ -397,7 +402,9 @@ const saveCalculation = async () => {
         total: displayTotalPrice.value,
         totalMetalPerItem: getTotalValue(finalPriceData.value, 'metalTotal'),
         totalProcessingPerItem: getTotalValue(finalPriceData.value, 'processing'),
-        totalProfitabilityPerItem: getTotalValue(finalPriceData.value, 'profitability')
+        totalProfitabilityPerItem: getTotalValue(finalPriceData.value, 'profitability'),
+        isMetalEnabled: calculationData.value.isMetalEnabled || false,
+        isHardwareEnabled: calculationData.value.isHardwareEnabled || false
       });
       toast.add({ severity: 'success', summary: 'Успешно', detail: 'Калькуляция сохранена', life: 3000 });
     } catch (error) {
@@ -438,6 +445,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
       :loading="loading"
       :format-number="formatNumber"
       :truncate-decimal="truncateDecimal"
+      :calculation-id="calculationId"
+      :is-create-mode="isCreateMode"
       @create-calculation="saveCalculation"
     />
 
@@ -518,6 +527,10 @@ watch(increaseInSalary, (newValue, oldValue) => {
         :total-metal="totalMetal"
         :expand-accordion-total-costs="expandAccordionTotalCosts"
         :computed-style-class="computedStyleClass"
+        :is-metal-enabled="calculationData.isMetalEnabled"
+        @update:isMetalEnabled="(data) => (calculationData.isMetalEnabled = data)"
+        :is-hardware-enabled="calculationData.isHardwareEnabled"
+        @update:isHardwareEnabled="(data) => (calculationData.isHardwareEnabled = data)"
         @upload="onUpload"
         @remove-file="removeFile"
         @paste-from-buffer="pasteFromBuffer"
