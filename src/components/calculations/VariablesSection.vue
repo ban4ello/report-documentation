@@ -9,7 +9,6 @@ const props = defineProps({
     default: () => ({})
   }
 });
-
 </script>
 
 <template>
@@ -42,6 +41,18 @@ const props = defineProps({
           :maxFractionDigits="5"
           fluid
         />
+      </div>
+
+      <div class="grid grid-cols-1fr-40 gap-2 items-center">
+        <label for="costOfElectricityPerDay">Оцинковка:</label>
+        <!-- eslint-disable-next-line vue/no-mutating-props -->
+        <InputNumber v-model="calculationData.galvanizedValue" inputId="costOfElectricityPerDay" class="" fluid />
+      </div>
+
+      <div class="grid grid-cols-1fr-40 gap-2 items-center">
+        <label for="costOfElectricityPerDay">Транспорт:</label>
+        <!-- eslint-disable-next-line vue/no-mutating-props -->
+        <InputNumber v-model="calculationData.transportValue" inputId="costOfElectricityPerDay" class="" fluid />
       </div>
     </div>
   </div>

@@ -47,11 +47,6 @@ const onCellEditComplete = (event) => {
               {{ formatNumber(data.total) }}
             </div>
           </template>
-
-          <template #editor="{ data }">
-            <InputText v-if="data.key === 'galvanizing'" v-model="data.total" type="number" />
-            <InputText v-if="data.key === 'transport'" v-model="data.total" type="number" />
-          </template>
         </Column>
 
         <Column field="perItem" header="На 1 единицу">
@@ -129,4 +124,3 @@ const onCellEditComplete = (event) => {
     </div>
   </div>
 </template>
-
