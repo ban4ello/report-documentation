@@ -53,10 +53,7 @@ export function useCalculation() {
 
   const initializeTaxData = async () => {
     if (!router.currentRoute.value.query.parentId) {
-      const [workersTaxData, itrTaxData] = await Promise.all([
-        MochDataService.getWorkersTaxData(),
-        MochDataService.getItrTaxData()
-      ]);
+      const [workersTaxData, itrTaxData] = await Promise.all([MochDataService.getWorkersTaxData(), MochDataService.getItrTaxData()]);
       calculationData.value.workersTaxData = workersTaxData;
       calculationData.value.itrTaxData = itrTaxData;
     }
