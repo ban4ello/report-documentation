@@ -334,7 +334,7 @@ export const MochDataService = {
       {
         id: 1,
         name: 'т',
-        coefficient: 0.3,
+        coefficient: 0.0,
         coefficientA: null,
         coefficientB: null,
         orderId: 1,
@@ -394,7 +394,7 @@ export const MochDataService = {
       {
         id: 1,
         name: 'т',
-        coefficient: 0.3,
+        coefficient: 0.0,
         coefficientA: null,
         coefficientB: null,
         orderId: 1,

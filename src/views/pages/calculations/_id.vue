@@ -35,6 +35,7 @@ const {
   currentCalculationType,
   calculationPlanTotal,
   initializeFromQuery,
+  initializeTaxData,
   createCalculation: createCalculationApi
 } = useCalculation();
 
@@ -152,6 +153,10 @@ onBeforeMount(async () => {
   }
 
   await loadWorkers();
+
+  if (isCreateMode.value) {
+    await initializeTaxData();
+  }
 });
 
 const onCellEditComplete = (event) => {
