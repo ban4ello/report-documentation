@@ -92,7 +92,7 @@ export function useCalculations(calculationData) {
 
   // Эффективное значение totalHardware - исключается из расчетов если isMetalEnabled === true
   const effectiveTotalHardware = computed(() => {
-    if (calculationData.value.isMetalEnabled === true) {
+    if (calculationData.value.isHardwareEnabled === true) {
       return 0;
     }
     return totalHardware.value;
@@ -100,7 +100,7 @@ export function useCalculations(calculationData) {
 
   // Эффективное значение totalMetal - исключается из расчетов если isHardwareEnabled === true
   const effectiveTotalMetal = computed(() => {
-    if (calculationData.value.isHardwareEnabled === true) {
+    if (calculationData.value.isMetalEnabled === true) {
       return 0;
     }
     return totalMetal.value;

@@ -20,6 +20,7 @@ import VariablesSection from '@/components/calculations/VariablesSection.vue';
 import WorkersSalaryAccordion from '@/components/calculations/WorkersSalaryAccordion.vue';
 import ITRSalaryAccordion from '@/components/calculations/ITRSalaryAccordion.vue';
 import CreateWorkerDialog from '@/components/calculations/CreateWorkerDialog.vue';
+import Breadcrumbs from '@/components/Breadcrumbs.vue';
 
 const toast = useToast();
 const router = useRouter();
@@ -35,6 +36,7 @@ const {
   currentCalculationType,
   calculationPlanTotal,
   initializeFromQuery,
+  initializeTaxData,
   createCalculation: createCalculationApi
 } = useCalculation();
 
@@ -152,39 +154,60 @@ onBeforeMount(async () => {
   }
 
   await loadWorkers();
+
+  if (isCreateMode.value) {
+    await initializeTaxData();
+  }
 });
 
 const onCellEditComplete = (event) => {
   let { data, newValue, field } = event;
 
-  // Обработка специальных случаев (Оцинковка, Транспорт) из PriceSummary
-  if (data.name === 'Оцинковка') {
-    calculationData.value.galvanizedValue = Number(newValue);
-    data[field] = newValue;
-    return;
-  }
-
-  if (data.name === 'Транспорт') {
-    calculationData.value.transportValue = Number(newValue);
-    data[field] = newValue;
-    return;
-  }
+  console.log('onCellEditComplete', data, newValue, field);
+  console.log('calculationData.value.specificationData', calculationData.value.specificationData);
 
   // Для спецификации: явно обновляем элемент в массиве для гарантии реактивности
   if (data.id && calculationData.value.specificationData?.table) {
-    const index = calculationData.value.specificationData.table.findIndex((item) => item.id === data.id);
+    // Преобразуем числовые поля
+    if (field === 'quantity' || field === 'valuePerUnit') {
+      data[field] = Number(newValue) || 0;
+    } else {
+      data[field] = newValue;
+    }
+
+    return;
+  }
+
+  // Для workersData: явно обновляем элемент в массиве для гарантии реактивности
+  if (data.id && calculationData.value.workersData?.table) {
+    const index = calculationData.value.workersData.table.findIndex((item) => item.id === data.id);
     if (index !== -1) {
       // Преобразуем числовые поля
-      if (field === 'quantity' || field === 'valuePerUnit') {
-        calculationData.value.specificationData.table[index][field] = Number(newValue) || 0;
+      if (field === 'numberOfHoursWorked' || field === 'salaryPerDay') {
+        calculationData.value.workersData.table[index][field] = Number(newValue) || 0;
       } else {
-        calculationData.value.specificationData.table[index][field] = newValue;
+        calculationData.value.workersData.table[index][field] = newValue;
       }
     }
-  } else {
-    // Для других случаев (workers, itr и т.д.) просто обновляем data
-    data[field] = newValue;
+    return;
   }
+
+  // Для itrData: явно обновляем элемент в массиве для гарантии реактивности
+  if (data.id && calculationData.value.itrData?.table) {
+    const index = calculationData.value.itrData.table.findIndex((item) => item.id === data.id);
+    if (index !== -1) {
+      // Преобразуем числовые поля
+      if (field === 'salaryPerMonth') {
+        calculationData.value.itrData.table[index][field] = Number(newValue) || 0;
+      } else {
+        calculationData.value.itrData.table[index][field] = newValue;
+      }
+    }
+    return;
+  }
+
+  // Для других случаев просто обновляем data
+  data[field] = newValue;
 };
 
 const copySpecification = (data) => {
@@ -434,8 +457,9 @@ watch(increaseInSalary, (newValue, oldValue) => {
   </div>
 
   <Fluid>
+    <Breadcrumbs :items="breadCrumbsItems" />
+
     <CalculationHeader
-      :breadCrumbsItems="breadCrumbsItems"
       :calculation-data="calculationData"
       :display-total-price="displayTotalPrice"
       :calculation-plan-total="calculationPlanTotal"
