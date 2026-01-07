@@ -20,6 +20,7 @@ import VariablesSection from '@/components/calculations/VariablesSection.vue';
 import WorkersSalaryAccordion from '@/components/calculations/WorkersSalaryAccordion.vue';
 import ITRSalaryAccordion from '@/components/calculations/ITRSalaryAccordion.vue';
 import CreateWorkerDialog from '@/components/calculations/CreateWorkerDialog.vue';
+import Breadcrumbs from '@/components/Breadcrumbs.vue';
 
 const toast = useToast();
 const router = useRouter();
@@ -456,8 +457,9 @@ watch(increaseInSalary, (newValue, oldValue) => {
   </div>
 
   <Fluid>
+    <Breadcrumbs :items="breadCrumbsItems" />
+
     <CalculationHeader
-      :breadCrumbsItems="breadCrumbsItems"
       :calculation-data="calculationData"
       :display-total-price="displayTotalPrice"
       :calculation-plan-total="calculationPlanTotal"
