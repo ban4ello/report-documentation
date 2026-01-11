@@ -545,7 +545,14 @@ watch(increaseInSalary, (newValue, oldValue) => {
       <TotalCostsSection
         :consumables-data="calculationData.consumablesData"
         :hardware-data="calculationData.hardwareData"
-        :metal-data="calculationData.metalData"
+        :metal-data="
+          calculationData.metalData.map((item) => ({
+            ...item,
+            quantity: item.quantity,
+            taxPrice: item.taxPrice,
+            price: item.price
+          }))
+        "
         :total-consumables="totalConsumables"
         :total-hardware="totalHardware"
         :total-metal="totalMetal"
@@ -558,6 +565,9 @@ watch(increaseInSalary, (newValue, oldValue) => {
         @upload="onUpload"
         @remove-file="removeFile"
         @paste-from-buffer="pasteFromBuffer"
+        @update:consumablesData="(data) => (calculationData.consumablesData = data)"
+        @update:hardwareData="(data) => (calculationData.hardwareData = data)"
+        @update:metalData="(data) => (calculationData.metalData = data)"
       />
 
       <MediaFilesSection ref="mediaFilesSectionRef" :calculation-id="calculationId" :computed-style-class="computedStyleClass" />
