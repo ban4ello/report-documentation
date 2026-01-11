@@ -1,10 +1,11 @@
 // import jsonBig from "json-bigint";
-const mode = import.meta.env.MODE;
+// const mode = import.meta.env.MODE;
 
 export default {
   // baseURL: 'http://localhost:8000/api/',
   // baseURL: `${import.meta.env.VITE_API_HOST}/api/`,
-  baseURL: `${mode === 'development' ? import.meta.env.VITE_API_HOST : 'https://calculations-api.site'}/api/`,
+  baseURL: import.meta.env.VITE_API_HOST,
+  // baseURL: `${mode === 'development' ? import.meta.env.VITE_API_HOST : 'https://calculations-api.site'}/api/`,
   // baseURL: `${process.env.VITE_API_HOST}${process.env.VITE_API_VERSION_PREFIX}`,
   timeout: 10000,
   // withCredentials: false,

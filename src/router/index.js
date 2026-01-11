@@ -10,8 +10,8 @@ const router = createRouter({
       children: [
         {
           path: '/',
-          name: 'dashboard',
-          component: () => import('@/views/Dashboard.vue')
+          name: 'analysis',
+          component: () => import('@/views/pages/analysis/index.vue')
         },
         {
           path: '/calculations',
@@ -19,112 +19,21 @@ const router = createRouter({
           component: () => import('@/views/pages/calculations/index.vue')
         },
         {
-          path: '/calculations/:id',
-          name: 'calculation-item',
-          component: () => import('@/views/pages/calculations/_id.vue')
+          path: '/workers',
+          name: 'workers',
+          component: () => import('@/views/pages/workers/index.vue')
         },
         {
           path: '/calculations/create',
           name: 'calculation-create',
-          component: () => import('@/views/pages/calculations/create.vue')
+          component: () => import('@/views/pages/calculations/_id.vue')
         },
         {
-          path: '/analysis',
-          name: 'analysis',
-          component: () => import('@/views/pages/analysis/index.vue')
-        },
-        {
-          path: '/uikit/formlayout',
-          name: 'formlayout',
-          component: () => import('@/views/uikit/FormLayout.vue')
-        },
-        {
-          path: '/uikit/input',
-          name: 'input',
-          component: () => import('@/views/uikit/InputDoc.vue')
-        },
-        {
-          path: '/uikit/button',
-          name: 'button',
-          component: () => import('@/views/uikit/ButtonDoc.vue')
-        },
-        {
-          path: '/uikit/table',
-          name: 'table',
-          component: () => import('@/views/uikit/TableDoc.vue')
-        },
-        {
-          path: '/uikit/list',
-          name: 'list',
-          component: () => import('@/views/uikit/ListDoc.vue')
-        },
-        {
-          path: '/uikit/tree',
-          name: 'tree',
-          component: () => import('@/views/uikit/TreeDoc.vue')
-        },
-        {
-          path: '/uikit/panel',
-          name: 'panel',
-          component: () => import('@/views/uikit/PanelsDoc.vue')
-        },
-
-        {
-          path: '/uikit/overlay',
-          name: 'overlay',
-          component: () => import('@/views/uikit/OverlayDoc.vue')
-        },
-        {
-          path: '/uikit/media',
-          name: 'media',
-          component: () => import('@/views/uikit/MediaDoc.vue')
-        },
-        {
-          path: '/uikit/message',
-          name: 'message',
-          component: () => import('@/views/uikit/MessagesDoc.vue')
-        },
-        {
-          path: '/uikit/file',
-          name: 'file',
-          component: () => import('@/views/uikit/FileDoc.vue')
-        },
-        {
-          path: '/uikit/menu',
-          name: 'menu',
-          component: () => import('@/views/uikit/MenuDoc.vue')
-        },
-        {
-          path: '/uikit/charts',
-          name: 'charts',
-          component: () => import('@/views/uikit/ChartDoc.vue')
-        },
-        {
-          path: '/uikit/misc',
-          name: 'misc',
-          component: () => import('@/views/uikit/MiscDoc.vue')
-        },
-        {
-          path: '/uikit/timeline',
-          name: 'timeline',
-          component: () => import('@/views/uikit/TimelineDoc.vue')
-        },
-        {
-          path: '/pages/empty',
-          name: 'empty',
-          component: () => import('@/views/pages/Empty.vue')
-        },
-        {
-          path: '/pages/crud',
-          name: 'crud',
-          component: () => import('@/views/pages/Crud.vue')
+          path: '/calculations/:id',
+          name: 'calculation-item',
+          component: () => import('@/views/pages/calculations/_id.vue')
         }
       ]
-    },
-    {
-      path: '/pages/notfound',
-      name: 'notfound',
-      component: () => import('@/views/pages/NotFound.vue')
     },
 
     {
@@ -147,10 +56,9 @@ const router = createRouter({
 
 router.beforeEach((to, from, next) => {
   const isAuthenticated = localStorage.getItem('isAuthenticated');
-  console.log('router.beforeEach', to, isAuthenticated);
 
   if (to.name !== 'login' && (!isAuthenticated || isAuthenticated === 'false')) next({ path: '/login' });
   else next();
-})
+});
 
 export default router;

@@ -27,7 +27,9 @@ export default {
     totalMetalPerItem,
     totalProcessingPerItem,
     totalProfitabilityPerItem,
-    total
+    total,
+    isMetalEnabled,
+    isHardwareEnabled
   }) {
     return api().post('/calculation', {
       itrWorkedDays,
@@ -55,7 +57,9 @@ export default {
       totalMetalPerItem,
       totalProcessingPerItem,
       totalProfitabilityPerItem,
-      total
+      total,
+      isMetalEnabled,
+      isHardwareEnabled
     });
   },
 
@@ -70,6 +74,7 @@ export default {
     profitabilityCoeficient,
     title,
     transportValue,
+    dateOfCreation,
     lastEditDate,
     id,
     consumablesData,
@@ -83,7 +88,9 @@ export default {
     totalMetalPerItem,
     totalProcessingPerItem,
     totalProfitabilityPerItem,
-    total
+    total,
+    isMetalEnabled,
+    isHardwareEnabled
   }) {
     return api().put(`/calculation/${id}`, {
       itrWorkedDays,
@@ -96,6 +103,7 @@ export default {
       profitabilityCoeficient,
       title,
       transportValue,
+      dateOfCreation,
       lastEditDate,
       consumablesData,
       hardwareData,
@@ -108,7 +116,9 @@ export default {
       totalMetalPerItem,
       totalProcessingPerItem,
       totalProfitabilityPerItem,
-      total
+      total,
+      isMetalEnabled,
+      isHardwareEnabled
     });
   },
 
@@ -170,6 +180,18 @@ export default {
     return api().get('/workers');
   },
 
+  updateWorker({ id, name, lastname, position }) {
+    return api().put(`/worker/${id}`, {
+      name,
+      lastname,
+      position
+    });
+  },
+
+  deleteWorker(id) {
+    return api().delete(`/worker/${id}`);
+  },
+
   signup({ username, password, email, role }) {
     return api().post('/signup', { username, password, email, role });
   },
@@ -180,5 +202,27 @@ export default {
 
   logout() {
     return api().post('/logout');
+  },
+
+  uploadCalculationMediaFiles(calculationId, formData) {
+    return api().post(`/calculation/${calculationId}/media-files`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+  },
+
+  getCalculationMediaFiles(calculationId) {
+    return api().get(`/calculation/${calculationId}/media-files`);
+  },
+
+  downloadCalculationMediaFile(fileId) {
+    return api().get(`/calculation-media-file/${fileId}`, {
+      responseType: 'blob'
+    });
+  },
+
+  deleteCalculationMediaFile(fileId) {
+    return api().delete(`/calculation-media-file/${fileId}`);
   }
 };

@@ -1,13 +1,15 @@
 <script setup>
 import { useLayout } from '@/layout/composables/layout';
 import AppConfigurator from './AppConfigurator.vue';
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, computed } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import ApiService from '@/service/ApiService';
 
 const user = JSON.parse(localStorage.getItem('user'));
 const router = useRouter();
-const { onMenuToggle, toggleDarkMode, isDarkTheme, appConfig } = useLayout();
+const route = useRoute();
+const { toggleDarkMode, isDarkTheme, appConfig } = useLayout();
+
 const logout = async () => {
   try {
     // Вызываем logout на сервере
@@ -24,7 +26,40 @@ const logout = async () => {
   }
 };
 
-const menuItems = ref([
+const navigationMenuItems = ref([
+  {
+    label: 'Анализ',
+    icon: 'pi pi-chart-bar',
+    command: () => {
+      router.push('/');
+    }
+  },
+  {
+    label: 'Калькуляции',
+    icon: 'pi pi-calculator',
+    command: () => {
+      router.push('/calculations');
+    }
+  },
+  {
+    label: 'Сотрудники',
+    icon: 'pi pi-users',
+    command: () => {
+      router.push('/workers');
+    }
+  }
+]);
+
+// Определяем активный пункт меню на основе текущего роута
+const activeMenuItem = computed(() => {
+  const currentPath = route.path;
+  if (currentPath === '/') return 0;
+  if (currentPath.startsWith('/calculations')) return 1;
+  if (currentPath.startsWith('/workers')) return 2;
+  return null;
+});
+
+const userMenuItems = ref([
   {
     label: user.username,
     icon: 'pi pi-user',
@@ -39,20 +74,25 @@ const menuItems = ref([
         command: () => {
           logout();
         }
-      },
+      }
     ]
-  },
+  }
 ]);
 </script>
 
 <template>
   <div class="layout-topbar">
     <div class="layout-topbar-logo-container">
-      <button class="layout-menu-button layout-topbar-action" @click="onMenuToggle">
-        <i class="pi pi-bars"></i>
-      </button>
       <router-link to="/" class="layout-topbar-logo">
-        <svg fill="#000000" version="1.1" id="Layer_1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 496 496" xml:space="preserve">
+        <svg
+          fill="#000000"
+          version="1.1"
+          id="Layer_1"
+          xmlns="http://www.w3.org/2000/svg"
+          xmlns:xlink="http://www.w3.org/1999/xlink"
+          viewBox="0 0 496 496"
+          xml:space="preserve"
+        >
           <g>
             <g>
               <g>
@@ -60,7 +100,10 @@ const menuItems = ref([
                 <path fill="var(--primary-color)" d="M272,144H160v112h112V144z M256,240h-80v-80h80V240z" />
                 <path fill="var(--primary-color)" d="M144,272H32v112h112V272z M128,368H48v-80h80V368z" />
                 <path fill="var(--primary-color)" d="M272,272H160v112h112V272z M256,368h-80v-80h80V368z" />
-                <polygon fill="var(--primary-color)" points="80,224 96,224 96,208 112,208 112,192 96,192 96,176 80,176 80,192 64,192 64,208 80,208 			" />
+                <polygon
+                  fill="var(--primary-color)"
+                  points="80,224 96,224 96,208 112,208 112,192 96,192 96,176 80,176 80,192 64,192 64,208 80,208 			"
+                />
                 <rect fill="var(--primary-color)" x="192" y="192" width="48" height="16" />
                 <polygon
                   fill="var(--primary-color)"
@@ -76,7 +119,10 @@ const menuItems = ref([
                   d="M464,432H53.784L0.456,464l53.328,32H464c17.648,0,32-14.352,32-32S481.648,432,464,432z M384,480H58.216l-26.672-16
 				l26.672-16H384V480z M416,480h-16v-32h16V480z M464,480h-32v-32h32c8.816,0,16,7.176,16,16C480,472.824,472.816,480,464,480z"
                 />
-                <path fill="var(--primary-color)" d="M304,48V0H0v416h304v-48h192V48H304z M288,400H16V128h272V400z M288,112H16V16h272V112z M480,352H304V64h176V352z" />
+                <path
+                  fill="var(--primary-color)"
+                  d="M304,48V0H0v416h304v-48h192V48H304z M288,400H16V128h272V400z M288,112H16V16h272V112z M480,352H304V64h176V352z"
+                />
                 <path
                   fill="var(--primary-color)"
                   d="M387.704,334.752l4.296,2.736l4.296-2.736C399.064,332.984,464,290.648,464,208S399.064,83.016,396.296,81.248
@@ -86,7 +132,10 @@ const menuItems = ref([
 				S361.128,152,392,152z M392,280c15.912,0,30.576-5.248,42.512-14.016c-13.6,27.792-33.776,45.424-42.528,52.168
 				c-8.776-6.728-29-24.344-42.584-52.24C361.344,274.72,376.048,280,392,280z"
                 />
-                <polygon fill="var(--primary-color)" points="384,248 400,248 400,216 432,216 432,200 400,200 400,168 384,168 384,200 352,200 352,216 384,216 			" />
+                <polygon
+                  fill="var(--primary-color)"
+                  points="384,248 400,248 400,216 432,216 432,200 400,200 400,168 384,168 384,200 352,200 352,216 384,216 			"
+                />
               </g>
             </g>
           </g>
@@ -94,6 +143,21 @@ const menuItems = ref([
 
         <span>{{ appConfig.companyName }}</span>
       </router-link>
+    </div>
+
+    <div class="layout-topbar-navigation">
+      <Menubar :model="navigationMenuItems" class="layout-navigation-menubar">
+        <template #item="{ item, root, index }">
+          <a
+            v-if="root"
+            :class="['p-menuitem-link', 'layout-navigation-link', { 'p-highlight': index === activeMenuItem }]"
+            @click="item.command && item.command()"
+          >
+            <span :class="item.icon" class="p-menuitem-icon"></span>
+            <span class="p-menuitem-text">{{ item.label }}</span>
+          </a>
+        </template>
+      </Menubar>
     </div>
 
     <div class="layout-topbar-actions">
@@ -104,7 +168,14 @@ const menuItems = ref([
 
         <div class="relative">
           <button
-            v-styleclass="{ selector: '@next', enterFromClass: 'hidden', enterActiveClass: 'animate-scalein', leaveToClass: 'hidden', leaveActiveClass: 'animate-fadeout', hideOnOutsideClick: true }"
+            v-styleclass="{
+              selector: '@next',
+              enterFromClass: 'hidden',
+              enterActiveClass: 'animate-scalein',
+              leaveToClass: 'hidden',
+              leaveActiveClass: 'animate-fadeout',
+              hideOnOutsideClick: true
+            }"
             type="button"
             class="layout-topbar-action layout-topbar-action-highlight"
           >
@@ -116,7 +187,14 @@ const menuItems = ref([
 
       <button
         class="layout-topbar-menu-button layout-topbar-action"
-        v-styleclass="{ selector: '@next', enterFromClass: 'hidden', enterActiveClass: 'animate-scalein', leaveToClass: 'hidden', leaveActiveClass: 'animate-fadeout', hideOnOutsideClick: true }"
+        v-styleclass="{
+          selector: '@next',
+          enterFromClass: 'hidden',
+          enterActiveClass: 'animate-scalein',
+          leaveToClass: 'hidden',
+          leaveActiveClass: 'animate-fadeout',
+          hideOnOutsideClick: true
+        }"
       >
         <i class="pi pi-ellipsis-v"></i>
       </button>
@@ -137,8 +215,21 @@ const menuItems = ref([
           </button>
         </div> -->
 
-        <Menubar :model="menuItems" />
+        <Menubar :model="userMenuItems" />
       </div>
     </div>
   </div>
 </template>
+
+<style scoped lang="scss">
+.layout-navigation-link {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  cursor: pointer !important;
+
+  .p-menuitem-icon {
+    margin-right: 0.5rem !important;
+  }
+}
+</style>

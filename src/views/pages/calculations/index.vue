@@ -45,7 +45,7 @@ const confirmDeleteEntity = async (data, typeOfEntity = 'parent-calculation') =>
             calculationsData.value = calculationsData.value.map((item) => {
               return {
                 ...item,
-                childrens: item.childrens.filter((children) => children.id !== data.id)
+                childrens: item.childrens ? item.childrens.filter((children) => children.id !== data.id) : undefined
               };
             });
             await ApiService.deleteCalculation(data.id);
@@ -128,6 +128,8 @@ const expandRow = (row) => {
         :rows="10"
         :rowHover="true"
         dataKey="id"
+        sortField="dateOfCreation"
+        :sortOrder="-1"
         @row-expand="expandRow"
       >
         <template #empty> Нет данных для отображения </template>
@@ -142,7 +144,7 @@ const expandRow = (row) => {
           </template>
         </Column>
 
-        <Column field="dateOfCreation" header="Дата создания" style="min-width: 12rem">
+        <Column field="dateOfCreation" header="Дата создания" sortable dataType="date" style="min-width: 12rem">
           <template #body="{ data }">
             {{ new Date(data.dateOfCreation).toLocaleDateString() }}
           </template>
