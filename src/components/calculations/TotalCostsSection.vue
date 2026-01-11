@@ -1,7 +1,7 @@
 <script setup>
 import { formatNumber } from '@/utils/helper';
 
-defineProps({
+const props = defineProps({
   consumablesData: {
     type: Array,
     required: true
@@ -44,7 +44,118 @@ defineProps({
   }
 });
 
-defineEmits(['upload', 'remove-file', 'update:isMetalEnabled', 'update:isHardwareEnabled']);
+const $emit = defineEmits([
+  'upload',
+  'remove-file',
+  'update:isMetalEnabled',
+  'update:isHardwareEnabled',
+  'update:totalMetal',
+  'update:metalData',
+  'update:consumablesData',
+  'update:hardwareData'
+]);
+
+const normalizeNumericValue = (value) => {
+  if (typeof value === 'number') {
+    return value;
+  }
+  if (typeof value === 'string') {
+    const normalizedValue = String(value || '')
+      .replace(',', '.')
+      .replace(/\s/g, '');
+    return Number(normalizedValue) || 0;
+  }
+  return value;
+};
+
+const onCellEditCompleteConsumables = (event) => {
+  let { data, newValue, field } = event;
+
+  // Обновляем значение в локальном объекте
+  let updatedValue = newValue;
+
+  // Для числовых полей преобразуем запятую в точку
+  if (field === 'quantity' || field === 'taxPrice' || field === 'price') {
+    updatedValue = normalizeNumericValue(newValue);
+  }
+
+  data[field] = updatedValue;
+
+  // Создаем обновленный массив consumablesData и отправляем в родительский компонент
+  const updatedConsumablesData = props.consumablesData.map((item) => {
+    if (item.order === data.order) {
+      return { ...item, [field]: updatedValue };
+    }
+    return item;
+  });
+
+  // Emit обновленных данных в родительский компонент
+  $emit('update:consumablesData', updatedConsumablesData);
+};
+
+const onCellEditCompleteHardware = (event) => {
+  let { data, newValue, field } = event;
+
+  // Обновляем значение в локальном объекте
+  let updatedValue = newValue;
+
+  // Для числовых полей преобразуем запятую в точку
+  if (field === 'quantity' || field === 'taxPrice' || field === 'price') {
+    updatedValue = normalizeNumericValue(newValue);
+  }
+
+  data[field] = updatedValue;
+
+  // Создаем обновленный массив hardwareData и отправляем в родительский компонент
+  const updatedHardwareData = props.hardwareData.map((item) => {
+    if (item.order === data.order) {
+      return { ...item, [field]: updatedValue };
+    }
+    return item;
+  });
+
+  // Emit обновленных данных в родительский компонент
+  $emit('update:hardwareData', updatedHardwareData);
+};
+
+const onCellEditComplete = (event) => {
+  let { data, newValue, field } = event;
+
+  // Обновляем значение в локальном объекте
+  let updatedValue = newValue;
+
+  // Для числовых полей преобразуем запятую в точку
+  if (field === 'quantity' || field === 'taxPrice' || field === 'price') {
+    updatedValue = normalizeNumericValue(newValue);
+  }
+
+  data[field] = updatedValue;
+
+  // Создаем обновленный массив metalData и отправляем в родительский компонент
+  const updatedMetalData = props.metalData.map((item) => {
+    if (item.order === data.order) {
+      return { ...item, [field]: updatedValue };
+    }
+    return item;
+  });
+
+  // Emit обновленных данных в родительский компонент
+  $emit('update:metalData', updatedMetalData);
+
+  // Пересчитываем totalMetal
+  const totalMetal = updatedMetalData.reduce((acc, item) => acc + parseNumberWithComma(item.price), 0);
+  $emit('update:totalMetal', totalMetal);
+};
+
+const parseNumberWithComma = (str) => {
+  if (typeof str === 'number') return str;
+
+  if (!str) return 0;
+  // Заменяем запятую на точку и убираем лишние пробелы
+  const normalized = String(str).trim().replace(',', '.').replace(/\s/g, '');
+  const num = Number(normalized);
+  return isNaN(num) ? 0 : num;
+};
 </script>
 
 <template>
@@ -90,7 +201,14 @@ defineEmits(['upload', 'remove-file', 'update:isMetalEnabled', 'update:isHardwar
         </AccordionHeader>
 
         <AccordionContent>
-          <DataTable :value="consumablesData" dataKey="order" :rowHover="true" showGridlines>
+          <DataTable
+            :value="consumablesData"
+            dataKey="order"
+            :rowHover="true"
+            editMode="cell"
+            showGridlines
+            @cell-edit-complete="onCellEditCompleteConsumables"
+          >
             <template #empty> Нет данных для отображения </template>
 
             <Column field="order" header="№ п/п" style="min-width: 12rem">
@@ -103,11 +221,19 @@ defineEmits(['upload', 'remove-file', 'update:isMetalEnabled', 'update:isHardwar
               <template #body="{ data }">
                 {{ data.name }}
               </template>
+
+              <template #editor="{ data }">
+                <InputText v-model="data.name" fluid />
+              </template>
             </Column>
 
             <Column field="unitOfMeasurement" header="ед.изм." style="min-width: 12rem">
               <template #body="{ data }">
                 {{ data.unitOfMeasurement }}
+              </template>
+
+              <template #editor="{ data }">
+                <InputText v-model="data.unitOfMeasurement" fluid />
               </template>
             </Column>
 
@@ -115,17 +241,29 @@ defineEmits(['upload', 'remove-file', 'update:isMetalEnabled', 'update:isHardwar
               <template #body="{ data }">
                 {{ data.quantity }}
               </template>
+
+              <template #editor="{ data }">
+                <InputText v-model="data.quantity" fluid />
+              </template>
             </Column>
 
             <Column field="taxPrice" header="цена НДС" style="min-width: 12rem">
               <template #body="{ data }">
                 {{ data.taxPrice }}
               </template>
+
+              <template #editor="{ data }">
+                <InputText v-model="data.taxPrice" fluid />
+              </template>
             </Column>
 
             <Column field="price" header="Стоимость" style="min-width: 12rem">
               <template #body="{ data }">
                 {{ data.price }}
+              </template>
+
+              <template #editor="{ data }">
+                <InputText v-model="data.price" fluid />
               </template>
             </Column>
 
@@ -185,7 +323,14 @@ defineEmits(['upload', 'remove-file', 'update:isMetalEnabled', 'update:isHardwar
         </AccordionHeader>
 
         <AccordionContent>
-          <DataTable :value="hardwareData" dataKey="order" :rowHover="true" showGridlines>
+          <DataTable
+            :value="hardwareData"
+            dataKey="order"
+            :rowHover="true"
+            editMode="cell"
+            showGridlines
+            @cell-edit-complete="onCellEditCompleteHardware"
+          >
             <template #empty> Нет данных для отображения </template>
 
             <Column field="order" header="№ п/п" style="min-width: 12rem">
@@ -198,11 +343,19 @@ defineEmits(['upload', 'remove-file', 'update:isMetalEnabled', 'update:isHardwar
               <template #body="{ data }">
                 {{ data.name }}
               </template>
+
+              <template #editor="{ data }">
+                <InputText v-model="data.name" fluid />
+              </template>
             </Column>
 
             <Column field="unitOfMeasurement" header="ед.изм." style="min-width: 12rem">
               <template #body="{ data }">
                 {{ data.unitOfMeasurement }}
+              </template>
+
+              <template #editor="{ data }">
+                <InputText v-model="data.unitOfMeasurement" fluid />
               </template>
             </Column>
 
@@ -210,17 +363,29 @@ defineEmits(['upload', 'remove-file', 'update:isMetalEnabled', 'update:isHardwar
               <template #body="{ data }">
                 {{ data.quantity }}
               </template>
+
+              <template #editor="{ data }">
+                <InputText v-model="data.quantity" fluid />
+              </template>
             </Column>
 
             <Column field="taxPrice" header="цена НДС" style="min-width: 12rem">
               <template #body="{ data }">
                 {{ data.taxPrice }}
               </template>
+
+              <template #editor="{ data }">
+                <InputText v-model="data.taxPrice" fluid />
+              </template>
             </Column>
 
             <Column field="price" header="Стоимость" style="min-width: 12rem">
               <template #body="{ data }">
                 {{ data.price }}
+              </template>
+
+              <template #editor="{ data }">
+                <InputText v-model="data.price" fluid />
               </template>
             </Column>
 
@@ -280,7 +445,14 @@ defineEmits(['upload', 'remove-file', 'update:isMetalEnabled', 'update:isHardwar
         </AccordionHeader>
 
         <AccordionContent>
-          <DataTable :value="metalData" dataKey="order" :rowHover="true" showGridlines>
+          <DataTable
+            :value="metalData"
+            dataKey="order"
+            :rowHover="true"
+            editMode="cell"
+            showGridlines
+            @cell-edit-complete="onCellEditComplete"
+          >
             <template #empty> Нет данных для отображения </template>
 
             <Column field="order" header="№ п/п" style="min-width: 12rem">
@@ -293,11 +465,19 @@ defineEmits(['upload', 'remove-file', 'update:isMetalEnabled', 'update:isHardwar
               <template #body="{ data }">
                 {{ data.name }}
               </template>
+
+              <template #editor="{ data }">
+                <InputText v-model="data.name" fluid />
+              </template>
             </Column>
 
             <Column field="unitOfMeasurement" header="ед.изм." style="min-width: 12rem">
               <template #body="{ data }">
                 {{ data.unitOfMeasurement }}
+              </template>
+
+              <template #editor="{ data }">
+                <InputText v-model="data.unitOfMeasurement" fluid />
               </template>
             </Column>
 
@@ -305,17 +485,29 @@ defineEmits(['upload', 'remove-file', 'update:isMetalEnabled', 'update:isHardwar
               <template #body="{ data }">
                 {{ data.quantity }}
               </template>
+
+              <template #editor="{ data }">
+                <InputText v-model="data.quantity" fluid />
+              </template>
             </Column>
 
             <Column field="taxPrice" header="цена НДС" style="min-width: 12rem">
               <template #body="{ data }">
                 {{ data.taxPrice }}
               </template>
+
+              <template #editor="{ data }">
+                <InputText v-model="data.taxPrice" fluid />
+              </template>
             </Column>
 
             <Column field="price" header="Стоимость" style="min-width: 12rem">
               <template #body="{ data }">
                 {{ data.price }}
+              </template>
+
+              <template #editor="{ data }">
+                <InputText v-model="data.price" fluid />
               </template>
             </Column>
 
