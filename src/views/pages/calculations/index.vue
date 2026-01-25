@@ -1,7 +1,7 @@
 <script setup>
 import ApiService from '@/service/ApiService';
 import { MochDataService } from '@/service/MochDataService';
-import { onBeforeMount, ref } from 'vue';
+import { onBeforeMount, ref, watch, onMounted } from 'vue';
 // import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import { useRouter } from 'vue-router';
@@ -10,6 +10,30 @@ const router = useRouter();
 // const toast = useToast();
 const dropdownItemsParentCalculations = ref([]);
 const expandedRows = ref([]);
+
+onMounted(() => {
+  const saved = localStorage.getItem('myTableExpanded');
+  if (saved) {
+    console.log(saved);
+    // {"0":true,"6":true}
+    expandedRows.value = JSON.parse(saved);
+
+    const keys = Object.keys(JSON.parse(saved)); // ["0", "6"]
+    console.log(222222, keys);
+    for (let i = 0; i < keys.length; i++) {
+      expandRowAction(keys[i]);
+    }
+  }
+});
+
+watch(
+  expandedRows,
+  (newValue) => {
+    localStorage.setItem('myTableExpanded', JSON.stringify(newValue));
+  },
+  { deep: true }
+);
+
 const calculationPlanId = ref(null);
 const loading = ref(false);
 
@@ -80,28 +104,32 @@ onBeforeMount(() => {
   });
 });
 
-const expandRow = (row) => {
-  ApiService.getParentCalculationChildren(row.data.id).then((res) => {
-    const updatedData = JSON.parse(JSON.stringify(calculationsData.value));
-    calculationPlanId.value = res.data.filter((item) => item.calculation_type === 'plan')[0].id;
+const expandRowAction = (rowId) => {
+  try {
+    ApiService.getParentCalculationChildren(rowId).then((res) => {
+      const updatedData = JSON.parse(JSON.stringify(calculationsData.value));
+      calculationPlanId.value = res.data.filter((item) => item.calculation_type === 'plan')[0].id;
 
-    const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase());
-    const camelizeData = res.data.map((item) => {
-      return Object.keys(item).reduce((acc, key) => {
-        acc[camelize(key)] = item[key];
+      const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase());
+      const camelizeData = res.data.map((item) => {
+        return Object.keys(item).reduce((acc, key) => {
+          acc[camelize(key)] = item[key];
 
-        return acc;
-      }, {});
+          return acc;
+        }, {});
+      });
+
+      calculationsData.value = updatedData.map((item) => {
+        if (Number(item.id) === Number(rowId)) {
+          item.childrens = camelizeData;
+        }
+
+        return item;
+      });
     });
-
-    calculationsData.value = updatedData.map((item) => {
-      if (Number(item.id) === Number(row.data.id)) {
-        item.childrens = camelizeData;
-      }
-
-      return item;
-    });
-  });
+  } catch (error) {
+    console.log(error);
+  }
 };
 </script>
 
@@ -122,6 +150,7 @@ const expandRow = (row) => {
         </div>
       </div>
       <!-- :paginator="true" -->
+
       <DataTable
         v-model:expandedRows="expandedRows"
         :value="calculationsData"
@@ -130,7 +159,7 @@ const expandRow = (row) => {
         dataKey="id"
         sortField="dateOfCreation"
         :sortOrder="-1"
-        @row-expand="expandRow"
+        @row-expand="(row) => expandRowAction(row.data.id)"
       >
         <template #empty> Нет данных для отображения </template>
 
