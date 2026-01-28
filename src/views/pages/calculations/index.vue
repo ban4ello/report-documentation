@@ -1,7 +1,7 @@
 <script setup>
 import ApiService from '@/service/ApiService';
 import { MochDataService } from '@/service/MochDataService';
-import { onBeforeMount, ref, watch, onMounted } from 'vue';
+import { onBeforeMount, ref, watch } from 'vue';
 // import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import { useRouter } from 'vue-router';
@@ -11,25 +11,10 @@ const router = useRouter();
 const dropdownItemsParentCalculations = ref([]);
 const expandedRows = ref([]);
 
-onMounted(() => {
-  const saved = localStorage.getItem('myTableExpanded');
-  if (saved) {
-    console.log(saved);
-    // {"0":true,"6":true}
-    expandedRows.value = JSON.parse(saved);
-
-    const keys = Object.keys(JSON.parse(saved)); // ["0", "6"]
-    console.log(222222, keys);
-    for (let i = 0; i < keys.length; i++) {
-      expandRowAction(keys[i]);
-    }
-  }
-});
-
 watch(
   expandedRows,
   (newValue) => {
-    localStorage.setItem('myTableExpanded', JSON.stringify(newValue));
+    localStorage.setItem('calculationTableExpanded', JSON.stringify(newValue));
   },
   { deep: true }
 );
@@ -101,6 +86,16 @@ onBeforeMount(() => {
     });
 
     calculationsData.value = camelizeData;
+
+    const savedExpandedItems = localStorage.getItem('calculationTableExpanded');
+    if (savedExpandedItems) {
+      expandedRows.value = JSON.parse(savedExpandedItems);
+
+      const expandedKeys = Object.keys(JSON.parse(savedExpandedItems));
+      for (let i = 0; i < expandedKeys.length; i++) {
+        expandRowAction(expandedKeys[i]);
+      }
+    }
   });
 });
 
