@@ -27,7 +27,9 @@ export default {
     totalMetalPerItem,
     totalProcessingPerItem,
     totalProfitabilityPerItem,
-    total
+    total,
+    isMetalEnabled,
+    isHardwareEnabled
   }) {
     return api().post('/calculation', {
       itrWorkedDays,
@@ -55,7 +57,9 @@ export default {
       totalMetalPerItem,
       totalProcessingPerItem,
       totalProfitabilityPerItem,
-      total
+      total,
+      isMetalEnabled,
+      isHardwareEnabled
     });
   },
 
@@ -84,7 +88,9 @@ export default {
     totalMetalPerItem,
     totalProcessingPerItem,
     totalProfitabilityPerItem,
-    total
+    total,
+    isMetalEnabled,
+    isHardwareEnabled
   }) {
     return api().put(`/calculation/${id}`, {
       itrWorkedDays,
@@ -110,7 +116,9 @@ export default {
       totalMetalPerItem,
       totalProcessingPerItem,
       totalProfitabilityPerItem,
-      total
+      total,
+      isMetalEnabled,
+      isHardwareEnabled
     });
   },
 

@@ -54,7 +54,7 @@ const confirmDeleteEntity = async (data, typeOfEntity = 'parent-calculation') =>
             calculationsData.value = calculationsData.value.map((item) => {
               return {
                 ...item,
-                childrens: item.childrens.filter((children) => children.id !== data.id)
+                childrens: item.childrens ? item.childrens.filter((children) => children.id !== data.id) : undefined
               };
             });
             await ApiService.deleteCalculation(data.id);

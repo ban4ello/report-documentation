@@ -2,12 +2,12 @@
 defineProps({
   modelValue: {
     type: String,
-    required: true,
+    required: true
   },
   showAllYear: {
     type: Boolean,
-    default: false,
-  },
+    default: false
+  }
 });
 
 const emit = defineEmits(['update:modelValue', 'update:showAllYear', 'dateChange']);
@@ -20,6 +20,20 @@ const handleDateChange = (newDate) => {
 const handleShowAllYearChange = (value) => {
   emit('update:showAllYear', value);
 };
+
+// Русская локализация для календаря
+const ruLocale = {
+  firstDayOfWeek: 1,
+  dayNames: ['Воскресенье', 'Понедельник', 'Вторник', 'Среда', 'Четверг', 'Пятница', 'Суббота'],
+  dayNamesShort: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+  dayNamesMin: ['Вс', 'Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб'],
+  monthNames: ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь', 'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
+  monthNamesShort: ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн', 'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
+  today: 'Сегодня',
+  clear: 'Очистить',
+  dateFormat: 'mm.yy',
+  weekHeader: 'Неделя'
+};
 </script>
 
 <template>
@@ -31,7 +45,8 @@ const handleShowAllYearChange = (value) => {
       dateFormat="mm.yy"
       placeholder="mm/yyyy"
       view="month"
-      style="width: 200px;"
+      style="width: 200px"
+      :locale="ruLocale"
       @update:modelValue="handleDateChange"
     />
 
@@ -41,4 +56,3 @@ const handleShowAllYearChange = (value) => {
     </div>
   </div>
 </template>
-

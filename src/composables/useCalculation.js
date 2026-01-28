@@ -2,6 +2,7 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import ApiService from '@/service/ApiService';
 import { camelize } from '@/utils/helper';
+import { MochDataService } from '@/service/MochDataService';
 
 export function useCalculation() {
   const router = useRouter();
@@ -43,10 +44,20 @@ export function useCalculation() {
     metalData: [],
     workersTaxData: [],
     itrTaxData: [],
-    total: null
+    total: null,
+    isMetalEnabled: false,
+    isHardwareEnabled: false
   };
 
   const calculationData = ref({ ...initialCalculationData });
+
+  const initializeTaxData = async () => {
+    if (!router.currentRoute.value.query.parentId) {
+      const [workersTaxData, itrTaxData] = await Promise.all([MochDataService.getWorkersTaxData(), MochDataService.getItrTaxData()]);
+      calculationData.value.workersTaxData = workersTaxData;
+      calculationData.value.itrTaxData = itrTaxData;
+    }
+  };
 
   const initializeFromQuery = async () => {
     const query = router.currentRoute.value.query;
@@ -100,7 +111,9 @@ export function useCalculation() {
         total: finalTotalPrice,
         totalMetalPerItem: getTotalValue(finalPriceData, 'metalTotal'),
         totalProcessingPerItem: getTotalValue(finalPriceData, 'processing'),
-        totalProfitabilityPerItem: getTotalValue(finalPriceData, 'profitability')
+        totalProfitabilityPerItem: getTotalValue(finalPriceData, 'profitability'),
+        isMetalEnabled: calculationData.value.isMetalEnabled || false,
+        isHardwareEnabled: calculationData.value.isHardwareEnabled || false
       });
       return { success: true, data: calculationRes.data };
     } catch (error) {
@@ -119,6 +132,7 @@ export function useCalculation() {
     calculationPlanId,
     calculationPlanTotal,
     initializeFromQuery,
+    initializeTaxData,
     createCalculation
   };
 }

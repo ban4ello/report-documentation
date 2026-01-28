@@ -4,8 +4,6 @@ import ApiService from '@/service/ApiService';
 import { useToast } from 'primevue/usetoast';
 import { useRouter } from 'vue-router';
 
-import { MochDataService } from '@/service/MochDataService';
-
 // Composables
 import { useCalculation } from '@/composables/useCalculation';
 import { useWorkers } from '@/composables/useWorkers';
@@ -22,13 +20,14 @@ import VariablesSection from '@/components/calculations/VariablesSection.vue';
 import WorkersSalaryAccordion from '@/components/calculations/WorkersSalaryAccordion.vue';
 import ITRSalaryAccordion from '@/components/calculations/ITRSalaryAccordion.vue';
 import CreateWorkerDialog from '@/components/calculations/CreateWorkerDialog.vue';
+import Breadcrumbs from '@/components/Breadcrumbs.vue';
 
 const toast = useToast();
 const router = useRouter();
 const calculationId = ref(null);
 const isCreateMode = ref(false);
 
-const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м']);
+const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м', 'услуга']);
 
 // Composables initialization
 const {
@@ -37,6 +36,7 @@ const {
   currentCalculationType,
   calculationPlanTotal,
   initializeFromQuery,
+  initializeTaxData,
   createCalculation: createCalculationApi
 } = useCalculation();
 
@@ -155,30 +155,58 @@ onBeforeMount(async () => {
 
   await loadWorkers();
 
-  MochDataService.getWorkersTaxData().then((data) => {
-    calculationData.value.workersTaxData = data;
-  });
-
-  MochDataService.getItrTaxData().then((data) => {
-    calculationData.value.itrTaxData = data;
-  });
+  if (isCreateMode.value) {
+    await initializeTaxData();
+  }
 });
 
 const onCellEditComplete = (event) => {
   let { data, newValue, field } = event;
 
-  switch (data.name) {
-    case 'Оцинковка':
-      calculationData.value.galvanizedValue = Number(newValue);
-      break;
-    case 'Транспорт':
-      calculationData.value.transportValue = Number(newValue);
-      break;
+  console.log('onCellEditComplete', data, newValue, field);
+  console.log('calculationData.value.specificationData', calculationData.value.specificationData);
 
-    default:
-      break;
+  // Для спецификации: явно обновляем элемент в массиве для гарантии реактивности
+  if (data.id && calculationData.value.specificationData?.table) {
+    // Преобразуем числовые поля
+    if (field === 'quantity' || field === 'valuePerUnit') {
+      data[field] = Number(newValue) || 0;
+    } else {
+      data[field] = newValue;
+    }
+
+    return;
   }
 
+  // Для workersData: явно обновляем элемент в массиве для гарантии реактивности
+  if (data.id && calculationData.value.workersData?.table) {
+    const index = calculationData.value.workersData.table.findIndex((item) => item.id === data.id);
+    if (index !== -1) {
+      // Преобразуем числовые поля
+      if (field === 'numberOfHoursWorked' || field === 'salaryPerDay') {
+        calculationData.value.workersData.table[index][field] = Number(newValue) || 0;
+      } else {
+        calculationData.value.workersData.table[index][field] = newValue;
+      }
+    }
+    return;
+  }
+
+  // Для itrData: явно обновляем элемент в массиве для гарантии реактивности
+  if (data.id && calculationData.value.itrData?.table) {
+    const index = calculationData.value.itrData.table.findIndex((item) => item.id === data.id);
+    if (index !== -1) {
+      // Преобразуем числовые поля
+      if (field === 'salaryPerMonth') {
+        calculationData.value.itrData.table[index][field] = Number(newValue) || 0;
+      } else {
+        calculationData.value.itrData.table[index][field] = newValue;
+      }
+    }
+    return;
+  }
+
+  // Для других случаев просто обновляем data
   data[field] = newValue;
 };
 
@@ -351,7 +379,7 @@ const saveCalculation = async () => {
     const result = await createCalculationApi(displayTotalPrice.value, finalPriceData.value);
     if (result.success) {
       toast.add({ severity: 'success', summary: 'Успешно', detail: 'Калькуляция создана', life: 3000 });
-      
+
       // Загружаем отложенные медиа файлы перед переходом
       if (mediaFilesSectionRef.value && mediaFilesSectionRef.value.uploadPendingFiles) {
         // Обновляем calculationId для компонента
@@ -366,7 +394,7 @@ const saveCalculation = async () => {
           // Продолжаем переход даже если загрузка файлов не удалась
         }
       }
-      
+
       router.push({ path: `/calculations/${result.data.id}` });
     } else {
       toast.add({ severity: 'error', summary: 'Ошибка', detail: 'Не удалось создать калькуляцию', life: 3000 });
@@ -397,7 +425,9 @@ const saveCalculation = async () => {
         total: displayTotalPrice.value,
         totalMetalPerItem: getTotalValue(finalPriceData.value, 'metalTotal'),
         totalProcessingPerItem: getTotalValue(finalPriceData.value, 'processing'),
-        totalProfitabilityPerItem: getTotalValue(finalPriceData.value, 'profitability')
+        totalProfitabilityPerItem: getTotalValue(finalPriceData.value, 'profitability'),
+        isMetalEnabled: calculationData.value.isMetalEnabled || false,
+        isHardwareEnabled: calculationData.value.isHardwareEnabled || false
       });
       toast.add({ severity: 'success', summary: 'Успешно', detail: 'Калькуляция сохранена', life: 3000 });
     } catch (error) {
@@ -427,8 +457,9 @@ watch(increaseInSalary, (newValue, oldValue) => {
   </div>
 
   <Fluid>
+    <Breadcrumbs :items="breadCrumbsItems" />
+
     <CalculationHeader
-      :breadCrumbsItems="breadCrumbsItems"
       :calculation-data="calculationData"
       :display-total-price="displayTotalPrice"
       :calculation-plan-total="calculationPlanTotal"
@@ -438,6 +469,8 @@ watch(increaseInSalary, (newValue, oldValue) => {
       :loading="loading"
       :format-number="formatNumber"
       :truncate-decimal="truncateDecimal"
+      :calculation-id="calculationId"
+      :is-create-mode="isCreateMode"
       @create-calculation="saveCalculation"
     />
 
@@ -512,15 +545,29 @@ watch(increaseInSalary, (newValue, oldValue) => {
       <TotalCostsSection
         :consumables-data="calculationData.consumablesData"
         :hardware-data="calculationData.hardwareData"
-        :metal-data="calculationData.metalData"
+        :metal-data="
+          calculationData.metalData.map((item) => ({
+            ...item,
+            quantity: item.quantity,
+            taxPrice: item.taxPrice,
+            price: item.price
+          }))
+        "
         :total-consumables="totalConsumables"
         :total-hardware="totalHardware"
         :total-metal="totalMetal"
         :expand-accordion-total-costs="expandAccordionTotalCosts"
         :computed-style-class="computedStyleClass"
+        :is-metal-enabled="calculationData.isMetalEnabled"
+        @update:isMetalEnabled="(data) => (calculationData.isMetalEnabled = data)"
+        :is-hardware-enabled="calculationData.isHardwareEnabled"
+        @update:isHardwareEnabled="(data) => (calculationData.isHardwareEnabled = data)"
         @upload="onUpload"
         @remove-file="removeFile"
         @paste-from-buffer="pasteFromBuffer"
+        @update:consumablesData="(data) => (calculationData.consumablesData = data)"
+        @update:hardwareData="(data) => (calculationData.hardwareData = data)"
+        @update:metalData="(data) => (calculationData.metalData = data)"
       />
 
       <MediaFilesSection ref="mediaFilesSectionRef" :calculation-id="calculationId" :computed-style-class="computedStyleClass" />
