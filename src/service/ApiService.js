@@ -140,6 +140,10 @@ export default {
     return api().get('/parent-calculations');
   },
 
+  updateParentCalculation({ id, title }) {
+    return api().put(`/parent-calculation/${id}`, { title });
+  },
+
   getParentCalculationById(id) {
     return api().get(`/parent-calculation/${id}`);
   },

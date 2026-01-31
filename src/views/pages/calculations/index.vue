@@ -21,6 +21,9 @@ watch(
 
 const calculationPlanId = ref(null);
 const loading = ref(false);
+const editDialogVisible = ref(false);
+const editingParent = ref(null);
+const editTitle = ref('');
 
 let calculationsData = ref([]);
 const confirm = useConfirm();
@@ -68,6 +71,36 @@ const confirmDeleteEntity = async (data, typeOfEntity = 'parent-calculation') =>
       }
     }
   });
+};
+
+const openEditParent = (data) => {
+  editingParent.value = { id: data.id, title: data.title };
+  editTitle.value = data.title || '';
+  editDialogVisible.value = true;
+};
+
+const saveEditParent = async () => {
+  if (!editingParent.value || !editTitle.value?.trim()) return;
+  loading.value = true;
+  try {
+    await ApiService.updateParentCalculation({ id: editingParent.value.id, title: editTitle.value.trim() });
+    calculationsData.value = calculationsData.value.map((item) =>
+      item.id === editingParent.value.id ? { ...item, title: editTitle.value.trim() } : item
+    );
+    editDialogVisible.value = false;
+    editingParent.value = null;
+    editTitle.value = '';
+  } catch (error) {
+    console.error(error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const cancelEditParent = () => {
+  editDialogVisible.value = false;
+  editingParent.value = null;
+  editTitle.value = '';
 };
 
 onBeforeMount(() => {
@@ -192,7 +225,10 @@ const expandRowAction = (rowId) => {
 
         <Column :exportable="false">
           <template #body="slotProps">
-            <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteEntity(slotProps.data)" />
+            <div class="flex gap-2">
+              <Button icon="pi pi-pencil" outlined rounded severity="secondary" @click="openEditParent(slotProps.data)" />
+              <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteEntity(slotProps.data)" />
+            </div>
           </template>
         </Column>
 
@@ -253,6 +289,29 @@ const expandRowAction = (rowId) => {
     </div>
 
     <ConfirmDialog></ConfirmDialog>
+
+    <Dialog
+      v-model:visible="editDialogVisible"
+      header="Редактировать калькуляцию"
+      modal
+      :style="{ width: '28rem' }"
+      @hide="cancelEditParent"
+    >
+      <div class="flex flex-col gap-3">
+        <label for="edit-parent-title" class="font-medium">Название</label>
+        <InputText
+          id="edit-parent-title"
+          v-model="editTitle"
+          class="w-full"
+          placeholder="Название родительской калькуляции"
+          @keydown.enter="saveEditParent"
+        />
+      </div>
+      <template #footer>
+        <Button label="Отмена" severity="secondary" outlined @click="cancelEditParent" />
+        <Button label="Сохранить" @click="saveEditParent" :disabled="!editTitle?.trim()" />
+      </template>
+    </Dialog>
   </Fluid>
 </template>
 
