@@ -102,6 +102,22 @@ onBeforeMount(() => {
 const expandRowAction = (rowId) => {
   try {
     ApiService.getParentCalculationChildren(rowId).then((res) => {
+      // When response has no children, remove this row from expanded state so calculationTableExpanded (localStorage) stays in sync
+      if (!res.data || res.data.length === 0) {
+        const key = String(rowId);
+        if (
+          expandedRows.value &&
+          typeof expandedRows.value === 'object' &&
+          !Array.isArray(expandedRows.value) &&
+          key in expandedRows.value
+        ) {
+          const next = { ...expandedRows.value };
+          delete next[key];
+          expandedRows.value = next;
+        }
+        return;
+      }
+
       const updatedData = JSON.parse(JSON.stringify(calculationsData.value));
       calculationPlanId.value = res.data.filter((item) => item.calculation_type === 'plan')[0].id;
 
