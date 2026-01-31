@@ -164,6 +164,10 @@ export default {
     return api().delete(`/parent-calculation/${parentCalculationId}`);
   },
 
+  cloneParentCalculation(parentCalculationId) {
+    return api().post(`/parent-calculation/${parentCalculationId}/clone`);
+  },
+
   deleteCalculation(calculationId) {
     return api().delete(`/calculation/${calculationId}`);
   },
