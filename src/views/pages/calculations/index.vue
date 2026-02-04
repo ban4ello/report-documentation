@@ -6,6 +6,8 @@ import { onBeforeMount, ref, watch } from 'vue';
 import { useConfirm } from 'primevue/useconfirm';
 import { useRouter } from 'vue-router';
 
+import MyCustomComponent from './MyCustomComponent.vue';
+
 const router = useRouter();
 // const toast = useToast();
 const dropdownItemsParentCalculations = ref([]);
@@ -24,6 +26,24 @@ const loading = ref(false);
 
 let calculationsData = ref([]);
 const confirm = useConfirm();
+
+//функция для копирования родительской калькуляции
+const copyParentCalculation = (data, typeOfEntity = 'parent-calculation') => {
+  console.log(data)
+
+  const generateTempId = () => Date.now() + Math.random();
+
+  const copied = {
+    id: generateTempId,
+    title: data.title,
+    dateOfCreation: new Date().toISOString(),
+    calculations: data.calculations.map(item => ({
+      ...item,
+      id: generateTempId()
+    }))
+  }
+  calculationsData.value.push(copied);
+}
 
 const confirmDeleteEntity = async (data, typeOfEntity = 'parent-calculation') => {
   confirm.require({
@@ -126,10 +146,15 @@ const expandRowAction = (rowId) => {
     console.log(error);
   }
 };
+
+const test = (str) => {
+  alert(str)
+}
 </script>
 
 <template>
-  <div v-if="loading" class="card flex justify-center items-center h-[100vh] fixed top-0 left-0 right-0 z-9999 opacity-60">
+  <div v-if="loading"
+    class="card flex justify-center items-center h-[100vh] fixed top-0 left-0 right-0 z-9999 opacity-60">
     <ProgressSpinner />
   </div>
   <Fluid>
@@ -137,25 +162,15 @@ const expandRowAction = (rowId) => {
       <div class="flex gap-4 justify-between">
         <div class="font-semibold text-[--primary-color] text-xl mb-4">Калькуляции</div>
 
-        <div
-          class="font-semibold hover:text-[--primary-color] hover:cursor-pointer text-xl mb-4"
-          @click="router.push({ path: '/calculations/create' })"
-        >
+        <div class="font-semibold hover:text-[--primary-color] hover:cursor-pointer text-xl mb-4"
+          @click="router.push({ path: '/calculations/create' })">
           создать новую калькуляцию-план +
         </div>
       </div>
       <!-- :paginator="true" -->
 
-      <DataTable
-        v-model:expandedRows="expandedRows"
-        :value="calculationsData"
-        :rows="10"
-        :rowHover="true"
-        dataKey="id"
-        sortField="dateOfCreation"
-        :sortOrder="-1"
-        @row-expand="(row) => expandRowAction(row.data.id)"
-      >
+      <DataTable v-model:expandedRows="expandedRows" :value="calculationsData" :rows="10" :rowHover="true" dataKey="id"
+        sortField="dateOfCreation" :sortOrder="-1" @row-expand="(row) => expandRowAction(row.data.id)">
         <template #empty> Нет данных для отображения </template>
 
         <template #loading> Загружается список... Пожалуйста подождите. </template>
@@ -174,20 +189,30 @@ const expandRowAction = (rowId) => {
           </template>
         </Column>
 
+        <!-- Кнопки копии и корзины в родительской калькуляции -->
         <Column :exportable="false">
           <template #body="slotProps">
-            <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteEntity(slotProps.data)" />
+            <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success"
+              @click="copyParentCalculation(slotProps.data)" />
+            <Button icon="pi pi-trash" outlined rounded severity="danger"
+              @click="confirmDeleteEntity(slotProps.data)" />
+            <!-- <MyCustomComponent title='Пока' v-bind:number='400' />
+            <MyCustomComponent title='Пока' :number='400' @customClick='test'>
+              <template #footer>
+                <h1>FOOTER</h1>
+              </template>
+  <Button icon="pi pi-copy" outlined rounded severity="success" v-on:click="copyParentCalculation(slotProps.data)" />
+  </MyCustomComponent> -->
           </template>
         </Column>
 
         <template #expansion="slotProps">
-          <DataTable showGridlines :value="slotProps.data.childrens" class="shadow-md" sortField="calculationType" :sortOrder="-1">
+          <DataTable showGridlines :value="slotProps.data.childrens" class="shadow-md" sortField="calculationType"
+            :sortOrder="-1">
             <Column field="title" header="Название" sortable style="min-width: 12rem">
               <template #body="{ data }">
-                <div
-                  class="hover:text-[--primary-color] hover:cursor-pointer"
-                  @click="router.push({ path: `/calculations/${data.id}`, query: { parentId: slotProps.data.id, type: data.type } })"
-                >
+                <div class="hover:text-[--primary-color] hover:cursor-pointer"
+                  @click="router.push({ path: `/calculations/${data.id}`, query: { parentId: slotProps.data.id, type: data.type } })">
                   {{ data.title }}
                 </div>
               </template>
@@ -209,25 +234,16 @@ const expandRowAction = (rowId) => {
               <template #body="{ data }">
                 <div>
                   <!-- <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" /> -->
-                  <Button
-                    v-if="data.calculationType === 'fact'"
-                    icon="pi pi-trash"
-                    outlined
-                    rounded
-                    severity="danger"
-                    @click="confirmDeleteEntity(data, 'calculation')"
-                  />
+                  <Button v-if="data.calculationType === 'fact'" icon="pi pi-trash" outlined rounded severity="danger"
+                    @click="confirmDeleteEntity(data, 'calculation')" />
                 </div>
               </template>
             </Column>
 
             <template #footer>
-              <div
-                class="flex justify-center items-center text-[--primary-color] hover:cursor-pointer"
-                @click="
-                  router.push({ path: '/calculations/create', query: { parentId: slotProps.data.id, type: 'fact', calculationPlanId } })
-                "
-              >
+              <div class="flex justify-center items-center text-[--primary-color] hover:cursor-pointer" @click="
+                router.push({ path: '/calculations/create', query: { parentId: slotProps.data.id, type: 'fact', calculationPlanId } })
+                ">
                 добавить калькуляцию-факт +
               </div>
             </template>
