@@ -210,13 +210,6 @@ const test = (str) => {
               @click="copyParentCalculation(slotProps.data)" />
             <Button icon="pi pi-trash" outlined rounded severity="danger"
               @click="confirmDeleteEntity(slotProps.data)" />
-            <!-- <MyCustomComponent title='Пока' v-bind:number='400' />
-            <MyCustomComponent title='Пока' :number='400' @customClick='test'>
-              <template #footer>
-                <h1>FOOTER</h1>
-              </template>
-  <Button icon="pi pi-copy" outlined rounded severity="success" v-on:click="copyParentCalculation(slotProps.data)" />
-  </MyCustomComponent> -->
           </template>
         </Column>
 
