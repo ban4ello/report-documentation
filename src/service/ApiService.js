@@ -164,6 +164,11 @@ export default {
     return api().delete(`/parent-calculation/${parentCalculationId}`);
   },
 
+  //api для копирования родительской калькуляции, в ответе нужен весь объект копирования с новым id и датой создания
+  copyParentCalculation(parentCalculationId) {
+    return api().post(`/parent-calculation/copy/${parentCalculationId}`)
+  },
+
   deleteCalculation(calculationId) {
     return api().delete(`/calculation/${calculationId}`);
   },

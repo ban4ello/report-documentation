@@ -28,21 +28,35 @@ let calculationsData = ref([]);
 const confirm = useConfirm();
 
 //функция для копирования родительской калькуляции
-const copyParentCalculation = (data, typeOfEntity = 'parent-calculation') => {
+const copyParentCalculation = async (data, typeOfEntity = 'parent-calculation') => {
   console.log(data)
+  loading.value = true;
 
-  const generateTempId = () => Date.now() + Math.random();
+  try {
+    const response = await ApiService.copyParentCalculation(data.id);
+    calculationsData.value.push(response.data);
+  } catch(error) {
+    console.warn('API копирования недоступен, используем мок', error);
+    const generateTempId = () => Date.now() + Math.random();
 
-  const copied = {
-    id: generateTempId,
-    title: data.title,
-    dateOfCreation: new Date().toISOString(),
-    calculations: data.calculations.map(item => ({
-      ...item,
-      id: generateTempId()
-    }))
+    const copied = {
+      id: generateTempId(),
+      title: `Мок ${data.title}`,
+      dateOfCreation: new Date().toISOString(),
+      calculations: data.calculations.map(item => ({
+        ...item,
+        id: generateTempId()
+      })),
+      childrens: data.childrens ? data.childrens.map(item => ({
+        ...item,
+        id: generateTempId()
+      })) : []
+    }
+    calculationsData.value.push(copied);
+
+  } finally {
+    loading.value = false;
   }
-  calculationsData.value.push(copied);
 }
 
 const confirmDeleteEntity = async (data, typeOfEntity = 'parent-calculation') => {
