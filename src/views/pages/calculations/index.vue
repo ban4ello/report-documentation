@@ -10,8 +10,6 @@ const router = useRouter();
 // const toast = useToast();
 const dropdownItemsParentCalculations = ref([]);
 const expandedRows = ref([]);
-const editParentCalculationDialog = ref(false);
-const parentCalculationTitle = ref('');
 
 watch(
   expandedRows,
@@ -144,17 +142,6 @@ const expandRowAction = (rowId) => {
     console.log(error);
   }
 };
-
-const showParentEditModal = (data) => {
-  console.log(data);
-  editParentCalculationDialog.value = true;
-  parentCalculationTitle.value = data.title;
-};
-
-const saveParentCalculation = () => {
-  //сделать запрос на сервер
-  //при успешном выполнении поменять данные в calculationsData
-};
 </script>
 
 <template>
@@ -205,7 +192,6 @@ const saveParentCalculation = () => {
 
         <Column :exportable="false">
           <template #body="slotProps">
-            <Button icon="pi pi-pencil" outlined rounded severity="secondary" @click="showParentEditModal(slotProps.data)" />
             <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteEntity(slotProps.data)" />
           </template>
         </Column>
@@ -267,21 +253,6 @@ const saveParentCalculation = () => {
     </div>
 
     <ConfirmDialog></ConfirmDialog>
-
-    <Dialog v-model:visible="editParentCalculationDialog" header="Редактировать калькуляцию" :style="{ width: '450px' }" modal>
-      <div class="flex flex-col gap-6">
-        <div>
-          <label for="name" class="block font-bold mb-3">Название</label>
-
-          <InputText v-model="parentCalculationTitle" type="text" />
-        </div>
-      </div>
-
-      <template #footer>
-        <Button label="Отменить" icon="pi pi-pencil" text @click="editParentCalculationDialog = false" />
-        <Button label="Сохранить" icon="pi pi-check" @click="saveParentCalculation()" />
-      </template>
-    </Dialog>
   </Fluid>
 </template>
 
