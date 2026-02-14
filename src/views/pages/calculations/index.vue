@@ -1,7 +1,7 @@
 <script setup>
 import ApiService from '@/service/ApiService';
 import { MochDataService } from '@/service/MochDataService';
-import { onBeforeMount, ref } from 'vue';
+import { onBeforeMount, ref, watch } from 'vue';
 // import { useToast } from 'primevue/usetoast';
 import { useConfirm } from 'primevue/useconfirm';
 import { useRouter } from 'vue-router';
@@ -10,6 +10,15 @@ const router = useRouter();
 // const toast = useToast();
 const dropdownItemsParentCalculations = ref([]);
 const expandedRows = ref([]);
+
+watch(
+  expandedRows,
+  (newValue) => {
+    localStorage.setItem('calculationTableExpanded', JSON.stringify(newValue));
+  },
+  { deep: true }
+);
+
 const calculationPlanId = ref(null);
 const loading = ref(false);
 
@@ -77,31 +86,74 @@ onBeforeMount(() => {
     });
 
     calculationsData.value = camelizeData;
+
+    const savedExpandedItems = localStorage.getItem('calculationTableExpanded');
+    if (savedExpandedItems) {
+      expandedRows.value = JSON.parse(savedExpandedItems);
+
+      const expandedKeys = Object.keys(JSON.parse(savedExpandedItems));
+      for (let i = 0; i < expandedKeys.length; i++) {
+        expandRowAction(expandedKeys[i]);
+      }
+    }
   });
 });
 
-const expandRow = (row) => {
-  ApiService.getParentCalculationChildren(row.data.id).then((res) => {
-    const updatedData = JSON.parse(JSON.stringify(calculationsData.value));
-    calculationPlanId.value = res.data.filter((item) => item.calculation_type === 'plan')[0].id;
-
-    const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase());
-    const camelizeData = res.data.map((item) => {
-      return Object.keys(item).reduce((acc, key) => {
-        acc[camelize(key)] = item[key];
-
-        return acc;
-      }, {});
-    });
-
-    calculationsData.value = updatedData.map((item) => {
-      if (Number(item.id) === Number(row.data.id)) {
-        item.childrens = camelizeData;
+const expandRowAction = (rowId) => {
+  try {
+    ApiService.getParentCalculationChildren(rowId).then((res) => {
+      // When response has no children, remove this row from expanded state so calculationTableExpanded (localStorage) stays in sync
+      if (!res.data || res.data.length === 0) {
+        const key = String(rowId);
+        if (
+          expandedRows.value &&
+          typeof expandedRows.value === 'object' &&
+          !Array.isArray(expandedRows.value) &&
+          key in expandedRows.value
+        ) {
+          const next = { ...expandedRows.value };
+          delete next[key];
+          expandedRows.value = next;
+        }
+        return;
       }
 
-      return item;
+      const updatedData = JSON.parse(JSON.stringify(calculationsData.value));
+      calculationPlanId.value = res.data.filter((item) => item.calculation_type === 'plan')[0].id;
+
+      const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase());
+      const camelizeData = res.data.map((item) => {
+        return Object.keys(item).reduce((acc, key) => {
+          acc[camelize(key)] = item[key];
+
+          return acc;
+        }, {});
+      });
+
+      calculationsData.value = updatedData.map((item) => {
+        if (Number(item.id) === Number(rowId)) {
+          item.childrens = camelizeData;
+        }
+
+        return item;
+      });
     });
-  });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+const copyParentCalculation = async (data) => {
+  loading.value = true;
+
+  try {
+    const response = await ApiService.cloneParentCalculation(data.id);
+    calculationsData.value.push(response.data);
+  } catch (error) {
+    console.log(error);
+  } finally {
+    loading.value = false;
+  }
 };
 </script>
 
@@ -122,6 +174,7 @@ const expandRow = (row) => {
         </div>
       </div>
       <!-- :paginator="true" -->
+
       <DataTable
         v-model:expandedRows="expandedRows"
         :value="calculationsData"
@@ -130,7 +183,7 @@ const expandRow = (row) => {
         dataKey="id"
         sortField="dateOfCreation"
         :sortOrder="-1"
-        @row-expand="expandRow"
+        @row-expand="(row) => expandRowAction(row.data.id)"
       >
         <template #empty> Нет данных для отображения </template>
 
@@ -152,6 +205,7 @@ const expandRow = (row) => {
 
         <Column :exportable="false">
           <template #body="slotProps">
+            <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copyParentCalculation(slotProps.data)" />
             <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteEntity(slotProps.data)" />
           </template>
         </Column>

@@ -1,5 +1,8 @@
 <script setup>
-defineProps({
+import { computed } from 'vue';
+import { MONTH } from '@/utils/constants.js';
+
+const props = defineProps({
   modelValue: {
     type: String,
     required: true
@@ -12,8 +15,22 @@ defineProps({
 
 const emit = defineEmits(['update:modelValue', 'update:showAllYear', 'dateChange']);
 
+// Преобразуем строку "Февраль/2026" в Date для DatePicker (ожидает Date или строку в формате mm.yy)
+const datePickerValue = computed(() => {
+  const str = props.modelValue;
+  if (!str || typeof str !== 'string') return null;
+  const [monthName, yearPart] = str.split('/');
+  const monthIndex = MONTH.indexOf(monthName?.trim());
+  const year = parseInt(yearPart?.trim(), 10);
+  if (monthIndex === -1 || isNaN(year)) return null;
+  return new Date(year, monthIndex, 1);
+});
+
 const handleDateChange = (newDate) => {
-  emit('update:modelValue', newDate);
+  const value = newDate
+    ? MONTH[new Date(newDate).getMonth()] + '/' + new Date(newDate).getFullYear()
+    : props.modelValue;
+  emit('update:modelValue', value);
   emit('dateChange', newDate);
 };
 
@@ -41,7 +58,7 @@ const ruLocale = {
     <span>Выберите дату:</span>
 
     <DatePicker
-      :modelValue="modelValue"
+      :modelValue="datePickerValue"
       dateFormat="mm.yy"
       placeholder="mm/yyyy"
       view="month"

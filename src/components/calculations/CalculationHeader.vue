@@ -73,6 +73,10 @@ const localIsAmountWithoutMetal = computed({
   get: () => props.isAmountWithoutMetal,
   set: (value) => emit('update:isAmountWithoutMetal', value)
 });
+
+const isTitleValid = computed(() => {
+  return props.calculationData.title?.trim() !== '';
+});
 </script>
 
 <template>
@@ -193,6 +197,7 @@ const localIsAmountWithoutMetal = computed({
           <Button
             label="Сохранить калькуляцию"
             :loading="loading"
+            :disabled="!isTitleValid || loading"
             size="large"
             severity="success"
             class="text-xs"
