@@ -165,7 +165,7 @@ export default {
   },
 
   cloneParentCalculation(parentCalculationId) {
-    return api().post(`/parent-calculation/${parentCalculationId}/clone`);
+    return api().post(`/parent-calculation/${parentCalculationId}/clone`, {}, { timeout: 120000 });
   },
 
   deleteCalculation(calculationId) {
