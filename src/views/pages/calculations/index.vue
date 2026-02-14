@@ -142,6 +142,19 @@ const expandRowAction = (rowId) => {
     console.log(error);
   }
 };
+
+const copyParentCalculation = async (data) => {
+  loading.value = true;
+
+  try {
+    const response = await ApiService.cloneParentCalculation(data.id);
+    calculationsData.value.push(response.data);
+  } catch (error) {
+    console.log(error);
+  } finally {
+    loading.value = false;
+  }
+};
 </script>
 
 <template>
@@ -192,6 +205,7 @@ const expandRowAction = (rowId) => {
 
         <Column :exportable="false">
           <template #body="slotProps">
+            <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copyParentCalculation(slotProps.data)" />
             <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteEntity(slotProps.data)" />
           </template>
         </Column>
