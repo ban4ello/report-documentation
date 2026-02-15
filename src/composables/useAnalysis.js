@@ -200,6 +200,25 @@ export function useAnalysis() {
     };
   };
 
+  // Статистика по году
+  const statisticsYear = ref(new Date().getFullYear());
+
+  const availableYears = computed(() => {
+    const years = new Set(rawCalculationData.value.map((item) => new Date(item.dateOfCreation).getFullYear()));
+    const currentYear = new Date().getFullYear();
+    if (years.size === 0) {
+      return [currentYear];
+    }
+    if (!years.has(currentYear)) {
+      years.add(currentYear);
+    }
+    return Array.from(years).sort((a, b) => b - a);
+  });
+
+  const statisticsCalculationsByYear = computed(() => {
+    return rawCalculationData.value.filter((item) => new Date(item.dateOfCreation).getFullYear() === statisticsYear.value);
+  });
+
   return {
     loading,
     rawCalculationData,
@@ -217,6 +236,9 @@ export function useAnalysis() {
     loadCalculations,
     setFilterForAnalysisTable,
     setWorkersFilter,
-    setITRFilter
+    setITRFilter,
+    statisticsYear,
+    availableYears,
+    statisticsCalculationsByYear
   };
 }
