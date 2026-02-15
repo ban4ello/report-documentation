@@ -228,5 +228,25 @@ export default {
 
   deleteCalculationMediaFile(fileId) {
     return api().delete(`/calculation-media-file/${fileId}`);
+  },
+
+  getTemplates() {
+    return api().get('/templates');
+  },
+
+  getTemplate(id) {
+    return api().get(`/template/${id}`);
+  },
+
+  createTemplate({ title, templateType, workersData, itrData }) {
+    return api().post('/template', { title, templateType, workersData, itrData });
+  },
+
+  updateTemplate(id, { title, templateType, workersData, itrData }) {
+    return api().put(`/template/${id}`, { title, templateType, workersData, itrData });
+  },
+
+  deleteTemplate(id) {
+    return api().delete(`/template/${id}`);
   }
 };

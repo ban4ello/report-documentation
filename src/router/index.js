@@ -24,6 +24,11 @@ const router = createRouter({
           component: () => import('@/views/pages/workers/index.vue')
         },
         {
+          path: '/settings',
+          name: 'settings',
+          component: () => import('@/views/pages/settings/index.vue')
+        },
+        {
           path: '/calculations/create',
           name: 'calculation-create',
           component: () => import('@/views/pages/calculations/_id.vue')
