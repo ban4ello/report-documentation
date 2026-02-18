@@ -118,6 +118,16 @@ const handleChangeSelectedItem = (data) => {
   newStaffData.value.name = data.value || data;
   emit('change-selected-item', data, 'workers');
 };
+
+// данные для шаблонов 
+const selectedCity = ref();
+const cities = ref([
+  { name: 'New York', code: 'NY' },
+  { name: 'Rome', code: 'RM' },
+  { name: 'London', code: 'LDN' },
+  { name: 'Istanbul', code: 'IST' },
+  { name: 'Paris', code: 'PRS' }
+]);
 </script>
 
 <template>
@@ -126,8 +136,10 @@ const handleChangeSelectedItem = (data) => {
       <div class="flex gap-6 items-center justify-between w-full">
         <div class="flex gap-6 items-center gap-2 w-full font-semibold text-lg">Цех</div>
 
-        <div v-if="salariesOfWorkersTotal" class="flex justify-end items-center font-bold w-full mr-4 font-semibold text-lg">
-          <span :class="computedStyleClass">Итого ЗП:</span> &nbsp;<span class="text-lg">{{ formatNumber(salariesOfWorkersTotal) }}</span>
+        <div v-if="salariesOfWorkersTotal"
+          class="flex justify-end items-center font-bold w-full mr-4 font-semibold text-lg">
+          <span :class="computedStyleClass">Итого ЗП:</span> &nbsp;<span class="text-lg">{{
+            formatNumber(salariesOfWorkersTotal) }}</span>
         </div>
 
         <div v-if="taxTotal" class="flex justify-end items-center font-bold w-full mr-4 font-semibold text-lg">
@@ -142,17 +154,30 @@ const handleChangeSelectedItem = (data) => {
       <div class="grid grid-cols-1fr-40 gap-4 mb-[2rem]">
         <div class="shop">
           <div class="card h-full">
-            <div class="flex justify-between">
-              <div class="flex flex-row gap-2 max-w-[250px] mb-4">
-                <label for="numberOfHoursPerShift">Количество часов в смене</label>
-                <!-- eslint-disable-next-line vue/no-mutating-props -->
-                <InputNumber v-model="calculationData.numberOfHoursPerShift" inputId="numberOfHoursPerShift" fluid />
+            <div class="flex justify-between mb-2">
+
+              <div class="flex gap-4 max-w-[360px]">
+
+                <!-- Количество часов -->
+                <div class="flex items-end gap-2 flex-1 min-w-0">
+                  <label for="numberOfHoursPerShift" class="text-sm font-medium leading-snug max-w-[180px]">
+                    Количество часов в смене
+                  </label>
+
+                  <InputNumber v-model="calculationData.numberOfHoursPerShift" inputId="numberOfHoursPerShift"
+                    class="w-[56px] h-[36px] text-sm" />
+                </div>
+
+                <!-- Шаблоны -->
+                <Select v-model="selectedCity" :options="cities" optionLabel="name" selectId="selectTemplates"
+                  placeholder="Шаблоны" class="w-[140px] h-[36px] text-sm" />
               </div>
 
               <div class="flex flex-row gap-2 items-center">
                 <label for="increaseInSalary">Увеличения ЗП</label>
 
-                <InputNumber v-model="localIncreaseInSalary" :step="5" showButtons buttonLayout="horizontal" style="width: 140px">
+                <InputNumber v-model="localIncreaseInSalary" :step="5" showButtons buttonLayout="horizontal"
+                  style="width: 140px">
                   <template #incrementbuttonicon>
                     <span class="pi pi-plus" />
                   </template>
@@ -163,13 +188,8 @@ const handleChangeSelectedItem = (data) => {
               </div>
             </div>
 
-            <DataTable
-              :value="calculationData.workersData.table"
-              v-model:selection="localSelectedStaff"
-              editMode="cell"
-              @cell-edit-complete="$emit('cell-edit-complete', $event)"
-              showGridlines
-            >
+            <DataTable :value="calculationData.workersData.table" v-model:selection="localSelectedStaff" editMode="cell"
+              @cell-edit-complete="$emit('cell-edit-complete', $event)" showGridlines>
               <template #empty> Нет данных для отображения </template>
 
               <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
@@ -213,27 +233,24 @@ const handleChangeSelectedItem = (data) => {
               <Column field="total" header="Итого">
                 <template #body="{ data }">
                   {{
-                    formatNumber(truncateDecimal((data.salaryPerDay / calculationData.numberOfHoursPerShift) * data.numberOfHoursWorked, 0))
+                    formatNumber(truncateDecimal((data.salaryPerDay / calculationData.numberOfHoursPerShift) *
+                      data.numberOfHoursWorked, 0))
                   }}
                 </template>
               </Column>
 
               <Column :exportable="false" style="min-width: 12rem">
                 <template #body="slotProps">
-                  <Button
-                    icon="pi pi-copy"
-                    class="mr-2"
-                    outlined
-                    rounded
-                    severity="success"
-                    @click="$emit('copy-worker', slotProps.data)"
-                  />
-                  <Button icon="pi pi-trash" outlined rounded severity="danger" @click="$emit('delete-worker', slotProps.data)" />
+                  <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success"
+                    @click="$emit('copy-worker', slotProps.data)" />
+                  <Button icon="pi pi-trash" outlined rounded severity="danger"
+                    @click="$emit('delete-worker', slotProps.data)" />
                 </template>
               </Column>
 
               <template #footer>
-                <div class="flex justify-center items-center hover:cursor-pointer" :class="computedStyleClass" @click="showDialog">
+                <div class="flex justify-center items-center hover:cursor-pointer" :class="computedStyleClass"
+                  @click="showDialog">
                   добавить сотрудника +
                 </div>
 
@@ -251,19 +268,15 @@ const handleChangeSelectedItem = (data) => {
               <Textarea v-model="calculationData.workersData.notes" />
             </div>
 
-            <Dialog v-model:visible="newStaffDialog" :style="{ width: '550px' }" header="Выберите сотрудника" :modal="true">
+            <Dialog v-model:visible="newStaffDialog" :style="{ width: '550px' }" header="Выберите сотрудника"
+              :modal="true">
               <div class="flex flex-col gap-6">
                 <div>
                   <label for="name" class="block font-bold mb-3">Имя</label>
-                  <SearchSelect
-                    :dropdownItemsWorkerStaff="filteredWorkerNames"
-                    :value="newStaffData.name || ''"
-                    actionName="Добавить нового сотрудника"
-                    type="worker"
-                    v-model:isShowOnlyType="isShowOnlyType"
+                  <SearchSelect :dropdownItemsWorkerStaff="filteredWorkerNames" :value="newStaffData.name || ''"
+                    actionName="Добавить нового сотрудника" type="worker" v-model:isShowOnlyType="isShowOnlyType"
                     @input="(value) => handleChangeSelectedItem({ value })"
-                    @clickToAction="$emit('show-new-worker-modal')"
-                  />
+                    @clickToAction="$emit('show-new-worker-modal')" />
                 </div>
 
                 <div>
@@ -285,15 +298,10 @@ const handleChangeSelectedItem = (data) => {
           </div>
         </div>
 
-        <TaxCharges
-          :computedTaxData="computedWorkerTaxData"
-          :taxData="calculationData.workersTaxData"
-          :totalAmount="salariesOfWorkersTotal"
-          :taxTotal="taxTotal"
-          :formatNumber="formatNumber"
+        <TaxCharges :computedTaxData="computedWorkerTaxData" :taxData="calculationData.workersTaxData"
+          :totalAmount="salariesOfWorkersTotal" :taxTotal="taxTotal" :formatNumber="formatNumber"
           :coeficientOfNds="calculationData.coeficientOfNds"
-          @changeCoeficient="(data) => $emit('change-coeficient', data)"
-        />
+          @changeCoeficient="(data) => $emit('change-coeficient', data)" />
       </div>
     </AccordionContent>
   </AccordionPanel>
