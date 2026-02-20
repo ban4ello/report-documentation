@@ -120,14 +120,49 @@ const handleChangeSelectedItem = (data) => {
 };
 
 // данные для шаблонов 
-const selectedCity = ref();
-const cities = ref([
-  { name: 'New York', code: 'NY' },
-  { name: 'Rome', code: 'RM' },
-  { name: 'London', code: 'LDN' },
-  { name: 'Istanbul', code: 'IST' },
-  { name: 'Paris', code: 'PRS' }
+const templateShop = ref();
+const arrayTemplatesShop = ref([
+  {
+    id: 1,
+    name: 'Шаблон 1',
+    workers: [
+      {
+        name: 'Екатерина Варенцова',
+        numberOfHoursWorked: 40,
+        salaryPerDay: 5600,
+      }
+    ]
+  },
+  {
+    id: 2,
+    name: 'Шаблон 2',
+    workers: [
+      {
+        name: 'Иван Петров',
+        numberOfHoursWorked: 32,
+        salaryPerDay: 4800,
+      },
+      {
+        name: 'Мария Смирнова',
+        numberOfHoursWorked: 24,
+        salaryPerDay: 5200,
+      }
+    ]
+  },
+  {
+    id: 3,
+    name: 'Шаблон 3',
+    workers: [
+      {
+        name: 'Алексей Кузнецов',
+        numberOfHoursWorked: 40,
+        salaryPerDay: 6000,
+
+      }
+    ]
+  }
 ]);
+
 </script>
 
 <template>
@@ -169,8 +204,8 @@ const cities = ref([
                 </div>
 
                 <!-- Шаблоны -->
-                <Select v-model="selectedCity" :options="cities" optionLabel="name" selectId="selectTemplates"
-                  placeholder="Шаблоны" class="w-[140px] h-[36px] text-sm" />
+                <Select v-model="templateShop" :options="arrayTemplatesShop" optionLabel="name" placeholder="Шаблоны"
+                  class="w-[140px] h-[36px] text-sm" @update:modelValue="$emit('select-template', $event)" />
               </div>
 
               <div class="flex flex-row gap-2 items-center">

@@ -257,6 +257,20 @@ const saveNewStaff = (staffData) => {
   });
 };
 
+const selectTemplateData = (data) => {
+  console.log(data.workers)
+  data.workers.forEach((item) => {
+    calculationData.value.workersData.table.push({
+    id: Number((Math.random() * 1000).toFixed()),
+    name: item.name,
+    numberOfHoursWorked: Number(item.numberOfHoursWorked),
+    salaryPerDay: Number(item.salaryPerDay),
+    salaryPerHour: null,
+    total: null
+  });
+  })
+}
+
 const copyWorkerData = (data) => {
   calculationData.value.workersData.table.push({
     id: Number((Math.random() * 1000).toFixed()),
@@ -512,6 +526,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
             :format-number="formatNumber"
             :truncate-decimal="truncateDecimal"
             @cell-edit-complete="onCellEditComplete"
+            @select-template="selectTemplateData"
             @copy-worker="copyWorkerData"
             @delete-worker="confirmDeleteWorker"
             @save-new-staff="saveNewStaff"
