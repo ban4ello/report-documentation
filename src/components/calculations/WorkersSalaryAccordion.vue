@@ -1,9 +1,13 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch, onMounted, provide, inject } from 'vue';
 import SearchSelect from '@/components/custom-ui/SearchSelect.vue';
 import TaxCharges from '@/components/TaxCharges.vue';
 
 const props = defineProps({
+  newTitle: {
+    type: String,
+    default: null
+  },
   calculationData: {
     type: Object,
     required: true
@@ -43,6 +47,10 @@ const props = defineProps({
   truncateDecimal: {
     type: Function,
     required: true
+  },
+  arrayTemplatesShop: {
+    type: Array,
+    default: () => []
   }
 });
 
@@ -50,12 +58,14 @@ const emit = defineEmits([
   'update:selectedStaff',
   'update:increaseInSalary',
   'cell-edit-complete',
+  'select-template',
   'copy-worker',
   'delete-worker',
   'save-new-staff',
   'change-selected-item',
   'show-new-worker-modal',
-  'change-coeficient'
+  'change-coeficient',
+  'myEvent',
 ]);
 
 const newStaffDialog = ref(false);
@@ -121,47 +131,83 @@ const handleChangeSelectedItem = (data) => {
 
 // данные для шаблонов 
 const templateShop = ref();
-const arrayTemplatesShop = ref([
+const arrayTemplates = ref([
   {
-    id: 1,
-    name: 'Шаблон 1',
-    workers: [
+    title: "Шаблон w1",
+    templateType: "workers",
+    workersData: [
       {
-        name: 'Екатерина Варенцова',
-        numberOfHoursWorked: 40,
-        salaryPerDay: 5600,
-      }
-    ]
-  },
-  {
-    id: 2,
-    name: 'Шаблон 2',
-    workers: [
-      {
-        name: 'Иван Петров',
-        numberOfHoursWorked: 32,
-        salaryPerDay: 4800,
+        name: "Имя сотрудника",
+        numberOfHoursWorked: 8,
+        salaryPerDay: 1000,
       },
       {
-        name: 'Мария Смирнова',
-        numberOfHoursWorked: 24,
-        salaryPerDay: 5200,
+        name: "Имя сотрудника 2",
+        numberOfHoursWorked: 8,
+        salaryPerDay: 1000,
       }
     ]
   },
   {
-    id: 3,
-    name: 'Шаблон 3',
-    workers: [
+    title: "Шаблон w2",
+    templateType: "workers",
+    workersData: [
       {
-        name: 'Алексей Кузнецов',
-        numberOfHoursWorked: 40,
-        salaryPerDay: 6000,
-
+        name: "Имя сотрудника 3",
+        numberOfHoursWorked: 8,
+        salaryPerDay: 1000,
+      }
+    ]
+  },
+  {
+    title: "Шаблон w3",
+    templateType: "workers",
+    workersData: [
+      {
+        name: "Имя сотрудника 4",
+        numberOfHoursWorked: 8,
+        salaryPerDay: 1000,
+      },
+      {
+        name: "Имя сотрудника 5",
+        numberOfHoursWorked: 8,
+        salaryPerDay: 1000,
+      },
+      {
+        name: "Имя сотрудника 6",
+        numberOfHoursWorked: 8,
+        salaryPerDay: 1000,
+      }
+    ]
+  },
+  {
+    title: "Шаблон itr1",
+    templateType: "itr",
+    itrData: [
+      {
+        name: "Имя сотрудника",
+        salaryPerMonth: 50000
+      }
+    ]
+  },
+  {
+    title: "Шаблон itr2",
+    templateType: "itr",
+    itrData: [
+      {
+        name: "Имя сотрудника",
+        salaryPerMonth: 50000
       }
     ]
   }
 ]);
+
+// const arrayTemplatesShop = computed(() => {
+//   return arrayTemplates.value.filter(
+//     item => item.templateType === 'workers'
+//   )
+// })
+console.log('Шаблоны цеха тут', props.arrayTemplatesShop)
 
 </script>
 
@@ -204,8 +250,9 @@ const arrayTemplatesShop = ref([
                 </div>
 
                 <!-- Шаблоны -->
-                <Select v-model="templateShop" :options="arrayTemplatesShop" optionLabel="name" placeholder="Шаблоны"
-                  class="w-[140px] h-[36px] text-sm" @update:modelValue="$emit('select-template', $event)" />
+                <Select v-model="templateShop" v-bind:options="props.arrayTemplatesShop" optionLabel="title"
+                  placeholder="Шаблоны" class="w-[140px] h-[36px] text-sm"
+                  @update:modelValue="$emit('select-template', $event)" />
               </div>
 
               <div class="flex flex-row gap-2 items-center">
