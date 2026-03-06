@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed, watch, onMounted, provide, inject } from 'vue';
+import { ref, computed, watch } from 'vue';
 import SearchSelect from '@/components/custom-ui/SearchSelect.vue';
 import TaxCharges from '@/components/TaxCharges.vue';
+import { useRoute } from 'vue-router';
 
 const props = defineProps({
   newTitle: {
@@ -131,84 +132,23 @@ const handleChangeSelectedItem = (data) => {
 
 // данные для шаблонов 
 const templateShop = ref();
-const arrayTemplates = ref([
-  {
-    title: "Шаблон w1",
-    templateType: "workers",
-    workersData: [
-      {
-        name: "Имя сотрудника",
-        numberOfHoursWorked: 8,
-        salaryPerDay: 1000,
-      },
-      {
-        name: "Имя сотрудника 2",
-        numberOfHoursWorked: 8,
-        salaryPerDay: 1000,
-      }
-    ]
-  },
-  {
-    title: "Шаблон w2",
-    templateType: "workers",
-    workersData: [
-      {
-        name: "Имя сотрудника 3",
-        numberOfHoursWorked: 8,
-        salaryPerDay: 1000,
-      }
-    ]
-  },
-  {
-    title: "Шаблон w3",
-    templateType: "workers",
-    workersData: [
-      {
-        name: "Имя сотрудника 4",
-        numberOfHoursWorked: 8,
-        salaryPerDay: 1000,
-      },
-      {
-        name: "Имя сотрудника 5",
-        numberOfHoursWorked: 8,
-        salaryPerDay: 1000,
-      },
-      {
-        name: "Имя сотрудника 6",
-        numberOfHoursWorked: 8,
-        salaryPerDay: 1000,
-      }
-    ]
-  },
-  {
-    title: "Шаблон itr1",
-    templateType: "itr",
-    itrData: [
-      {
-        name: "Имя сотрудника",
-        salaryPerMonth: 50000
-      }
-    ]
-  },
-  {
-    title: "Шаблон itr2",
-    templateType: "itr",
-    itrData: [
-      {
-        name: "Имя сотрудника",
-        salaryPerMonth: 50000
-      }
-    ]
-  }
-]);
+const route = useRoute();
 
-// const arrayTemplatesShop = computed(() => {
-//   return arrayTemplates.value.filter(
-//     item => item.templateType === 'workers'
-//   )
-// })
 console.log('Шаблоны цеха тут', props.arrayTemplatesShop)
+console.log(route.name);
 
+//calculation-item
+//calculation-create
+
+watch(
+  () => props.arrayTemplatesShop,
+  (templates) => {
+    if (route.name !== 'calculation-create') return;
+    if (!templates || templates.length === 0) return;
+    emit('select-template', templates[0])
+  },
+  {immediate: true}
+)
 </script>
 
 <template>
