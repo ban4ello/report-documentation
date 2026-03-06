@@ -34,6 +34,11 @@ const arrayTemplatesShop = computed(() => {
     item => item.templateType === 'workers'
   )
 })
+const arrayTemplatesItr = computed(() => {
+  return arrayTemplates.value.filter(
+    item => item.templateType === 'itr'
+  )
+})
 
 const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м', 'услуга']);
 
@@ -169,9 +174,7 @@ onBeforeMount(async () => {
 
   //получение всех шаблонов для цеха и итр
   ApiService.getTemplates().then((res) => {
-    console.log('1', res.data)
     arrayTemplates.value = res.data
-    console.log('2', arrayTemplatesShop)
   })
 });
 
@@ -272,10 +275,10 @@ const saveNewStaff = (staffData) => {
   });
 };
 
-const selectTemplateData = (data) => {
+const selectTemplateDataShop = (data) => {
   data.workersData.forEach((item) => {
     calculationData.value.workersData.table.push({
-      id: Number((Math.random() * 1000).toFixed()),
+      id: item.id,
       name: item.name,
       numberOfHoursWorked: Number(item.numberOfHoursWorked),
       salaryPerDay: Number(item.salaryPerDay),
@@ -327,6 +330,16 @@ const saveNewITRStaff = (itrStaffData) => {
     salaryPerMonth: itrStaffData.salaryPerMonth
   });
 };
+
+const selectTemplateDataItr = (data) => {
+  data.itrData.forEach((item) => {
+    calculationData.value.itrData.table.push({
+    id: item.id,
+    name: item.name,
+    salaryPerMonth: item.salaryPerMonth
+  });
+  })
+}
 
 const confirmDeleteItrWorker = async (item) => {
   if (item) {
@@ -524,7 +537,7 @@ const handler = (str) => {
             :salaries-of-workers-total="salariesOfWorkersTotal" :tax-total="taxTotal"
             :computed-worker-tax-data="computedWorkerTaxData" :format-number="formatNumber"
             :truncate-decimal="truncateDecimal" :array-templates-shop="arrayTemplatesShop"
-            @cell-edit-complete="onCellEditComplete" @select-template="selectTemplateData" @copy-worker="copyWorkerData"
+            @cell-edit-complete="onCellEditComplete" @select-template-shop="selectTemplateDataShop" @copy-worker="copyWorkerData"
             @delete-worker="confirmDeleteWorker" @save-new-staff="saveNewStaff"
             @change-selected-item="changeSelectedItem" @show-new-worker-modal="showNewWorkerModal"
             @change-coeficient="(data) => (calculationData.coeficientOfNds = data.value)" @myEvent="handler" />
@@ -534,7 +547,7 @@ const handler = (str) => {
             :salaries-of-i-t-r-total="salariesOfITRTotal"
             :salaries-of-i-t-r-total-per-month="salariesOfITRTotalPerMonth" :tax-i-t-r-total="taxITRTotal"
             :computed-itr-tax-data="computedItrTaxData" :format-number="formatNumber"
-            :truncate-decimal="truncateDecimal" @cell-edit-complete="onCellEditComplete"
+            :truncate-decimal="truncateDecimal" :array-templates-itr="arrayTemplatesItr" @select-template-itr="selectTemplateDataItr" @cell-edit-complete="onCellEditComplete"
             @copy-itr-worker="copyITRWorker" @delete-itr-worker="confirmDeleteItrWorker"
             @save-new-itr-staff="saveNewITRStaff" @change-selected-item="changeSelectedItem"
             @show-new-worker-modal="showNewWorkerModal"

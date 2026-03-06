@@ -1,7 +1,8 @@
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, watch } from 'vue';
 import SearchSelect from '@/components/custom-ui/SearchSelect.vue';
 import TaxCharges from '@/components/TaxCharges.vue';
+import { useRoute } from 'vue-router';
 
 const props = defineProps({
   calculationData: {
@@ -43,10 +44,15 @@ const props = defineProps({
   truncateDecimal: {
     type: Function,
     required: true
+  },
+  arrayTemplatesItr: {
+    type: Array,
+    default: () => []
   }
 });
 
 const emit = defineEmits([
+  'select-template-itr',
   'update:selectedITRStaff',
   'cell-edit-complete',
   'copy-itr-worker',
@@ -111,6 +117,20 @@ const handleChangeSelectedItem = (data) => {
   newITRStaffData.value.name = data.value || data;
   emit('change-selected-item', data, 'itr');
 };
+
+//данные для шаблонов ИТР
+const templateITR = ref();
+const route = useRoute();
+
+watch(
+  () => props.arrayTemplatesItr,
+  (templates) => {
+    if (route.name !== 'calculation-create') return;
+    if (!templates || templates.length === 0) return;
+    emit('select-template-itr', templates[0])
+  },
+  { immediate: true }
+)
 </script>
 
 <template>
@@ -119,8 +139,10 @@ const handleChangeSelectedItem = (data) => {
       <div class="flex gap-6 items-center justify-between w-full">
         <div class="flex gap-6 items-center gap-2 w-full font-semibold text-lg">ИТР</div>
 
-        <div v-if="salariesOfITRTotal" class="flex justify-end items-center font-bold w-full mr-4 font-semibold text-lg">
-          <span :class="computedStyleClass">Итого ЗП:</span> &nbsp;<span class="text-lg">{{ formatNumber(salariesOfITRTotal) }}</span>
+        <div v-if="salariesOfITRTotal"
+          class="flex justify-end items-center font-bold w-full mr-4 font-semibold text-lg">
+          <span :class="computedStyleClass">Итого ЗП:</span> &nbsp;<span class="text-lg">{{
+            formatNumber(salariesOfITRTotal) }}</span>
         </div>
 
         <div v-if="taxITRTotal" class="flex justify-end items-center font-bold w-full mr-4 font-semibold text-lg">
@@ -139,30 +161,24 @@ const handleChangeSelectedItem = (data) => {
               <div class="flex flex-row gap-2 items-center">
                 <label for="numberOfDaysPerShift">Количество дней в мес.</label>
                 <!-- eslint-disable-next-line vue/no-mutating-props -->
-                <InputNumber v-model="calculationData.numberOfDaysPerShift" inputId="numberOfDaysPerShift" class="max-w-[50px]" fluid />
+                <InputNumber v-model="calculationData.numberOfDaysPerShift" inputId="numberOfDaysPerShift"
+                  class="max-w-[50px]" fluid />
               </div>
 
               <div class="flex flex-row gap-2 items-center">
                 <label for="itrWorkedDays">Количество дней (трудозатраты)</label>
                 <!-- eslint-disable-next-line vue/no-mutating-props -->
-                <InputNumber
-                  v-model="calculationData.itrWorkedDays"
-                  inputId="itrWorkedDays"
-                  class="max-w-[50px]"
-                  fluid
-                  :minFractionDigits="1"
-                  :maxFractionDigits="5"
-                />
+                <InputNumber v-model="calculationData.itrWorkedDays" inputId="itrWorkedDays" class="max-w-[50px]" fluid
+                  :minFractionDigits="1" :maxFractionDigits="5" />
               </div>
             </div>
+            <!-- Шаблоны -->
+            <Select v-model="templateITR" v-bind:options="props.arrayTemplatesItr" optionLabel="title"
+              placeholder="Шаблоны" class="w-[140px] h-[36px] text-sm mb-2"
+              @update:modelValue="$emit('select-template-itr', $event)" />
 
-            <DataTable
-              :value="calculationData.itrData.table"
-              v-model:selection="localSelectedITRStaff"
-              editMode="cell"
-              @cell-edit-complete="$emit('cell-edit-complete', $event)"
-              showGridlines
-            >
+            <DataTable :value="calculationData.itrData.table" v-model:selection="localSelectedITRStaff" editMode="cell"
+              @cell-edit-complete="$emit('cell-edit-complete', $event)" showGridlines>
               <template #empty> Нет данных для отображения </template>
 
               <Column selectionMode="multiple" headerStyle="width: 3rem"></Column>
@@ -191,7 +207,8 @@ const handleChangeSelectedItem = (data) => {
                 <template #body="{ data }">
                   {{
                     formatNumber(
-                      truncateDecimal((data.salaryPerMonth / calculationData.numberOfDaysPerShift) * calculationData.itrWorkedDays, 0)
+                      truncateDecimal((data.salaryPerMonth / calculationData.numberOfDaysPerShift) *
+                        calculationData.itrWorkedDays, 0)
                     )
                   }}
                 </template>
@@ -199,51 +216,43 @@ const handleChangeSelectedItem = (data) => {
 
               <Column :exportable="false" style="min-width: 12rem">
                 <template #body="slotProps">
-                  <Button
-                    icon="pi pi-copy"
-                    class="mr-2"
-                    outlined
-                    rounded
-                    severity="success"
-                    @click="$emit('copy-itr-worker', slotProps.data)"
-                  />
-                  <Button icon="pi pi-trash" outlined rounded severity="danger" @click="$emit('delete-itr-worker', slotProps.data)" />
+                  <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success"
+                    @click="$emit('copy-itr-worker', slotProps.data)" />
+                  <Button icon="pi pi-trash" outlined rounded severity="danger"
+                    @click="$emit('delete-itr-worker', slotProps.data)" />
                 </template>
               </Column>
 
               <template #footer>
-                <div class="flex justify-center items-center hover:cursor-pointer" :class="computedStyleClass" @click="showDialog">
+                <div class="flex justify-center items-center hover:cursor-pointer" :class="computedStyleClass"
+                  @click="showDialog">
                   добавить сотрудника +
                 </div>
 
                 <div class="flex justify-end gap-4 w-full">
                   <div class="flex items-center">
                     Итого ЗП за полный месяц работы: &nbsp;<span class="font-bold text-lg">
-                      {{ formatNumber(salariesOfITRTotalPerMonth) }}</span
-                    >
+                      {{ formatNumber(salariesOfITRTotalPerMonth) }}</span>
                   </div>
 
                   <div class="flex items-center">
-                    Итого ЗП по факту: &nbsp;<span class="font-bold text-lg"> {{ formatNumber(salariesOfITRTotal) }}</span>
+                    Итого ЗП по факту: &nbsp;<span class="font-bold text-lg"> {{ formatNumber(salariesOfITRTotal)
+                      }}</span>
                   </div>
                 </div>
               </template>
             </DataTable>
 
-            <Dialog v-model:visible="newITRStaffDialog" :style="{ width: '450px' }" header="Выберите сотрудника" :modal="true">
+            <Dialog v-model:visible="newITRStaffDialog" :style="{ width: '450px' }" header="Выберите сотрудника"
+              :modal="true">
               <div class="flex flex-col gap-6">
                 <div>
                   <label for="name" class="block font-bold mb-3">Имя</label>
 
-                  <SearchSelect
-                    :dropdownItemsWorkerStaff="filteredITRNames"
-                    :value="newITRStaffData.name || ''"
-                    actionName="Добавить нового сотрудника"
-                    type="ITR"
-                    v-model:isShowOnlyType="isShowOnlyType"
+                  <SearchSelect :dropdownItemsWorkerStaff="filteredITRNames" :value="newITRStaffData.name || ''"
+                    actionName="Добавить нового сотрудника" type="ITR" v-model:isShowOnlyType="isShowOnlyType"
                     @input="(value) => handleChangeSelectedItem({ value })"
-                    @clickToAction="$emit('show-new-worker-modal')"
-                  />
+                    @clickToAction="$emit('show-new-worker-modal')" />
                 </div>
 
                 <div>
@@ -254,26 +263,17 @@ const handleChangeSelectedItem = (data) => {
 
               <template #footer>
                 <Button label="Отменить" icon="pi pi-times" text @click="closeDialog" />
-                <Button
-                  :disabled="!newITRStaffData.name.trim() || newITRStaffData.salaryPerMonth === null"
-                  label="Сохранить"
-                  icon="pi pi-check"
-                  @click="handleSaveNewITRStaff"
-                />
+                <Button :disabled="!newITRStaffData.name.trim() || newITRStaffData.salaryPerMonth === null"
+                  label="Сохранить" icon="pi pi-check" @click="handleSaveNewITRStaff" />
               </template>
             </Dialog>
           </div>
         </div>
 
-        <TaxCharges
-          :computedTaxData="computedItrTaxData"
-          :taxData="calculationData.itrTaxData"
-          :totalAmount="salariesOfITRTotal"
-          :taxTotal="taxITRTotal"
-          :formatNumber="formatNumber"
+        <TaxCharges :computedTaxData="computedItrTaxData" :taxData="calculationData.itrTaxData"
+          :totalAmount="salariesOfITRTotal" :taxTotal="taxITRTotal" :formatNumber="formatNumber"
           :coeficientOfNds="calculationData.coeficientOfNds"
-          @changeCoeficient="(data) => $emit('change-coeficient', data)"
-        />
+          @changeCoeficient="(data) => $emit('change-coeficient', data)" />
       </div>
     </AccordionContent>
   </AccordionPanel>

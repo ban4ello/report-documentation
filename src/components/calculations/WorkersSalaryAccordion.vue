@@ -59,7 +59,7 @@ const emit = defineEmits([
   'update:selectedStaff',
   'update:increaseInSalary',
   'cell-edit-complete',
-  'select-template',
+  'select-template-shop',
   'copy-worker',
   'delete-worker',
   'save-new-staff',
@@ -134,18 +134,12 @@ const handleChangeSelectedItem = (data) => {
 const templateShop = ref();
 const route = useRoute();
 
-console.log('Шаблоны цеха тут', props.arrayTemplatesShop)
-console.log(route.name);
-
-//calculation-item
-//calculation-create
-
 watch(
   () => props.arrayTemplatesShop,
   (templates) => {
     if (route.name !== 'calculation-create') return;
     if (!templates || templates.length === 0) return;
-    emit('select-template', templates[0])
+    emit('select-template-shop', templates[0])
   },
   {immediate: true}
 )
@@ -192,7 +186,7 @@ watch(
                 <!-- Шаблоны -->
                 <Select v-model="templateShop" v-bind:options="props.arrayTemplatesShop" optionLabel="title"
                   placeholder="Шаблоны" class="w-[140px] h-[36px] text-sm"
-                  @update:modelValue="$emit('select-template', $event)" />
+                  @update:modelValue="$emit('select-template-shop', $event)" />
               </div>
 
               <div class="flex flex-row gap-2 items-center">
