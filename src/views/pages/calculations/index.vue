@@ -155,6 +155,37 @@ const copyParentCalculation = async (data) => {
     loading.value = false;
   }
 };
+
+const editDialogVisible = ref(false);
+const editingParent = ref({ id: null, title: '' });
+
+const openEditParentDialog = (data) => {
+  editingParent.value = { id: data.id, title: data.title || '' };
+  editDialogVisible.value = true;
+};
+
+const saveEditParent = async () => {
+  if (!editingParent.value.id) return;
+  loading.value = true;
+  try {
+    const response = await ApiService.updateParentCalculation(editingParent.value.id, {
+      title: editingParent.value.title
+    });
+    const camelize = (s) => s.replace(/_./g, (x) => x[1].toUpperCase());
+    const updated = Object.keys(response.data).reduce((acc, key) => {
+      acc[camelize(key)] = response.data[key];
+      return acc;
+    }, {});
+    calculationsData.value = calculationsData.value.map((item) =>
+      Number(item.id) === Number(editingParent.value.id) ? { ...item, ...updated } : item
+    );
+    editDialogVisible.value = false;
+  } catch (error) {
+    console.log(error);
+  } finally {
+    loading.value = false;
+  }
+};
 </script>
 
 <template>
@@ -205,7 +236,24 @@ const copyParentCalculation = async (data) => {
 
         <Column :exportable="false">
           <template #body="slotProps">
-            <Button icon="pi pi-copy" class="mr-2" outlined rounded severity="success" @click="copyParentCalculation(slotProps.data)" />
+            <Button
+              icon="pi pi-pencil"
+              class="mr-2"
+              outlined
+              rounded
+              severity="secondary"
+              v-tooltip.top="'Редактировать'"
+              @click="openEditParentDialog(slotProps.data)"
+            />
+            <Button
+              icon="pi pi-copy"
+              class="mr-2"
+              outlined
+              rounded
+              severity="success"
+              v-tooltip.top="'Клонировать'"
+              @click="copyParentCalculation(slotProps.data)"
+            />
             <Button icon="pi pi-trash" outlined rounded severity="danger" @click="confirmDeleteEntity(slotProps.data)" />
           </template>
         </Column>
@@ -265,6 +313,24 @@ const copyParentCalculation = async (data) => {
         </template>
       </DataTable>
     </div>
+
+    <Dialog
+      v-model:visible="editDialogVisible"
+      header="Редактировать калькуляцию"
+      :style="{ width: '400px' }"
+      modal
+      :closable="true"
+      @hide="editDialogVisible = false"
+    >
+      <div class="flex flex-col gap-3">
+        <label for="edit-parent-title">Название</label>
+        <InputText id="edit-parent-title" v-model="editingParent.title" type="text" class="w-full" />
+      </div>
+      <template #footer>
+        <Button label="Отменить" icon="pi pi-times" text @click="editDialogVisible = false" />
+        <Button label="Сохранить" icon="pi pi-check" @click="saveEditParent" />
+      </template>
+    </Dialog>
 
     <ConfirmDialog></ConfirmDialog>
   </Fluid>
