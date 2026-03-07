@@ -234,7 +234,6 @@ export default {
     return api().delete(`/calculation-media-file/${fileId}`);
   },
 
-  //получене всех шаблонов
   getTemplates() {
     return api().get(`/templates`);
   }

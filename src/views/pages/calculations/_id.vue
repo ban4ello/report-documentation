@@ -27,7 +27,6 @@ const router = useRouter();
 const calculationId = ref(null);
 const isCreateMode = ref(false);
 
-//константа для хранения шаблонов 
 const arrayTemplates = ref([])
 const arrayTemplatesShop = computed(() => {
   return arrayTemplates.value.filter(
@@ -172,7 +171,6 @@ onBeforeMount(async () => {
     await initializeTaxData();
   }
 
-  //получение всех шаблонов для цеха и итр
   ApiService.getTemplates().then((res) => {
     arrayTemplates.value = res.data
   })
