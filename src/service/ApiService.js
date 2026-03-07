@@ -164,6 +164,10 @@ export default {
     return api().delete(`/parent-calculation/${parentCalculationId}`);
   },
 
+  updateParentCalculation(parentCalculationId, { title }) {
+    return api().put(`/parent-calculation/${parentCalculationId}`, { title });
+  },
+
   cloneParentCalculation(parentCalculationId) {
     return api().post(`/parent-calculation/${parentCalculationId}/clone`, {}, { timeout: 120000 });
   },
