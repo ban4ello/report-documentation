@@ -27,6 +27,18 @@ const router = useRouter();
 const calculationId = ref(null);
 const isCreateMode = ref(false);
 
+const arrayTemplates = ref([])
+const arrayTemplatesShop = computed(() => {
+  return arrayTemplates.value.filter(
+    item => item.templateType === 'workers'
+  )
+})
+const arrayTemplatesItr = computed(() => {
+  return arrayTemplates.value.filter(
+    item => item.templateType === 'itr'
+  )
+})
+
 const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м', 'услуга']);
 
 // Composables initialization
@@ -158,6 +170,10 @@ onBeforeMount(async () => {
   if (isCreateMode.value) {
     await initializeTaxData();
   }
+
+  ApiService.getTemplates().then((res) => {
+    arrayTemplates.value = res.data
+  })
 });
 
 const onCellEditComplete = (event) => {
@@ -257,6 +273,20 @@ const saveNewStaff = (staffData) => {
   });
 };
 
+const selectTemplateDataShop = (data) => {
+  data.workersData.forEach((item) => {
+    calculationData.value.workersData.table.push({
+      id: item.id,
+      name: item.name,
+      numberOfHoursWorked: Number(item.numberOfHoursWorked),
+      salaryPerDay: Number(item.salaryPerDay),
+      salaryPerHour: null,
+      total: null
+    });
+  }
+  )
+}
+
 const copyWorkerData = (data) => {
   calculationData.value.workersData.table.push({
     id: Number((Math.random() * 1000).toFixed()),
@@ -298,6 +328,16 @@ const saveNewITRStaff = (itrStaffData) => {
     salaryPerMonth: itrStaffData.salaryPerMonth
   });
 };
+
+const selectTemplateDataItr = (data) => {
+  data.itrData.forEach((item) => {
+    calculationData.value.itrData.table.push({
+    id: item.id,
+    name: item.name,
+    salaryPerMonth: item.salaryPerMonth
+  });
+  })
+}
 
 const confirmDeleteItrWorker = async (item) => {
   if (item) {
@@ -449,48 +489,37 @@ watch(increaseInSalary, (newValue, oldValue) => {
     return { ...item, salaryPerDay: newPrice };
   });
 });
+
+const newTitle = ref('Название');
+
+const handler = (str) => {
+  newTitle.value = str
+}
 </script>
 
 <template>
-  <div v-if="loading" class="card flex justify-center items-center h-[100vh] fixed top-0 left-0 right-0 z-9999 opacity-60">
+  <div v-if="loading"
+    class="card flex justify-center items-center h-[100vh] fixed top-0 left-0 right-0 z-9999 opacity-60">
     <ProgressSpinner />
   </div>
 
   <Fluid>
     <Breadcrumbs :items="breadCrumbsItems" />
 
-    <CalculationHeader
-      :calculation-data="calculationData"
-      :display-total-price="displayTotalPrice"
-      :calculation-plan-total="calculationPlanTotal"
-      :total-specification-items="totalSpecificationItems"
-      v-model:is-amount-without-metal="isAmountWithoutMetal"
-      :computed-style-class="computedStyleClass"
-      :loading="loading"
-      :format-number="formatNumber"
-      :truncate-decimal="truncateDecimal"
-      :calculation-id="calculationId"
-      :is-create-mode="isCreateMode"
-      @create-calculation="saveCalculation"
-    />
+    <CalculationHeader :calculation-data="calculationData" :display-total-price="displayTotalPrice"
+      :calculation-plan-total="calculationPlanTotal" :total-specification-items="totalSpecificationItems"
+      v-model:is-amount-without-metal="isAmountWithoutMetal" :computed-style-class="computedStyleClass"
+      :loading="loading" :format-number="formatNumber" :truncate-decimal="truncateDecimal"
+      :calculation-id="calculationId" :is-create-mode="isCreateMode" @create-calculation="saveCalculation" />
 
     <div class="flex flex-col">
-      <SpecificationTable
-        :specification-data="calculationData.specificationData"
-        :dropdown-items-unit-of-measurement="dropdownItemsUnitOfMeasurement"
-        :computed-style-class="computedStyleClass"
-        @add="addNewSpecification"
-        @delete="confirmDeleteSpecification"
-        @copy="copySpecification"
-        @cell-edit-complete="onCellEditComplete"
-      />
+      <SpecificationTable :specification-data="calculationData.specificationData"
+        :dropdown-items-unit-of-measurement="dropdownItemsUnitOfMeasurement" :computed-style-class="computedStyleClass"
+        @add="addNewSpecification" @delete="confirmDeleteSpecification" @copy="copySpecification"
+        @cell-edit-complete="onCellEditComplete" />
 
-      <PriceSummary
-        :price-data="priceData"
-        :final-price-data="finalPriceData"
-        :computed-style-class="computedStyleClass"
-        @cell-edit-complete="onCellEditComplete"
-      />
+      <PriceSummary :price-data="priceData" :final-price-data="finalPriceData"
+        :computed-style-class="computedStyleClass" @cell-edit-complete="onCellEditComplete" />
 
       <VariablesSection :calculation-data="calculationData" :computed-style-class="computedStyleClass" />
 
@@ -500,85 +529,54 @@ watch(increaseInSalary, (newValue, oldValue) => {
         </div>
 
         <Accordion multiple :value="expandAccordionSalary">
-          <WorkersSalaryAccordion
-            :calculation-data="calculationData"
-            v-model:selected-staff="selectedStaff"
-            v-model:increase-in-salary="increaseInSalary"
-            :dropdown-items-worker-staff="dropdownItemsWorkerStaff"
-            :computed-style-class="computedStyleClass"
-            :salaries-of-workers-total="salariesOfWorkersTotal"
-            :tax-total="taxTotal"
-            :computed-worker-tax-data="computedWorkerTaxData"
-            :format-number="formatNumber"
-            :truncate-decimal="truncateDecimal"
-            @cell-edit-complete="onCellEditComplete"
-            @copy-worker="copyWorkerData"
-            @delete-worker="confirmDeleteWorker"
-            @save-new-staff="saveNewStaff"
-            @change-selected-item="changeSelectedItem"
-            @show-new-worker-modal="showNewWorkerModal"
-            @change-coeficient="(data) => (calculationData.coeficientOfNds = data.value)"
-          />
+          <WorkersSalaryAccordion :new-title="newTitle" :calculation-data="calculationData"
+            v-model:selected-staff="selectedStaff" v-model:increase-in-salary="increaseInSalary"
+            :dropdown-items-worker-staff="dropdownItemsWorkerStaff" :computed-style-class="computedStyleClass"
+            :salaries-of-workers-total="salariesOfWorkersTotal" :tax-total="taxTotal"
+            :computed-worker-tax-data="computedWorkerTaxData" :format-number="formatNumber"
+            :truncate-decimal="truncateDecimal" :array-templates-shop="arrayTemplatesShop"
+            @cell-edit-complete="onCellEditComplete" @select-template-shop="selectTemplateDataShop" @copy-worker="copyWorkerData"
+            @delete-worker="confirmDeleteWorker" @save-new-staff="saveNewStaff"
+            @change-selected-item="changeSelectedItem" @show-new-worker-modal="showNewWorkerModal"
+            @change-coeficient="(data) => (calculationData.coeficientOfNds = data.value)" @myEvent="handler" />
 
-          <ITRSalaryAccordion
-            :calculation-data="calculationData"
-            v-model:selected-i-t-r-staff="selectedITRStaff"
-            :dropdown-items-worker-staff="dropdownItemsWorkerStaff"
-            :computed-style-class="computedStyleClass"
+          <ITRSalaryAccordion :calculation-data="calculationData" v-model:selected-i-t-r-staff="selectedITRStaff"
+            :dropdown-items-worker-staff="dropdownItemsWorkerStaff" :computed-style-class="computedStyleClass"
             :salaries-of-i-t-r-total="salariesOfITRTotal"
-            :salaries-of-i-t-r-total-per-month="salariesOfITRTotalPerMonth"
-            :tax-i-t-r-total="taxITRTotal"
-            :computed-itr-tax-data="computedItrTaxData"
-            :format-number="formatNumber"
-            :truncate-decimal="truncateDecimal"
-            @cell-edit-complete="onCellEditComplete"
-            @copy-itr-worker="copyITRWorker"
-            @delete-itr-worker="confirmDeleteItrWorker"
-            @save-new-itr-staff="saveNewITRStaff"
-            @change-selected-item="changeSelectedItem"
+            :salaries-of-i-t-r-total-per-month="salariesOfITRTotalPerMonth" :tax-i-t-r-total="taxITRTotal"
+            :computed-itr-tax-data="computedItrTaxData" :format-number="formatNumber"
+            :truncate-decimal="truncateDecimal" :array-templates-itr="arrayTemplatesItr" @select-template-itr="selectTemplateDataItr" @cell-edit-complete="onCellEditComplete"
+            @copy-itr-worker="copyITRWorker" @delete-itr-worker="confirmDeleteItrWorker"
+            @save-new-itr-staff="saveNewITRStaff" @change-selected-item="changeSelectedItem"
             @show-new-worker-modal="showNewWorkerModal"
-            @change-coeficient="(data) => (calculationData.coeficientOfNds = data.value)"
-          />
+            @change-coeficient="(data) => (calculationData.coeficientOfNds = data.value)" />
         </Accordion>
       </div>
 
-      <TotalCostsSection
-        :consumables-data="calculationData.consumablesData"
-        :hardware-data="calculationData.hardwareData"
-        :metal-data="
-          calculationData.metalData.map((item) => ({
-            ...item,
-            quantity: item.quantity,
-            taxPrice: item.taxPrice,
-            price: item.price
-          }))
-        "
-        :total-consumables="totalConsumables"
-        :total-hardware="totalHardware"
-        :total-metal="totalMetal"
-        :expand-accordion-total-costs="expandAccordionTotalCosts"
-        :computed-style-class="computedStyleClass"
+      <TotalCostsSection :consumables-data="calculationData.consumablesData"
+        :hardware-data="calculationData.hardwareData" :metal-data="calculationData.metalData.map((item) => ({
+          ...item,
+          quantity: item.quantity,
+          taxPrice: item.taxPrice,
+          price: item.price
+        }))
+          " :total-consumables="totalConsumables" :total-hardware="totalHardware" :total-metal="totalMetal"
+        :expand-accordion-total-costs="expandAccordionTotalCosts" :computed-style-class="computedStyleClass"
         :is-metal-enabled="calculationData.isMetalEnabled"
         @update:isMetalEnabled="(data) => (calculationData.isMetalEnabled = data)"
         :is-hardware-enabled="calculationData.isHardwareEnabled"
-        @update:isHardwareEnabled="(data) => (calculationData.isHardwareEnabled = data)"
-        @upload="onUpload"
-        @remove-file="removeFile"
-        @paste-from-buffer="pasteFromBuffer"
+        @update:isHardwareEnabled="(data) => (calculationData.isHardwareEnabled = data)" @upload="onUpload"
+        @remove-file="removeFile" @paste-from-buffer="pasteFromBuffer"
         @update:consumablesData="(data) => (calculationData.consumablesData = data)"
         @update:hardwareData="(data) => (calculationData.hardwareData = data)"
-        @update:metalData="(data) => (calculationData.metalData = data)"
-      />
+        @update:metalData="(data) => (calculationData.metalData = data)" />
 
-      <MediaFilesSection ref="mediaFilesSectionRef" :calculation-id="calculationId" :computed-style-class="computedStyleClass" />
+      <MediaFilesSection ref="mediaFilesSectionRef" :calculation-id="calculationId"
+        :computed-style-class="computedStyleClass" />
     </div>
 
-    <CreateWorkerDialog
-      v-model:visible="createNewWorkerDialog"
-      v-model:new-worker-data="newWorkerData"
-      :dropdown-items-workers-role="dropdownItemsWorkersRole"
-      @save="saveNewWorker"
-    />
+    <CreateWorkerDialog v-model:visible="createNewWorkerDialog" v-model:new-worker-data="newWorkerData"
+      :dropdown-items-workers-role="dropdownItemsWorkersRole" @save="saveNewWorker" />
     <Toast />
   </Fluid>
 </template>

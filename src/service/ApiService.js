@@ -232,5 +232,9 @@ export default {
 
   deleteCalculationMediaFile(fileId) {
     return api().delete(`/calculation-media-file/${fileId}`);
+  },
+
+  getTemplates() {
+    return api().get(`/templates`);
   }
 };
