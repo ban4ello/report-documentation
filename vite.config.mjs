@@ -9,6 +9,10 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   // base: process.env.NODE_ENV === 'production' ? '/report-documentation' : '/',
   base: '/',
+  server: {
+    port: 5174,
+    strictPort: true
+  },
   optimizeDeps: {
     noDiscovery: true
   },
