@@ -268,6 +268,11 @@ const copyWorkerData = (data) => {
   });
 };
 
+const applyWorkersTemplate = (rows) => {
+  calculationData.value.workersData.table = Array.isArray(rows) ? rows : [];
+  selectedStaff.value = null;
+};
+
 const confirmDeleteWorker = async (item) => {
   if (item) {
     calculationData.value.workersData.table = calculationData.value.workersData.table.filter((worker) => worker.id !== item.id);
@@ -319,6 +324,11 @@ const confirmDeleteItrWorker = async (item) => {
     }
   }
 
+  selectedITRStaff.value = null;
+};
+
+const applyITRTemplate = (rows) => {
+  calculationData.value.itrData.table = Array.isArray(rows) ? rows : [];
   selectedITRStaff.value = null;
 };
 
@@ -518,6 +528,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
             @change-selected-item="changeSelectedItem"
             @show-new-worker-modal="showNewWorkerModal"
             @change-coeficient="(data) => (calculationData.coeficientOfNds = data.value)"
+            @apply-template="applyWorkersTemplate"
           />
 
           <ITRSalaryAccordion
@@ -538,6 +549,7 @@ watch(increaseInSalary, (newValue, oldValue) => {
             @change-selected-item="changeSelectedItem"
             @show-new-worker-modal="showNewWorkerModal"
             @change-coeficient="(data) => (calculationData.coeficientOfNds = data.value)"
+            @apply-template="applyITRTemplate"
           />
         </Accordion>
       </div>

@@ -56,6 +56,7 @@ const activeMenuItem = computed(() => {
   if (currentPath === '/') return 0;
   if (currentPath.startsWith('/calculations')) return 1;
   if (currentPath.startsWith('/workers')) return 2;
+  if (currentPath.startsWith('/settings')) return 3;
   return null;
 });
 
@@ -66,7 +67,10 @@ const userMenuItems = ref([
     items: [
       {
         label: 'Настройки',
-        icon: 'pi pi-cog'
+        icon: 'pi pi-cog',
+        command: () => {
+          router.push('/settings');
+        }
       },
       {
         label: 'Выход',
