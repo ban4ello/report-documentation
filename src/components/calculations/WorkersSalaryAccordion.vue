@@ -1,5 +1,6 @@
 <script setup>
 import { ref, computed } from 'vue';
+import ApiService from '@/service/ApiService';
 import SearchSelect from '@/components/custom-ui/SearchSelect.vue';
 import TaxCharges from '@/components/TaxCharges.vue';
 
@@ -55,12 +56,19 @@ const emit = defineEmits([
   'save-new-staff',
   'change-selected-item',
   'show-new-worker-modal',
-  'change-coeficient'
+  'change-coeficient',
+  'apply-template'
 ]);
 
 const newStaffDialog = ref(false);
 const newStaffData = ref({ name: '', numberOfHoursWorked: null, salaryPerDay: null });
 const isShowOnlyType = ref(true);
+const templateDialogVisible = ref(false);
+const templatesLoading = ref(false);
+const workerTemplates = ref([]);
+const selectedTemplateId = ref(null);
+
+const selectedTemplate = computed(() => workerTemplates.value.find((item) => item.id === selectedTemplateId.value) || null);
 
 const localSelectedStaff = computed({
   get: () => props.selectedStaff,
@@ -117,6 +125,43 @@ const handleSaveNewStaff = () => {
 const handleChangeSelectedItem = (data) => {
   newStaffData.value.name = data.value || data;
   emit('change-selected-item', data, 'workers');
+};
+
+const openTemplateDialog = async () => {
+  selectedTemplateId.value = null;
+  templateDialogVisible.value = true;
+  templatesLoading.value = true;
+
+  try {
+    const response = await ApiService.getTemplates();
+    workerTemplates.value = (response.data || []).filter((item) => item.templateType === 'workers');
+  } catch (error) {
+    console.error('Ошибка при загрузке шаблонов ЦЕХ:', error);
+    workerTemplates.value = [];
+  } finally {
+    templatesLoading.value = false;
+  }
+};
+
+const closeTemplateDialog = () => {
+  templateDialogVisible.value = false;
+  selectedTemplateId.value = null;
+};
+
+const applySelectedTemplate = () => {
+  if (!selectedTemplate.value) return;
+
+  const rows = (selectedTemplate.value.workersData || []).map((row) => ({
+    id: Number((Math.random() * 10000).toFixed(0)),
+    name: row.name || '',
+    numberOfHoursWorked: row.numberOfHoursWorked ?? null,
+    salaryPerDay: row.salaryPerDay ?? null,
+    salaryPerHour: row.salaryPerHour ?? null,
+    total: row.total ?? null
+  }));
+
+  emit('apply-template', rows);
+  closeTemplateDialog();
 };
 </script>
 
@@ -233,8 +278,25 @@ const handleChangeSelectedItem = (data) => {
               </Column>
 
               <template #footer>
-                <div class="flex justify-center items-center hover:cursor-pointer" :class="computedStyleClass" @click="showDialog">
-                  добавить сотрудника +
+                <div class="flex justify-start items-center gap-3">
+                  <Button
+                    label="Добавить сотрудника"
+                    icon="pi pi-user-plus"
+                    severity="success"
+                    outlined
+                    size="small"
+                    class="salary-footer-btn"
+                    @click="showDialog"
+                  />
+                  <Button
+                    label="Заполнить из шаблона"
+                    icon="pi pi-copy"
+                    severity="success"
+                    outlined
+                    size="small"
+                    class="salary-footer-btn"
+                    @click="openTemplateDialog"
+                  />
                 </div>
 
                 <div class="flex justify-end gap-4 w-full">
@@ -282,6 +344,48 @@ const handleChangeSelectedItem = (data) => {
                 <Button label="Сохранить" icon="pi pi-check" @click="handleSaveNewStaff" />
               </template>
             </Dialog>
+
+            <Dialog
+              v-model:visible="templateDialogVisible"
+              :style="{ width: '480px' }"
+              header="Заполнить из шаблона ЦЕХ"
+              :modal="true"
+            >
+              <div class="flex flex-col gap-4">
+                <p class="m-0 text-surface-600">Текущая таблица зарплат Цех будет заменена строками из выбранного шаблона.</p>
+
+                <div v-if="templatesLoading" class="flex justify-center py-4">
+                  <ProgressSpinner style="width: 40px; height: 40px" />
+                </div>
+
+                <div v-else-if="workerTemplates.length === 0" class="text-surface-500">
+                  Нет шаблонов типа ЦЕХ. Создайте их в разделе «Настройки».
+                </div>
+
+                <div v-else>
+                  <label for="workers-template" class="block font-bold mb-3">Шаблон</label>
+                  <Select
+                    id="workers-template"
+                    v-model="selectedTemplateId"
+                    :options="workerTemplates"
+                    optionLabel="title"
+                    optionValue="id"
+                    placeholder="Выберите шаблон"
+                    class="w-full"
+                  />
+                </div>
+              </div>
+
+              <template #footer>
+                <Button label="Отменить" icon="pi pi-times" text @click="closeTemplateDialog" />
+                <Button
+                  label="Применить"
+                  icon="pi pi-check"
+                  :disabled="!selectedTemplateId || templatesLoading"
+                  @click="applySelectedTemplate"
+                />
+              </template>
+            </Dialog>
           </div>
         </div>
 
@@ -298,3 +402,10 @@ const handleChangeSelectedItem = (data) => {
     </AccordionContent>
   </AccordionPanel>
 </template>
+
+<style scoped>
+.salary-footer-btn {
+  width: auto !important;
+  flex: 0 0 auto;
+}
+</style>

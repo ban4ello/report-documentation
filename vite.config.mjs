@@ -9,6 +9,15 @@ import { defineConfig } from 'vite';
 export default defineConfig({
   // base: process.env.NODE_ENV === 'production' ? '/report-documentation' : '/',
   base: '/',
+  server: {
+    port: 5174,
+    strictPort: true,
+    // External volumes (e.g. /Volumes/HDD) often miss native FS events
+    watch: {
+      usePolling: true,
+      interval: 1000
+    }
+  },
   optimizeDeps: {
     noDiscovery: true
   },
