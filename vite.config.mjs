@@ -11,7 +11,12 @@ export default defineConfig({
   base: '/',
   server: {
     port: 5174,
-    strictPort: true
+    strictPort: true,
+    // External volumes (e.g. /Volumes/HDD) often miss native FS events
+    watch: {
+      usePolling: true,
+      interval: 1000
+    }
   },
   optimizeDeps: {
     noDiscovery: true
