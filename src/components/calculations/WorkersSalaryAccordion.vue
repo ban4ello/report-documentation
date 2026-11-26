@@ -258,7 +258,14 @@ const applySelectedTemplate = () => {
               <Column field="total" header="Итого">
                 <template #body="{ data }">
                   {{
-                    formatNumber(truncateDecimal((data.salaryPerDay / calculationData.numberOfHoursPerShift) * data.numberOfHoursWorked, 0))
+                    formatNumber(
+                      truncateDecimal(
+                        data.total !== null && data.total !== undefined && data.total !== ''
+                          ? Number(data.total)
+                          : (data.salaryPerDay / calculationData.numberOfHoursPerShift) * data.numberOfHoursWorked,
+                        0
+                      )
+                    )
                   }}
                 </template>
               </Column>
