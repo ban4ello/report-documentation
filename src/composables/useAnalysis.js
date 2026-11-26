@@ -167,12 +167,39 @@ export function useAnalysis() {
     return itrList;
   });
 
+  /** Ограниченный параллелизм: иначе ~75 getById одновременно отваливаются (canceled / 10s). */
+  const mapPool = async (items, concurrency, mapper) => {
+    const results = new Array(items.length);
+    let nextIndex = 0;
+
+    const workers = Array.from({ length: Math.min(concurrency, items.length) }, async () => {
+      while (nextIndex < items.length) {
+        const current = nextIndex++;
+        results[current] = await mapper(items[current], current);
+      }
+    });
+
+    await Promise.all(workers);
+    return results;
+  };
+
   const loadCalculations = async () => {
     loading.value = true;
     try {
       const factCalculatonsRes = await ApiService.getCalculations({ filter: { calculation_type: 'fact' } });
-      const calculationsRes = await Promise.allSettled(factCalculatonsRes.data.map((item) => ApiService.getCalculationById(item.id)));
-      const calculationsRow = calculationsRes.map((item) => item.value.data);
+      const factList = Array.isArray(factCalculatonsRes.data) ? factCalculatonsRes.data : [];
+
+      const detailResponses = await mapPool(factList, 6, async (item) => {
+        try {
+          const res = await ApiService.getCalculationById(item.id);
+          return res?.data ?? null;
+        } catch (error) {
+          console.warn(`Analysis: failed to load calculation ${item.id}`, error?.message || error);
+          return null;
+        }
+      });
+
+      const calculationsRow = detailResponses.filter(Boolean);
 
       const camelizeData = calculationsRow.map((item) => {
         return Object.keys(item).reduce((acc, key) => {
