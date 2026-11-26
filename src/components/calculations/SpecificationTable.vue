@@ -9,7 +9,7 @@ const props = defineProps({
   },
   dropdownItemsUnitOfMeasurement: {
     type: Array,
-    default: () => ['тн', 'кг', 'шт', 'м']
+    default: () => ['тн', 'кг', 'шт', 'компл', 'м']
   },
   computedStyleClass: {
     type: Object,
