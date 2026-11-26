@@ -1,6 +1,6 @@
 import { ref, computed } from 'vue';
 import ApiService from '@/service/ApiService';
-import { camelize } from '@/utils/helper';
+import { camelize, safeDivide } from '@/utils/helper';
 import { MONTH } from '@/utils/constants.js';
 
 const getCurrentDateFilter = () => {
@@ -8,6 +8,20 @@ const getCurrentDateFilter = () => {
   return {
     selectedYear: date.getFullYear(),
     selectedMonth: MONTH[date.getMonth()] + '/' + date.getFullYear()
+  };
+};
+
+const getLatestDateFilter = (calculations) => {
+  if (!calculations?.length) return getCurrentDateFilter();
+
+  const latest = calculations.reduce((max, item) => {
+    const date = new Date(item.dateOfCreation);
+    return date > max ? date : max;
+  }, new Date(calculations[0].dateOfCreation));
+
+  return {
+    selectedYear: latest.getFullYear(),
+    selectedMonth: MONTH[latest.getMonth()] + '/' + latest.getFullYear()
   };
 };
 
@@ -59,7 +73,7 @@ export function useAnalysis() {
         acc.push({
           order: item.title,
           workerName: item.workersData.table[workerIndex].name,
-          salary: (worker.salaryPerDay / item.numberOfHoursPerShift) * worker.numberOfHoursWorked,
+          salary: safeDivide(worker.salaryPerDay, item.numberOfHoursPerShift) * worker.numberOfHoursWorked,
           id: worker.id
         });
       });
@@ -106,7 +120,7 @@ export function useAnalysis() {
     const allSalaryAccruals = filteredCalculationsDataForITR.value.reduce((acc, item) => {
       if (item.itrData && item.itrData.table) {
         item.itrData.table.forEach((itr) => {
-          const salary = (itr.salaryPerMonth / item.numberOfDaysPerShift) * item.itrWorkedDays;
+          const salary = safeDivide(itr.salaryPerMonth, item.numberOfDaysPerShift) * item.itrWorkedDays;
           acc.push({
             order: item.title,
             itrName: itr.name,
@@ -171,6 +185,11 @@ export function useAnalysis() {
       });
 
       rawCalculationData.value = camelizeData;
+
+      const latestFilter = getLatestDateFilter(camelizeData);
+      analysisTableFilter.value = latestFilter;
+      workersSalaryFilter.value = latestFilter;
+      itrSalaryFilter.value = latestFilter;
     } catch (error) {
       console.error('Error loading calculations:', error);
       throw error;

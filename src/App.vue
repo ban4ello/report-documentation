@@ -1,7 +1,8 @@
 <script setup></script>
 
 <template>
-  <router-view :key="$route.fullPath" />
+  <!-- path, not fullPath: query-only updates (search on Калькуляции) must not remount the page and drop input focus -->
+  <router-view :key="$route.path" />
 </template>
 
 <style scoped></style>

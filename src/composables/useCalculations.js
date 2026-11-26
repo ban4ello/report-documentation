@@ -1,9 +1,14 @@
 import { computed } from 'vue';
-import { formatNumber, truncateDecimal } from '@/utils/helper';
+import { formatNumber, isPieceUnit, truncateDecimal } from '@/utils/helper';
 
 export function useCalculations(calculationData) {
   const salariesOfWorkersTotal = computed(() =>
     calculationData.value.workersData.table.reduce((acc, item) => {
+      // Prefer stored Excel "итого" when present — recomputing from day rate × hours
+      // often diverges due to rounding (e.g. 1969 vs 1875).
+      if (item.total !== null && item.total !== undefined && item.total !== '') {
+        return acc + Number(item.total);
+      }
       return (
         acc + parseFloat(Number((item.salaryPerDay / calculationData.value.numberOfHoursPerShift) * item.numberOfHoursWorked).toFixed())
       );
@@ -34,21 +39,23 @@ export function useCalculations(calculationData) {
       }, 0) || 0
   );
 
-  // Сумма quantity для элементов с unitOfMeasurement === 'шт'
+  // Сумма quantity для штучных единиц (шт / компл / комплекты / штуки / штука)
   const totalQuantityInPieces = computed(
     () =>
       calculationData.value.specificationData.table.reduce((acc, item) => {
-        if (item.unitOfMeasurement === 'шт') {
+        if (isPieceUnit(item.unitOfMeasurement)) {
           return acc + Number(item.quantity || 0);
         }
         return acc;
       }, 0) || 0
   );
 
-  // Проверка, есть ли элементы с unitOfMeasurement === 'шт'
-  const hasPiecesUnit = computed(() => calculationData.value.specificationData.table.some((item) => item.unitOfMeasurement === 'шт'));
+  // Проверка, есть ли штучные единицы измерения (в т.ч. компл)
+  const hasPiecesUnit = computed(() =>
+    calculationData.value.specificationData.table.some((item) => isPieceUnit(item.unitOfMeasurement))
+  );
 
-  // Знаменатель для расчета perItem: если есть 'шт', используем totalQuantityInPieces, иначе totalSpecificationItems
+  // Знаменатель для расчета perItem: для штучных единиц — сумма quantity, иначе qty×valuePerUnit
   const divisorForPerItem = computed(() => {
     return hasPiecesUnit.value && totalQuantityInPieces.value > 0 ? totalQuantityInPieces.value : totalSpecificationItems.value;
   });

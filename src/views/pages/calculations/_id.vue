@@ -27,7 +27,7 @@ const router = useRouter();
 const calculationId = ref(null);
 const isCreateMode = ref(false);
 
-const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'м', 'услуга']);
+const dropdownItemsUnitOfMeasurement = ref(['тн', 'кг', 'шт', 'компл', 'м', 'услуга']);
 
 // Composables initialization
 const {

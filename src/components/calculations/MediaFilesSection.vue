@@ -28,8 +28,23 @@ const previewTimeout = ref(null);
 const previewCache = ref(new Map()); // Кэш для предпросмотров
 const fileNameRefs = ref(new Map()); // Refs для элементов имен файлов
 
-const allowedTypes = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+const allowedTypes = [
+  'application/pdf',
+  'image/jpeg',
+  'image/jpg',
+  'image/png',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-excel',
+  'application/octet-stream'
+];
+const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png', '.xlsx', '.xls'];
 const maxFileSize = 10 * 1024 * 1024; // 10MB
+
+const isAllowedFile = (file) => {
+  const name = (file.name || '').toLowerCase();
+  const hasExt = allowedExtensions.some((ext) => name.endsWith(ext));
+  return (allowedTypes.includes(file.type) || hasExt) && file.size <= maxFileSize;
+};
 
 const loadMediaFiles = async () => {
   if (!props.calculationId || props.calculationId === 'create') {
@@ -59,7 +74,9 @@ const onFileSelect = (event) => {
   const invalidFiles = [];
 
   files.forEach((file) => {
-    if (!allowedTypes.includes(file.type)) {
+    const name = (file.name || '').toLowerCase();
+    const hasExt = allowedExtensions.some((ext) => name.endsWith(ext));
+    if (!allowedTypes.includes(file.type) && !hasExt) {
       invalidFiles.push(file.name);
     } else if (file.size > maxFileSize) {
       invalidFiles.push(`${file.name} (превышен размер 10MB)`);
@@ -70,11 +87,11 @@ const onFileSelect = (event) => {
     toast.add({
       severity: 'warn',
       summary: 'Предупреждение',
-      detail: `Некоторые файлы не подходят: ${invalidFiles.join(', ')}. Разрешены только PDF, JPG, PNG до 10MB`,
+      detail: `Некоторые файлы не подходят: ${invalidFiles.join(', ')}. Разрешены PDF, JPG, PNG, XLS, XLSX до 10MB`,
       life: 5000
     });
     // Удаляем невалидные файлы из списка
-    event.files = files.filter((file) => allowedTypes.includes(file.type) && file.size <= maxFileSize);
+    event.files = files.filter((file) => isAllowedFile(file));
   }
 };
 
@@ -231,9 +248,18 @@ const formatFileSize = (bytes) => {
   return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
 };
 
-const getFileIcon = (fileType) => {
+const getFileIcon = (fileType, fileName = '') => {
   if (fileType === 'application/pdf') return 'pi-file-pdf';
-  if (fileType.startsWith('image/')) return 'pi-image';
+  if (fileType?.startsWith('image/')) return 'pi-image';
+  const lower = (fileName || '').toLowerCase();
+  if (
+    fileType === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' ||
+    fileType === 'application/vnd.ms-excel' ||
+    lower.endsWith('.xlsx') ||
+    lower.endsWith('.xls')
+  ) {
+    return 'pi-file-excel';
+  }
   return 'pi-file';
 };
 
@@ -397,7 +423,7 @@ defineExpose({
         ref="fileUploadRef"
         mode="advanced"
         :multiple="true"
-        accept=".pdf,.jpg,.jpeg,.png"
+        accept=".pdf,.jpg,.jpeg,.png,.xlsx,.xls"
         :maxFileSize="maxFileSize"
         :auto="false"
         chooseLabel="Выберите файлы"
@@ -411,7 +437,7 @@ defineExpose({
           <div class="flex flex-col items-center justify-center py-8">
             <i class="pi pi-cloud-upload text-4xl text-gray-400 mb-2"></i>
             <p class="text-gray-500">Перетащите файлы сюда или нажмите для выбора</p>
-            <p class="text-sm text-gray-400 mt-2">Поддерживаются: PDF, JPG, PNG (макс. 10MB)</p>
+            <p class="text-sm text-gray-400 mt-2">Поддерживаются: PDF, JPG, PNG, XLS, XLSX (макс. 10MB)</p>
           </div>
         </template>
       </FileUpload>
@@ -439,7 +465,7 @@ defineExpose({
           <Column field="fileName" header="Имя файла" style="min-width: 200px">
             <template #body="{ data }">
               <div class="flex items-center gap-2">
-                <i :class="['pi', getFileIcon(data.fileType)]" class="text-blue-500"></i>
+                <i :class="['pi', getFileIcon(data.fileType, data.fileName)]" class="text-blue-500"></i>
                 <span
                   v-if="isImageFile(data.fileType)"
                   :ref="(el) => setFileNameRef(el, data.id)"

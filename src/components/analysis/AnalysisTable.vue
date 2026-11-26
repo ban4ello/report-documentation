@@ -1,6 +1,6 @@
 <script setup>
 import { useRouter } from 'vue-router';
-import { formatNumber, truncateDecimal } from '@/utils/helper.js';
+import { formatNumber, isPieceUnit, safeDivide, truncateDecimal } from '@/utils/helper.js';
 
 const props = defineProps({
   calculationsData: {
@@ -11,6 +11,15 @@ const props = defineProps({
 });
 
 const router = useRouter();
+
+const getSpecificationQuantity = (data) => {
+  const table = data.specificationData?.table || [];
+  const hasPieces = table.some((item) => isPieceUnit(item.unitOfMeasurement));
+  if (hasPieces) {
+    return table.reduce((acc, item) => (isPieceUnit(item.unitOfMeasurement) ? acc + Number(item.quantity || 0) : acc), 0);
+  }
+  return table.reduce((acc, item) => acc + Number(item.quantity || 0) * Number(item.valuePerUnit || 0), 0);
+};
 </script>
 
 <template>
@@ -74,7 +83,7 @@ const router = useRouter();
       </template>
 
       <template #body="{ data }">
-        {{ formatNumber(truncateDecimal(data.specificationData.table.reduce((acc, item) => acc += (item.quantity * Number(item.valuePerUnit)), 0), 3)) }}
+        {{ formatNumber(truncateDecimal(getSpecificationQuantity(data), 3)) }}
       </template>
     </Column>
 
@@ -122,7 +131,7 @@ const router = useRouter();
       </template>
 
       <template #body="{ data }">
-        {{ formatNumber(truncateDecimal(data.total / data.specificationData.table.reduce((acc, item) => acc += (item.quantity * Number(item.valuePerUnit)), 0), 1)) }}
+        {{ formatNumber(truncateDecimal(safeDivide(data.total, getSpecificationQuantity(data)), 1)) }}
       </template>
     </Column>
 
