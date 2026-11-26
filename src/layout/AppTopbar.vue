@@ -1,7 +1,7 @@
 <script setup>
 import { useLayout } from '@/layout/composables/layout';
 import AppConfigurator from './AppConfigurator.vue';
-import { ref, computed } from 'vue';
+import { ref } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import ApiService from '@/service/ApiService';
 
@@ -30,6 +30,7 @@ const navigationMenuItems = ref([
   {
     label: 'Анализ',
     icon: 'pi pi-chart-bar',
+    to: '/',
     command: () => {
       router.push('/');
     }
@@ -37,6 +38,7 @@ const navigationMenuItems = ref([
   {
     label: 'Калькуляции',
     icon: 'pi pi-calculator',
+    to: '/calculations',
     command: () => {
       router.push('/calculations');
     }
@@ -44,21 +46,18 @@ const navigationMenuItems = ref([
   {
     label: 'Сотрудники',
     icon: 'pi pi-users',
+    to: '/workers',
     command: () => {
       router.push('/workers');
     }
   }
 ]);
 
-// Определяем активный пункт меню на основе текущего роута
-const activeMenuItem = computed(() => {
-  const currentPath = route.path;
-  if (currentPath === '/') return 0;
-  if (currentPath.startsWith('/calculations')) return 1;
-  if (currentPath.startsWith('/workers')) return 2;
-  if (currentPath.startsWith('/settings')) return 3;
-  return null;
-});
+const isNavItemActive = (item) => {
+  if (!item?.to) return false;
+  if (item.to === '/') return route.path === '/';
+  return route.path === item.to || route.path.startsWith(`${item.to}/`);
+};
 
 const userMenuItems = ref([
   {
@@ -151,10 +150,10 @@ const userMenuItems = ref([
 
     <div class="layout-topbar-navigation">
       <Menubar :model="navigationMenuItems" class="layout-navigation-menubar">
-        <template #item="{ item, root, index }">
+        <template #item="{ item, root }">
           <a
             v-if="root"
-            :class="['p-menuitem-link', 'layout-navigation-link', { 'p-highlight': index === activeMenuItem }]"
+            :class="['p-menuitem-link', 'layout-navigation-link', { 'is-active': isNavItemActive(item) }]"
             @click="item.command && item.command()"
           >
             <span :class="item.icon" class="p-menuitem-icon"></span>
@@ -234,6 +233,11 @@ const userMenuItems = ref([
 
   .p-menuitem-icon {
     margin-right: 0.5rem !important;
+  }
+
+  &.is-active {
+    color: var(--primary-color);
+    box-shadow: inset 0 -2px 0 0 var(--primary-color);
   }
 }
 </style>
