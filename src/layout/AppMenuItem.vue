@@ -1,6 +1,6 @@
 <script setup>
 import { useLayout } from '@/layout/composables/layout';
-import { onBeforeMount, ref, watch } from 'vue';
+import { computed, onBeforeMount, ref, watch } from 'vue';
 import { useRoute } from 'vue-router';
 
 const route = useRoute();
@@ -29,18 +29,56 @@ const props = defineProps({
 const isActiveMenu = ref(false);
 const itemKey = ref(null);
 
+function isRouteMatch(to) {
+  if (!to) return false;
+  // Home must be exact — otherwise it matches every path
+  if (to === '/') return route.path === '/';
+  return route.path === to || route.path.startsWith(`${to}/`);
+}
+
+function itemOrChildrenMatch(item) {
+  if (!item) return false;
+  if (item.to && isRouteMatch(item.to)) return true;
+  return (item.items || []).some((child) => itemOrChildrenMatch(child));
+}
+
+const isActiveRoute = computed(() => isRouteMatch(props.item.to));
+
+function syncActiveFromRoute() {
+  if (!itemKey.value) return;
+
+  if (itemOrChildrenMatch(props.item)) {
+    isActiveMenu.value = true;
+    // Leaf links own the active key so parent sections highlight via prefix
+    if (props.item.to && !props.item.items) {
+      setActiveMenuItem(itemKey.value);
+    }
+  } else {
+    const activeItem = layoutState.activeMenuItem;
+    isActiveMenu.value = activeItem === itemKey.value || (activeItem ? activeItem.startsWith(itemKey.value + '-') : false);
+  }
+}
+
 onBeforeMount(() => {
   itemKey.value = props.parentItemKey ? props.parentItemKey + '-' + props.index : String(props.index);
-
-  const activeItem = layoutState.activeMenuItem;
-
-  isActiveMenu.value = activeItem === itemKey.value || activeItem ? activeItem.startsWith(itemKey.value + '-') : false;
+  syncActiveFromRoute();
 });
 
 watch(
   () => layoutState.activeMenuItem,
   (newVal) => {
-    isActiveMenu.value = newVal === itemKey.value || newVal.startsWith(itemKey.value + '-');
+    if (!newVal) {
+      isActiveMenu.value = itemOrChildrenMatch(props.item);
+      return;
+    }
+    isActiveMenu.value = newVal === itemKey.value || newVal.startsWith(itemKey.value + '-') || itemOrChildrenMatch(props.item);
+  }
+);
+
+watch(
+  () => route.path,
+  () => {
+    syncActiveFromRoute();
   }
 );
 
@@ -62,10 +100,6 @@ function itemClick(event, item) {
 
   setActiveMenuItem(foundItemKey);
 }
-
-function checkActiveRoute(item) {
-  return route.path === item.to;
-}
 </script>
 
 <template>
@@ -86,7 +120,7 @@ function checkActiveRoute(item) {
     <router-link
       v-if="item.to && !item.items && item.visible !== false"
       @click="itemClick($event, item, index)"
-      :class="[item.class, { 'active-route': checkActiveRoute(item) }]"
+      :class="[item.class, { 'active-route': isActiveRoute }]"
       tabindex="0"
       :to="item.to"
     >

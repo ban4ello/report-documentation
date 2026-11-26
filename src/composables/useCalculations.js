@@ -374,7 +374,7 @@ export function useCalculations(calculationData) {
         statistics: getPercentOfTotal(effectiveTotalMetal.value + effectiveTotalHardware.value, finalTotalPrice.value),
         total: effectiveTotalMetal.value + effectiveTotalHardware.value,
         perItem: divisorForPerItem.value
-          ? truncateDecimal((effectiveTotalMetal.value + effectiveTotalHardware.value) / divisorForPerItem.value)
+          ? truncateDecimal((effectiveTotalMetal.value + effectiveTotalHardware.value) / divisorForPerItem.value, 2)
           : 0
       },
       {
